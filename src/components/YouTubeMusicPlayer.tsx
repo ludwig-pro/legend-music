@@ -8,6 +8,12 @@ interface Track {
     artist: string;
     duration: string;
     thumbnail: string;
+    id?: string;
+}
+
+interface PlaylistTrack extends Track {
+    isPlaying?: boolean;
+    index: number;
 }
 
 interface PlayerState {
@@ -16,11 +22,94 @@ interface PlayerState {
     currentTime: string;
     isLoading: boolean;
     error: string | null;
+    playlist: PlaylistTrack[];
+    currentTrackIndex: number;
 }
 
 const injectedJavaScript = `
 (function() {
     let lastState = {};
+
+    function extractPlaylistInfo() {
+        try {
+            const playlist = [];
+            let currentTrackIndex = -1;
+            
+            // Try multiple strategies to find playlist items
+            let items = [];
+            
+            // Strategy 1: Try to get queue items (most reliable for current playlist)
+            const queueItems = document.querySelectorAll('ytmusic-player-queue-item');
+            if (queueItems.length > 0) {
+                items = Array.from(queueItems);
+                console.log('Found queue items:', items.length);
+            }
+            
+            // Strategy 2: Try to find Up Next section
+            if (items.length === 0) {
+                const upNextItems = document.querySelectorAll('ytmusic-player-queue ytmusic-responsive-list-item-renderer');
+                if (upNextItems.length > 0) {
+                    items = Array.from(upNextItems);
+                    console.log('Found up next items:', items.length);
+                }
+            }
+            
+            // Strategy 3: Try general playlist items on the page
+            if (items.length === 0) {
+                const playlistItems = document.querySelectorAll('ytmusic-responsive-list-item-renderer');
+                if (playlistItems.length > 0) {
+                    items = Array.from(playlistItems).slice(0, 20); // Limit to avoid too many items
+                    console.log('Found general playlist items:', items.length);
+                }
+            }
+            
+            // Strategy 4: Try any music items
+            if (items.length === 0) {
+                const musicItems = document.querySelectorAll('[class*="music"], [class*="song"], [class*="track"]');
+                items = Array.from(musicItems).slice(0, 10);
+                console.log('Found music items:', items.length);
+            }
+            
+            // Process found items
+            items.forEach((item, index) => {
+                const titleEl = item.querySelector('.title, [class*="title"], .song-title, h3, h4');
+                const artistEl = item.querySelector('.byline, [class*="byline"], .artist, [class*="artist"], .subtitle');
+                const durationEl = item.querySelector('.duration, [class*="duration"], .time');
+                const thumbnailEl = item.querySelector('img');
+                
+                if (titleEl && artistEl) {
+                    const title = titleEl.textContent?.trim() || '';
+                    const artist = artistEl.textContent?.trim() || '';
+                    
+                    // Only skip if it's completely empty or just whitespace
+                    if (title && artist && title !== artist) {
+                        playlist.push({
+                            title: title,
+                            artist: artist,
+                            duration: durationEl?.textContent?.trim() || '',
+                            thumbnail: thumbnailEl?.src || '',
+                            index: index,
+                            isPlaying: item.classList.contains('playing') || 
+                                     item.getAttribute('aria-selected') === 'true' ||
+                                     item.classList.contains('selected')
+                        });
+                        
+                        if (item.classList.contains('playing') || 
+                            item.getAttribute('aria-selected') === 'true' ||
+                            item.classList.contains('selected')) {
+                            currentTrackIndex = playlist.length - 1;
+                        }
+                    }
+                }
+            });
+            
+            console.log('Final playlist:', playlist.length, 'items');
+            return { playlist, currentTrackIndex };
+        } catch (error) {
+            console.error('Error extracting playlist:', error);
+            return { playlist: [], currentTrackIndex: -1 };
+        }
+    }
 
     function extractPlayerInfo() {
         try {
@@ -40,6 +129,9 @@ const injectedJavaScript = `
             // Get duration
             const durationElement = document.querySelector('#right-controls .time-info');
             const duration = durationElement?.textContent?.trim() || '0:00';
+            
+            // Get playlist info
+            const { playlist, currentTrackIndex } = extractPlaylistInfo();
 
             const currentState = {
                 isPlaying,
@@ -50,6 +142,8 @@ const injectedJavaScript = `
                     thumbnail: thumbnailElement?.src || ''
                 },
                 currentTime,
+                playlist,
+                currentTrackIndex,
                 isLoading: false,
                 error: null
             };
@@ -101,6 +195,23 @@ const injectedJavaScript = `
                 progressBar.value = seconds;
                 progressBar.dispatchEvent(new Event('input', { bubbles: true }));
             }
+        },
+        
+        playTrackAtIndex: function(index) {
+            // Try to find and click the track at the given index
+            const queueItems = document.querySelectorAll('ytmusic-player-queue-item, .ytmusic-player-queue-item, [class*="queue"] .song-item, .queue-item');
+            
+            if (queueItems[index]) {
+                queueItems[index].click();
+                return;
+            }
+            
+            // Try alternative selectors for playlist items
+            const playlistItems = document.querySelectorAll('ytmusic-responsive-list-item-renderer, .ytmusic-responsive-list-item-renderer, [class*="playlist"] .song-item');
+            
+            if (playlistItems[index]) {
+                playlistItems[index].click();
+            }
         }
     };
 
@@ -149,6 +260,8 @@ const playerState$ = useObservable<PlayerState>({
     currentTime: '0:00',
     isLoading: true,
     error: null,
+    playlist: [],
+    currentTrackIndex: -1,
 });
 
 let webViewRef: React.MutableRefObject<WebView | null> | null = null;
@@ -165,6 +278,7 @@ const controls = {
     previous: () => executeCommand('previous'),
     setVolume: (volume: number) => executeCommand('setVolume', volume),
     seek: (seconds: number) => executeCommand('seek', seconds),
+    playTrackAtIndex: (index: number) => executeCommand('playTrackAtIndex', index),
 };
 
 export function YouTubeMusicPlayer() {
@@ -232,3 +346,4 @@ export function YouTubeMusicPlayer() {
 
 // Export player state and controls for use in other components
 export { playerState$, controls };
+export type { Track, PlaylistTrack, PlayerState };

@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(mv:*)",
-      "Bash(bun run lint:*)"
+      "Bash(bun run lint:*)",
+      "Bash(bunx biome check:*)"
     ],
     "deny": []
   }
