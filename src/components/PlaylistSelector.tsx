@@ -12,6 +12,7 @@ export function PlaylistSelector() {
     const availablePlaylists = playerState.availablePlaylists;
 
     const handlePlaylistSelect = (playlist: YTMusicPlaylist) => {
+        console.log("Navigating to playlist:", playlist.id);
         selectedPlaylist$.set(playlist);
         controls.navigateToPlaylist(playlist.id);
     };

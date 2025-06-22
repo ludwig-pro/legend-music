@@ -438,57 +438,132 @@ const injectedJavaScript = `
         navigateToPlaylist: function(playlistId) {
             console.log('Navigating to playlist:', playlistId);
             
-            // Strategy 1: Direct navigation using playlist ID if it looks like a real YouTube playlist ID
-            if (playlistId.startsWith('PL') || playlistId === 'LM') {
-                const url = playlistId === 'LM' ? 
-                    '/library/liked_music' : 
-                    '/playlist?list=' + playlistId;
-                window.location.href = url;
-                return true;
-            }
-            
-            // Strategy 2: Try to find and click the playlist in the sidebar
-            const sidebarPlaylists = document.querySelectorAll('ytmusic-guide-entry-renderer[play-button-state="default"]');
-            for (let element of sidebarPlaylists) {
-                const linkEl = element.querySelector('tp-yt-paper-item[href]');
-                const href = linkEl?.getAttribute('href') || '';
+            try {
+                // Strategy 0: Handle sidebar_ prefixed IDs by clicking at specific index
+                if (playlistId.startsWith('sidebar_')) {
+                    const index = parseInt(playlistId.split('sidebar_')[1]);
+                    console.log('Clicking sidebar playlist at index:', index);
+                    
+                    const sidebarPlaylists = document.querySelectorAll('ytmusic-guide-entry-renderer[play-button-state="default"]');
+                    if (sidebarPlaylists[index]) {
+                        const linkEl = sidebarPlaylists[index].querySelector('tp-yt-paper-item[href]');
+                        if (linkEl) {
+                            console.log('Found sidebar element at index', index, 'clicking...');
+                            linkEl.click();
+                            return true;
+                        } else {
+                            console.log('No clickable link found in sidebar element at index', index);
+                            // Fallback: click the entire element
+                            sidebarPlaylists[index].click();
+                            return true;
+                        }
+                    } else {
+                        console.log('No sidebar playlist found at index:', index);
+                        return false;
+                    }
+                }
                 
-                if (href.includes('playlist?list=' + playlistId) || 
-                    href.includes(playlistId) ||
-                    (playlistId === 'library' && href.includes('library/'))) {
-                    linkEl?.click();
+                // Strategy 1: Direct navigation using playlist ID if it looks like a real YouTube playlist ID
+                if (playlistId.startsWith('PL') || playlistId === 'LM') {
+                    const url = playlistId === 'LM' ? 
+                        '/library/liked_music' : 
+                        '/playlist?list=' + playlistId;
+                    console.log('Direct navigation to:', url);
+                    
+                    // Try multiple navigation methods
+                    try {
+                        window.location.assign(url);
+                    } catch (e) {
+                        console.log('location.assign failed, trying href:', e);
+                        window.location.href = url;
+                    }
                     return true;
                 }
-            }
-            
-            // Strategy 3: Try to find and click in the main grid
-            const gridPlaylists = document.querySelectorAll('ytmusic-two-row-item-renderer a[href*="playlist?list="]');
-            for (let element of gridPlaylists) {
-                const href = element.getAttribute('href') || '';
-                if (href.includes('playlist?list=' + playlistId)) {
-                    element.click();
+                
+                // Strategy 2: Try to find and click the playlist in the sidebar
+                console.log('Searching sidebar playlists...');
+                const sidebarPlaylists = document.querySelectorAll('ytmusic-guide-entry-renderer[play-button-state="default"]');
+                console.log('Found sidebar playlist elements:', sidebarPlaylists.length);
+                
+                for (let i = 0; i < sidebarPlaylists.length; i++) {
+                    const element = sidebarPlaylists[i];
+                    const linkEl = element.querySelector('tp-yt-paper-item[href]');
+                    const href = linkEl?.getAttribute('href') || '';
+                    
+                    console.log('Checking sidebar element', i, 'href:', href);
+                    
+                    if (href.includes('playlist?list=' + playlistId) || 
+                        href.includes(playlistId) ||
+                        (playlistId === 'library' && href.includes('library/'))) {
+                        console.log('Found matching sidebar playlist, clicking...');
+                        linkEl?.click();
+                        return true;
+                    }
+                }
+                
+                // Strategy 3: Try to find and click in the main grid
+                console.log('Searching grid playlists...');
+                const gridPlaylists = document.querySelectorAll('ytmusic-two-row-item-renderer a[href*="playlist?list="]');
+                console.log('Found grid playlist elements:', gridPlaylists.length);
+                
+                for (let i = 0; i < gridPlaylists.length; i++) {
+                    const element = gridPlaylists[i];
+                    const href = element.getAttribute('href') || '';
+                    
+                    console.log('Checking grid element', i, 'href:', href);
+                    
+                    if (href.includes('playlist?list=' + playlistId)) {
+                        console.log('Found matching grid playlist, clicking...');
+                        element.click();
+                        return true;
+                    }
+                }
+                
+                // Strategy 4: Navigate to common special playlists
+                if (playlistId === 'LM' || playlistId.toLowerCase().includes('liked')) {
+                    console.log('Navigating to liked music...');
+                    try {
+                        window.location.assign('/library/liked_music');
+                    } catch (e) {
+                        window.location.href = '/library/liked_music';
+                    }
+                    return true;
+                } else if (playlistId.toLowerCase().includes('history')) {
+                    console.log('Navigating to history...');
+                    try {
+                        window.location.assign('/library/history');
+                    } catch (e) {
+                        window.location.href = '/library/history';
+                    }
+                    return true;
+                } else if (playlistId.toLowerCase().includes('queue')) {
+                    console.log('Trying to open queue...');
+                    const queueButton = document.querySelector('[aria-label*="Queue"], [title*="Queue"], #player-queue-button');
+                    if (queueButton) {
+                        queueButton.click();
+                        return true;
+                    }
+                }
+                
+                // Strategy 5: Last resort - try to navigate to any playlist with matching ID parts
+                console.log('Last resort: trying partial ID match navigation...');
+                if (playlistId.length > 3) {
+                    const url = '/playlist?list=' + playlistId;
+                    console.log('Attempting navigation to:', url);
+                    try {
+                        window.location.assign(url);
+                    } catch (e) {
+                        window.location.href = url;
+                    }
                     return true;
                 }
+                
+                console.log('Could not navigate to playlist:', playlistId);
+                return false;
+            } catch (error) {
+                console.error('Error in navigateToPlaylist:', error);
+                return false;
             }
-            
-            // Strategy 4: Navigate to common special playlists
-            if (playlistId === 'LM' || playlistId.toLowerCase().includes('liked')) {
-                window.location.href = '/library/liked_music';
-                return true;
-            } else if (playlistId.toLowerCase().includes('history')) {
-                window.location.href = '/library/history';
-                return true;
-            } else if (playlistId.toLowerCase().includes('queue')) {
-                // Try to open the queue/up next
-                const queueButton = document.querySelector('[aria-label*="Queue"], [title*="Queue"], #player-queue-button');
-                if (queueButton) {
-                    queueButton.click();
-                    return true;
-                }
-            }
-            
-            console.log('Could not navigate to playlist:', playlistId);
-            return false;
         }
     };
 
