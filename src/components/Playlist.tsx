@@ -5,76 +5,87 @@ import { controls, playerState$ } from "@/components/YouTubeMusicPlayer";
 import { cn } from "@/utils/cn";
 
 export function Playlist() {
-    const playerState = use$(playerState$);
-    const playlist = playerState.playlist;
-    const currentTrackIndex = playerState.currentTrackIndex;
-    const clickedTrackIndex$ = useObservable<number | null>(null);
-    const clickedTrackIndex = use$(clickedTrackIndex$);
+	const playerState = use$(playerState$);
+	const playlist = playerState.playlist;
+	const currentTrackIndex = playerState.currentTrackIndex;
+	const clickedTrackIndex$ = useObservable<number | null>(null);
+	const clickedTrackIndex = use$(clickedTrackIndex$);
 
-    const handleTrackClick = (index: number) => {
-        clickedTrackIndex$.set(index);
-        controls.playTrackAtIndex(index);
+	const handleTrackClick = (index: number) => {
+		clickedTrackIndex$.set(index);
+		controls.playTrackAtIndex(index);
 
-        // Clear the clicked state after a short delay
-        setTimeout(() => {
-            clickedTrackIndex$.set(null);
-        }, 1000);
-    };
+		// Clear the clicked state after a short delay
+		setTimeout(() => {
+			clickedTrackIndex$.set(null);
+		}, 1000);
+	};
 
-    return (
-        <View className="flex-1 mt-4">
-            {playlist.length === 0 ? (
-                <View className="flex-1 items-center justify-center">
-                    <Text className="text-white/60 text-base">
-                        {playerState.isLoading ? "Loading playlist..." : "No playlist available"}
-                    </Text>
-                    <Text className="text-white/40 text-sm mt-2">Navigate to YouTube Music and play a song</Text>
-                </View>
-            ) : (
-                <ScrollView showsVerticalScrollIndicator={false}>
-                    {playlist.map((track, index) => (
-                        <TouchableOpacity
-                            key={index}
-                            className={cn(
-                                "flex-row items-center px-4 py-2",
-                                index === currentTrackIndex
-                                    ? "bg-white/10"
-                                    : clickedTrackIndex === index
-                                      ? "bg-orange-500/20"
-                                      : "",
-                            )}
-                            onPress={() => handleTrackClick(index)}
-                        >
-                            <Text className="text-white/60 text-base w-8">{index + 1}</Text>
+	return (
+		<View className="flex-1 mt-4">
+			{playlist.length === 0 ? (
+				<View className="flex-1 items-center justify-center">
+					<Text className="text-white/60 text-base">
+						{playerState.isLoading
+							? "Loading playlist..."
+							: "No playlist available"}
+					</Text>
+					<Text className="text-white/40 text-sm mt-2">
+						Navigate to YouTube Music and play a song
+					</Text>
+				</View>
+			) : (
+				<ScrollView showsVerticalScrollIndicator={false}>
+					{playlist.map((track, index) => (
+						<TouchableOpacity
+							key={index}
+							className={cn(
+								"flex-row items-center px-4 py-2",
+								index === currentTrackIndex
+									? "bg-white/10"
+									: clickedTrackIndex === index
+										? "bg-orange-500/20"
+										: "",
+							)}
+							onPress={() => handleTrackClick(index)}
+						>
+							<Text className="text-white/60 text-base w-8">{index + 1}</Text>
 
-                            {track.thumbnail ? (
-                                <Image
-                                    source={{ uri: track.thumbnail }}
-                                    className="size-9 rounded-lg"
-                                    resizeMode="cover"
-                                />
-                            ) : (
-                                <View className="w-12 h-12 bg-white/20 rounded-lg ml-4 items-center justify-center">
-                                    <Text className="text-white text-xs">♪</Text>
-                                </View>
-                            )}
+							{track.thumbnail ? (
+								<Image
+									source={{ uri: track.thumbnail }}
+									className="size-9 rounded-lg"
+									resizeMode="cover"
+								/>
+							) : (
+								<View className="w-12 h-12 bg-white/20 rounded-lg ml-4 items-center justify-center">
+									<Text className="text-white text-xs">♪</Text>
+								</View>
+							)}
 
-                            <View className="flex-1 ml-4">
-                                <Text className="text-white text-base font-medium">{track.title}</Text>
-                                <Text className="text-white/70 text-sm">{track.artist}</Text>
-                            </View>
+							<View className="flex-1 ml-4 mr-8">
+								<Text
+									className="text-white text-sm font-medium"
+									numberOfLines={1}
+								>
+									{track.title}
+								</Text>
+								<Text className="text-white/50 text-sm" numberOfLines={1}>
+									{track.artist}
+								</Text>
+							</View>
 
-                            <Text className="text-white/60 text-base">{track.duration}</Text>
+							<Text className="text-white/60 text-base">{track.duration}</Text>
 
-                            {index === currentTrackIndex && (
-                                <View className="ml-2">
-                                    <Text className="text-orange-400 text-sm">♪</Text>
-                                </View>
-                            )}
-                        </TouchableOpacity>
-                    ))}
-                </ScrollView>
-            )}
-        </View>
-    );
+							{index === currentTrackIndex && (
+								<View className="ml-2">
+									<Text className="text-orange-400 text-sm">♪</Text>
+								</View>
+							)}
+						</TouchableOpacity>
+					))}
+				</ScrollView>
+			)}
+		</View>
+	);
 }

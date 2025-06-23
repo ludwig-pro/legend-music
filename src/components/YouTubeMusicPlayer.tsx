@@ -474,60 +474,88 @@ const injectedJavaScript = `
         playTrackAtIndex: function(index) {
             console.log('Attempting to play track at index:', index);
 
-            // Strategy 1: Try queue items first (most reliable)
-            const queueItems = document.querySelectorAll('ytmusic-player-queue-item ytmusic-play-button-renderer');
-            if (queueItems[index]) {
-                console.log('Clicking queue item at index:', index);
-                queueItems[index].click();
-                return true;
+            // Determine current context to use the same strategy as extraction
+            const url = window.location.href;
+            let detectedPlaylist = 'NOW_PLAYING';
+            
+            if (url.includes('/playlist?list=')) {
+                detectedPlaylist = url.split('/playlist?list=')[1].split('&')[0];
+            } else if (url.includes('/library/')) {
+                detectedPlaylist = url.split('/library/')[1] || 'library';
             }
 
-            // Strategy 2: Try up next items
-            const upNextItems = document.querySelectorAll('ytmusic-player-queue ytmusic-responsive-list-item-renderer');
-            if (upNextItems[index]) {
-                console.log('Clicking up next item at index:', index);
-                upNextItems[index].click();
-                return true;
-            }
+            // Use the same logic as extractPlaylistInfo to find the right items
+            let items = [];
+            let strategy = '';
 
-            // Strategy 3: Try playlist page items
-            const playlistItems = document.querySelectorAll('ytmusic-responsive-list-item-renderer');
-            if (playlistItems[index]) {
-                console.log('Clicking playlist item at index:', index);
-                // Look for play button within the item
-                const playButton = playlistItems[index].querySelector('[aria-label*="Play"], [title*="Play"], .play-button, [class*="play"]');
-                if (playButton) {
-                    playButton.click();
-                    return true;
-                } else {
-                    // Fall back to clicking the item itself
-                    playlistItems[index].click();
-                    return true;
+            // If we're in "Now Playing" context, use queue items
+            if (currentPlaylistSelection === 'NOW_PLAYING' || 
+                (detectedPlaylist === 'NOW_PLAYING' && currentPlaylistSelection === 'NOW_PLAYING')) {
+                const allQueueItems = document.querySelectorAll('ytmusic-player-queue-item');
+                const queueItems = Array.from(allQueueItems).filter(item => !item.closest('#counterpart-renderer'));
+                if (queueItems.length > 0) {
+                    items = queueItems;
+                    strategy = 'now-playing-queue';
+                    console.log('Using queue items for playback:', items.length);
+                }
+            } else {
+                // If we're viewing a specific playlist, use the same selectors as extraction
+                let playlistPageItems = document.querySelectorAll('ytmusic-playlist-shelf-renderer ytmusic-responsive-list-item-renderer');
+                if (playlistPageItems.length === 0) {
+                    playlistPageItems = document.querySelectorAll('ytmusic-shelf-renderer ytmusic-responsive-list-item-renderer');
+                }
+                if (playlistPageItems.length === 0) {
+                    playlistPageItems = document.querySelectorAll('ytmusic-responsive-list-item-renderer');
+                }
+
+                if (playlistPageItems.length > 0) {
+                    // Filter to get the same items as extraction (must match exactly)
+                    const filteredItems = Array.from(playlistPageItems).filter(item => {
+                        const titleEl = item.querySelector('.title-column .title');
+                        const artistEl = item.querySelector('.secondary-flex-columns .flex-column');
+                        const hasValidContent = titleEl && artistEl &&
+                                              titleEl.textContent?.trim() &&
+                                              artistEl.textContent?.trim();
+
+                        const isTrackItem = !item.closest('ytmusic-header-renderer') &&
+                                          !item.closest('ytmusic-nav-bar');
+
+                        return hasValidContent && isTrackItem;
+                    });
+
+                    items = filteredItems;
+                    strategy = 'playlist-tracks';
+                    console.log('Using playlist items for playback:', items.length);
                 }
             }
 
-            // Strategy 4: Try to find any clickable music items
-            const musicItems = document.querySelectorAll('[class*="music"], [class*="song"], [class*="track"]');
-            if (musicItems[index]) {
-                console.log('Clicking music item at index:', index);
-                musicItems[index].click();
-                return true;
-            }
-
-            // Strategy 5: Try to click any row-like items that might be tracks
-            const rowItems = document.querySelectorAll('ytmusic-shelf-renderer ytmusic-responsive-list-item-renderer, [role="row"], .song-row, .track-row');
-            if (rowItems[index]) {
-                console.log('Clicking row item at index:', index);
-                const playButton = rowItems[index].querySelector('[aria-label*="Play"], [title*="Play"]');
-                if (playButton) {
-                    playButton.click();
+            // Click the item at the specified index
+            if (items[index]) {
+                console.log('Clicking item at index', index, 'using strategy:', strategy);
+                
+                if (strategy === 'now-playing-queue') {
+                    // For queue items, look for play button
+                    const playButton = items[index].querySelector('ytmusic-play-button-renderer');
+                    if (playButton) {
+                        playButton.click();
+                        return true;
+                    }
                 } else {
-                    rowItems[index].click();
+                    // For playlist items, look for play button or click the item
+                    const playButton = items[index].querySelector('[aria-label*="Play"], [title*="Play"], ytmusic-play-button-renderer');
+                    if (playButton) {
+                        console.log('Found play button, clicking...');
+                        playButton.click();
+                        return true;
+                    } else {
+                        console.log('No play button found, clicking item directly...');
+                        items[index].click();
+                        return true;
+                    }
                 }
-                return true;
             }
 
-            console.log('Could not find track at index:', index);
+            console.log('Could not find track at index:', index, 'items available:', items.length);
             return false;
         },
 
