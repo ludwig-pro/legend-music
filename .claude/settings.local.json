@@ -6,7 +6,8 @@
       "Bash(bunx biome check:*)",
       "Bash(rg:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": []
   }

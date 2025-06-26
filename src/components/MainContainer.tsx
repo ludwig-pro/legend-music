@@ -1,6 +1,7 @@
 import "@/../global.css";
 import { View } from "react-native";
 
+import { LocalAudioPlayer } from "@/components/LocalAudioPlayer";
 import { PlaybackArea } from "@/components/PlaybackArea";
 import { Playlist } from "@/components/Playlist";
 import { PlaylistSelector } from "@/components/PlaylistSelector";
@@ -17,6 +18,7 @@ export function MainContainer() {
             <View className="flex-1">
                 <YouTubeMusicPlayer />
             </View>
+            <LocalAudioPlayer />
         </View>
     );
 }

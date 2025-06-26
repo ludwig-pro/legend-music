@@ -1,6 +1,7 @@
 import { use$, useObservable } from "@legendapp/state/react";
 import { Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
 
+import { localAudioControls, localPlayerState$ } from "@/components/LocalAudioPlayer";
 import { controls, playerState$ } from "@/components/YouTubeMusicPlayer";
 import { localMusicState$ } from "@/systems/LocalMusicState";
 import { cn } from "@/utils/cn";
@@ -8,6 +9,7 @@ import { cn } from "@/utils/cn";
 export function Playlist() {
 	const playerState = use$(playerState$);
 	const localMusicState = use$(localMusicState$);
+	const localPlayerState = use$(localPlayerState$);
 	const clickedTrackIndex$ = useObservable<number | null>(null);
 	const clickedTrackIndex = use$(clickedTrackIndex$);
 	
@@ -20,22 +22,25 @@ export function Playlist() {
 			duration: track.duration,
 			thumbnail: track.thumbnail || "",
 			index,
-			isPlaying: false // We'll update this when local playback is implemented
+			isPlaying: index === localPlayerState.currentIndex && localPlayerState.isPlaying
 		}))
 		: playerState.playlist;
 	
-	const currentTrackIndex = isLocalFilesSelected ? -1 : playerState.currentTrackIndex;
+	const currentTrackIndex = isLocalFilesSelected ? localPlayerState.currentIndex : playerState.currentTrackIndex;
 
 	const handleTrackClick = (index: number) => {
 		clickedTrackIndex$.set(index);
 		
 		if (isLocalFilesSelected) {
-			// Handle local file playback - we'll implement this later
+			// Handle local file playback
 			console.log("Playing local file at index:", index);
-			const track = localMusicState.tracks[index];
+			const tracks = localMusicState.tracks;
+			const track = tracks[index];
+			
 			if (track) {
 				console.log("Playing:", track.title, "by", track.artist);
-				// TODO: Implement local file playback
+				// Load the entire playlist and start playing at the selected index
+				localAudioControls.loadPlaylist(tracks, index);
 			}
 		} else {
 			// Handle YouTube Music playback

@@ -1,14 +1,32 @@
 import { use$ } from "@legendapp/state/react";
 import { Image, Text, TouchableOpacity, View } from "react-native";
 
+import { localAudioControls, localPlayerState$ } from "@/components/LocalAudioPlayer";
 import { controls, playerState$ } from "@/components/YouTubeMusicPlayer";
+import { localMusicState$ } from "@/systems/LocalMusicState";
 
 export function PlaybackArea() {
 	const playerState = use$(playerState$);
+	const localMusicState = use$(localMusicState$);
+	const localPlayerState = use$(localPlayerState$);
 
-	const currentTrack = playerState.currentTrack;
-	const isLoading = playerState.isLoading;
-	const isPlaying = playerState.isPlaying;
+	// Determine if we're using local files or YouTube Music
+	const isLocalFilesSelected = localMusicState.isLocalFilesSelected;
+	
+	// Use appropriate state based on current selection
+	const currentTrack = isLocalFilesSelected ? localPlayerState.currentTrack : playerState.currentTrack;
+	const isLoading = isLocalFilesSelected ? localPlayerState.isLoading : playerState.isLoading;
+	const isPlaying = isLocalFilesSelected ? localPlayerState.isPlaying : playerState.isPlaying;
+	const currentTime = isLocalFilesSelected ? 
+		formatTime(localPlayerState.currentTime) : 
+		playerState.currentTime;
+	
+	// Format time for local playback
+	function formatTime(seconds: number): string {
+		const mins = Math.floor(seconds / 60);
+		const secs = Math.floor(seconds % 60);
+		return `${mins}:${secs.toString().padStart(2, '0')}`;
+	}
 
 	return (
 		<View className="mx-6 mt-8">
@@ -36,7 +54,7 @@ export function PlaybackArea() {
 					</Text>
 					{currentTrack && (
 						<Text className="text-white/50 text-sm mt-1">
-							{playerState.currentTime}
+							{currentTime}
 						</Text>
 					)}
 				</View>
@@ -45,7 +63,7 @@ export function PlaybackArea() {
 				<View className="flex-row items-center gap-x-1 ml-4">
 					<TouchableOpacity
 						className="w-8 h-8 bg-white/20 rounded-full items-center justify-center"
-						onPress={controls.previous}
+						onPress={isLocalFilesSelected ? localAudioControls.playPrevious : controls.previous}
 						disabled={isLoading}
 					>
 						<Text className="text-white text-sm">⏮</Text>
@@ -53,7 +71,7 @@ export function PlaybackArea() {
 
 					<TouchableOpacity
 						className="w-8 h-8 bg-white/30 rounded-full items-center justify-center"
-						onPress={controls.playPause}
+						onPress={isLocalFilesSelected ? localAudioControls.togglePlayPause : controls.playPause}
 						disabled={isLoading}
 					>
 						<Text className="text-white text-base">
@@ -63,7 +81,7 @@ export function PlaybackArea() {
 
 					<TouchableOpacity
 						className="w-8 h-8 bg-white/20 rounded-full items-center justify-center"
-						onPress={controls.next}
+						onPress={isLocalFilesSelected ? localAudioControls.playNext : controls.next}
 						disabled={isLoading}
 					>
 						<Text className="text-white text-sm">⏭</Text>
