@@ -7,18 +7,41 @@ import {
 	playerState$,
 	type YTMusicPlaylist,
 } from "@/components/YouTubeMusicPlayer";
+import { localMusicState$, setCurrentPlaylist } from "@/systems/LocalMusicState";
 
 export function PlaylistSelector() {
 	const playerState = use$(playerState$);
+	const localMusicState = use$(localMusicState$);
 	const selectedPlaylist$ = useObservable<YTMusicPlaylist>(undefined);
 	const selectedPlaylist = use$(selectedPlaylist$);
 
-	const availablePlaylists = playerState.availablePlaylists;
+	// Create local files playlist
+	const localFilesPlaylist: YTMusicPlaylist = {
+		id: "LOCAL_FILES",
+		title: "Local Files",
+		thumbnail: "",
+		trackCount: localMusicState.tracks.length,
+		creator: "Local Library",
+	};
+
+	// Combine YouTube Music playlists with local files
+	const availablePlaylists = [
+		localFilesPlaylist,
+		...playerState.availablePlaylists,
+	];
 
 	const handlePlaylistSelect = (playlist: YTMusicPlaylist) => {
 		console.log("Navigating to playlist:", playlist.id);
 		selectedPlaylist$.set(playlist);
-		controls.navigateToPlaylist(playlist.id);
+		setCurrentPlaylist(playlist.id);
+		
+		if (playlist.id === "LOCAL_FILES") {
+			// Handle local files selection
+			console.log("Selected local files playlist");
+		} else {
+			// Handle YouTube Music playlists
+			controls.navigateToPlaylist(playlist.id);
+		}
 	};
 
 	return (

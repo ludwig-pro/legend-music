@@ -2,18 +2,45 @@ import { use$, useObservable } from "@legendapp/state/react";
 import { Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
 
 import { controls, playerState$ } from "@/components/YouTubeMusicPlayer";
+import { localMusicState$ } from "@/systems/LocalMusicState";
 import { cn } from "@/utils/cn";
 
 export function Playlist() {
 	const playerState = use$(playerState$);
-	const playlist = playerState.playlist;
-	const currentTrackIndex = playerState.currentTrackIndex;
+	const localMusicState = use$(localMusicState$);
 	const clickedTrackIndex$ = useObservable<number | null>(null);
 	const clickedTrackIndex = use$(clickedTrackIndex$);
+	
+	// Determine which playlist to show
+	const isLocalFilesSelected = localMusicState.isLocalFilesSelected;
+	const playlist = isLocalFilesSelected 
+		? localMusicState.tracks.map((track, index) => ({
+			title: track.title,
+			artist: track.artist,
+			duration: track.duration,
+			thumbnail: track.thumbnail || "",
+			index,
+			isPlaying: false // We'll update this when local playback is implemented
+		}))
+		: playerState.playlist;
+	
+	const currentTrackIndex = isLocalFilesSelected ? -1 : playerState.currentTrackIndex;
 
 	const handleTrackClick = (index: number) => {
 		clickedTrackIndex$.set(index);
-		controls.playTrackAtIndex(index);
+		
+		if (isLocalFilesSelected) {
+			// Handle local file playback - we'll implement this later
+			console.log("Playing local file at index:", index);
+			const track = localMusicState.tracks[index];
+			if (track) {
+				console.log("Playing:", track.title, "by", track.artist);
+				// TODO: Implement local file playback
+			}
+		} else {
+			// Handle YouTube Music playback
+			controls.playTrackAtIndex(index);
+		}
 
 		// Clear the clicked state after a short delay
 		setTimeout(() => {
@@ -26,12 +53,20 @@ export function Playlist() {
 			{playlist.length === 0 ? (
 				<View className="flex-1 items-center justify-center">
 					<Text className="text-white/60 text-base">
-						{playerState.isLoading
-							? "Loading playlist..."
-							: "No playlist available"}
+						{isLocalFilesSelected
+							? localMusicState.isScanning
+								? `Scanning... ${localMusicState.scanProgress}/${localMusicState.scanTotal}`
+								: localMusicState.error
+									? "Error scanning local files"
+									: "No local MP3 files found"
+							: playerState.isLoading
+								? "Loading playlist..."
+								: "No playlist available"}
 					</Text>
 					<Text className="text-white/40 text-sm mt-2">
-						Navigate to YouTube Music and play a song
+						{isLocalFilesSelected
+							? "Add MP3 files to /Users/jay/Downloads/mp3"
+							: "Navigate to YouTube Music and play a song"}
 					</Text>
 				</View>
 			) : (

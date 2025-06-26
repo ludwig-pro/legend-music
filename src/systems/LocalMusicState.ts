@@ -25,6 +25,8 @@ export interface LocalMusicState {
     scanProgress: number;
     scanTotal: number;
     error: string | null;
+    currentPlaylistId: string | null;
+    isLocalFilesSelected: boolean;
 }
 
 // Settings persistence
@@ -44,6 +46,8 @@ export const localMusicState$ = observable<LocalMusicState>({
     scanProgress: 0,
     scanTotal: 0,
     error: null,
+    currentPlaylistId: null,
+    isLocalFilesSelected: false,
 });
 
 // Extract metadata from filename
@@ -162,6 +166,12 @@ export async function scanLocalMusic(): Promise<void> {
     } finally {
         localMusicState$.isScanning.set(false);
     }
+}
+
+// Set current playlist selection
+export function setCurrentPlaylist(playlistId: string): void {
+    localMusicState$.currentPlaylistId.set(playlistId);
+    localMusicState$.isLocalFilesSelected.set(playlistId === "LOCAL_FILES");
 }
 
 // Initialize and scan on app start
