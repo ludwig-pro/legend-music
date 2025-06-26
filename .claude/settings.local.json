@@ -4,7 +4,8 @@
       "Bash(mv:*)",
       "Bash(bun run lint:*)",
       "Bash(bunx biome check:*)",
-      "Bash(rg:*)"
+      "Bash(rg:*)",
+      "Bash(git add:*)"
     ],
     "deny": []
   }

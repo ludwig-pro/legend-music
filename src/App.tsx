@@ -6,9 +6,11 @@ import { LogBox, StyleSheet, View } from "react-native";
 import { MainContainer } from "@/components/MainContainer";
 import { SettingsWindowManager } from "@/settings/SettingsWindowManager";
 import { initializeMenuManager } from "@/systems/MenuManager";
+import { initializeLocalMusic } from "@/systems/LocalMusicState";
 import { ThemeProvider } from "./theme/ThemeProvider";
 
 initializeMenuManager();
+initializeLocalMusic();
 
 LogBox.ignoreLogs(["Open debugger", "unknown error"]);
 
