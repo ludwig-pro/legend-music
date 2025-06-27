@@ -2,6 +2,7 @@ import { observable } from "@legendapp/state";
 import { Directory, File } from "expo-file-system/next";
 
 import { createJSONManager } from "@/utils/JSONManager";
+import { stateSaved$ } from "@/systems/State";
 
 export interface LocalTrack {
 	id: string;
@@ -189,11 +190,21 @@ export async function scanLocalMusic(): Promise<void> {
 export function setCurrentPlaylist(playlistId: string): void {
 	localMusicState$.currentPlaylistId.set(playlistId);
 	localMusicState$.isLocalFilesSelected.set(playlistId === "LOCAL_FILES");
+	
+	// Save current playlist to persistent state
+	stateSaved$.playlist.set(playlistId);
 }
 
 // Initialize and scan on app start
 export function initializeLocalMusic(): void {
 	const settings = localMusicSettings$.get();
+
+	// Restore saved playlist selection
+	const savedPlaylist = stateSaved$.playlist.get();
+	if (savedPlaylist) {
+		console.log("Restoring saved playlist:", savedPlaylist);
+		setCurrentPlaylist(savedPlaylist);
+	}
 
 	if (settings.autoScanOnStart) {
 		console.log("Auto-scanning local music on startup...");

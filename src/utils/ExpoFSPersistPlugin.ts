@@ -23,7 +23,7 @@ export interface ExpoFSPersistPluginOptions {
 	 */
 	basePath?: "Cache";
 
-	format: "json" | "msgpack";
+	format: "json" | "msgpack" | "m3u";
 
 	/**
 	 * Preload all tables on startup. Can be true to load all, or an array of table names
@@ -47,7 +47,7 @@ class ObservablePersistExpoFS implements ObservablePersistPlugin {
 				: FileSystemNext.Paths.cache,
 			"LegendMusic",
 		);
-		this.extension = configuration.format === "json" ? "json" : "lgh";
+		this.extension = configuration.format === "json" ? "json" : configuration.format === "m3u" ? "m3u" : "lgh";
 		console.log("directory", this.directory);
 	}
 
@@ -85,6 +85,9 @@ class ObservablePersistExpoFS implements ObservablePersistPlugin {
 			const content = file.text();
 			const parsed = safeParse(content);
 			return parsed;
+		} else if (this.configuration.format === "m3u") {
+			// For M3U format, just return the plain text content
+			return file.text();
 		}
 		const content = file.bytes();
 		return packer.unpack(content);
@@ -178,10 +181,15 @@ class ObservablePersistExpoFS implements ObservablePersistPlugin {
 		this.ensureDirectoryExists(file.parentDirectory);
 
 		if (v !== undefined && v !== null) {
-			const out =
-				this.configuration.format === "json"
-					? safeStringify(v)
-					: packer.pack(v);
+			let out: string | Uint8Array;
+			if (this.configuration.format === "json") {
+				out = safeStringify(v);
+			} else if (this.configuration.format === "m3u") {
+				// For M3U format, expect the value to already be a string
+				out = typeof v === "string" ? v : String(v);
+			} else {
+				out = packer.pack(v);
+			}
 			return file.write(out);
 		}
 

@@ -9,8 +9,10 @@
 
 ## Steps
 
-[x] The vertical line in the slider should animate from the center
-[x] It currently says "Loading playlists" when the app opens until youtube music loads. But if we have cached playlists, show them immediately.
+[x] When adding playlists from ytm, add an "order" along with them so they can be sorted correctly.
+[x] When YoutubeMusicPlayer receives the "playerState" message it should update the observable received by getPlaylistContent
+[x] ObservablePersistExpoFS needs a format "m3u" which just reads and writes plain text files with an extension "m3u"
+[x] Save the current playlist to stateSaved$ from State.ts
 
 ## Plan for later (do not do these yet)
 

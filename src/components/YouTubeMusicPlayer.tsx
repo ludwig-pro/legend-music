@@ -10,6 +10,8 @@ import {
 	type Playlist,
 	updatePlaylist,
 } from "@/systems/Playlists";
+import { getPlaylistContent } from "@/systems/PlaylistContent";
+import type { M3UTrack } from "@/utils/m3u";
 
 interface Track {
 	title: string;
@@ -867,6 +869,33 @@ const syncYouTubeMusicPlaylists = (ytmPlaylists: YTMusicPlaylist[]) => {
 	}
 };
 
+// Function to update playlist content (M3U format) when tracks are received
+const updatePlaylistContent = (playlistId: string | undefined, tracks: PlaylistTrack[]) => {
+	if (!playlistId || tracks.length === 0) {
+		return;
+	}
+
+	try {
+		// Convert YouTube Music tracks to M3U format
+		const m3uTracks: M3UTrack[] = tracks.map(track => ({
+			duration: -1, // YouTube Music doesn't provide duration in seconds
+			title: track.title,
+			artist: track.artist,
+			filePath: track.id ? `ytm://${track.id}` : `ytm://search/${encodeURIComponent(track.title)}`,
+		}));
+
+		// Get the playlist content observable and update it
+		const playlistContent$ = getPlaylistContent(playlistId);
+		playlistContent$.set({
+			tracks: m3uTracks,
+		});
+
+		console.log(`Updated playlist content for ${playlistId} with ${m3uTracks.length} tracks`);
+	} catch (error) {
+		console.error(`Failed to update playlist content for ${playlistId}:`, error);
+	}
+};
+
 // Expose control methods
 const controls = {
 	playPause: () => executeCommand("playPause"),
@@ -920,6 +949,11 @@ export function YouTubeMusicPlayer() {
 						Array.isArray(newState.availablePlaylists)
 					) {
 						syncYouTubeMusicPlaylists(newState.availablePlaylists);
+					}
+
+					// Update playlist content (M3U format) when tracks are received
+					if (newState.playlist && Array.isArray(newState.playlist)) {
+						updatePlaylistContent(newState.currentPlaylistId, newState.playlist);
 					}
 					break;
 				}

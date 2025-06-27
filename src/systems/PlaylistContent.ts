@@ -53,7 +53,7 @@ export function getPlaylistContent(playlistPath: string): Observable<M3UPlaylist
 			persist: {
 				name: `playlist_${cacheKey}`,
 				plugin: observablePersistExpoFS({
-					format: "json", // Store as JSON internally, transform handles M3U
+					format: "m3u", // Store directly as M3U format
 					preload: [`playlist_${cacheKey}`],
 					saveTimeout: 500,
 				}),
