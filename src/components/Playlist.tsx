@@ -116,12 +116,6 @@ export function Playlist() {
 							</View>
 
 							<Text className="text-white/60 text-base">{track.duration}</Text>
-
-							{index === currentTrackIndex && (
-								<View className="ml-2">
-									<Text className="text-orange-400 text-sm">♪</Text>
-								</View>
-							)}
 						</TouchableOpacity>
 					))}
 				</ScrollView>
