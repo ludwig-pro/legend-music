@@ -9,10 +9,8 @@
 
 ## Steps
 
-[x] The circle in the custom slider should only appear when the slider is hovered. And it should be a vertical line that animates its height from 1px to 3px.
-[x] DropdownMenu should have a prop for the content to have a maxwidth of the side of the trigger, and PlaylistSelector should use that
-[x] Change Playlists to be an object keyed by id rather than an array
-[x] Change the youtube music player to save and load its playlists using the functions in Playlists.ts
+[] The vertical line in the slider should animate from the center
+[] It currently says "Loading playlists" when the app opens until youtube music loads. But if we have cached playlists, show them immediately.
 
 ## Plan for later (do not do these yet)
 

@@ -21,16 +21,11 @@ export const playlistsData$ = createJSONManager<PlaylistsData>({
 });
 
 // Add a new playlist
-export function addPlaylist(playlist: Omit<Playlist, "id">): Playlist {
-	const id = `playlist_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-	const newPlaylist: Playlist = {
-		...playlist,
-		id,
-	};
-	
-	playlistsData$.playlists[id].set(newPlaylist);
-	
-	return newPlaylist;
+export function addPlaylist(playlist: Playlist): Playlist {
+	const { id } = playlist;
+	playlistsData$.playlists[id].set(playlist);
+
+	return playlist;
 }
 
 // Remove a playlist

@@ -1,9 +1,14 @@
+import { batch } from "@legendapp/state";
 import { useObservable } from "@legendapp/state/react";
 import React, { useEffect, useRef } from "react";
 import { View } from "react-native";
 import { WebView } from "react-native-webview";
-
-import { addPlaylist, getAllPlaylists, getPlaylist, updatePlaylist } from "@/systems/Playlists";
+import {
+	addPlaylist,
+	getAllPlaylists,
+	getPlaylist,
+	updatePlaylist,
+} from "@/systems/Playlists";
 
 interface Track {
 	title: string;
@@ -120,16 +125,16 @@ const injectedJavaScript = `
 
                     // Only include if it has a valid playlist link and appears to be a playlist
                     const hasPlaylistLink = linkEl && linkEl.getAttribute('href')?.includes('playlist?list=');
-                    const isPlaylistType = subtitle.toLowerCase().includes('playlist') || 
+                    const isPlaylistType = subtitle.toLowerCase().includes('playlist') ||
                                          subtitle.toLowerCase().includes('songs') ||
                                          subtitle.toLowerCase().includes('tracks');
-                    
+
                     // Exclude albums, artists, and other non-playlist content
                     const isNotPlaylist = subtitle.toLowerCase().includes('album') ||
                                         subtitle.toLowerCase().includes('artist') ||
                                         subtitle.toLowerCase().includes('ep') ||
                                         subtitle.toLowerCase().includes('single');
-                    
+
                     if (title && hasPlaylistLink && isPlaylistType && !isNotPlaylist) {
                         playlists.push({
                             id: playlistId,
@@ -151,8 +156,8 @@ const injectedJavaScript = `
                 creator: ''
             });
 
-            const hasLikedMusic = playlists.some(p => 
-                p.id === 'LM' || 
+            const hasLikedMusic = playlists.some(p =>
+                p.id === 'LM' ||
                 p.title.toLowerCase().includes('liked music') ||
                 p.title.toLowerCase() === 'liked music'
             );
@@ -168,8 +173,8 @@ const injectedJavaScript = `
 
             // Remove duplicates based on ID or title
             const uniquePlaylists = playlists.filter((playlist, index, self) =>
-                index === self.findIndex(p => 
-                    p.id === playlist.id || 
+                index === self.findIndex(p =>
+                    p.id === playlist.id ||
                     p.title.toLowerCase() === playlist.title.toLowerCase()
                 )
             );
@@ -500,7 +505,7 @@ const injectedJavaScript = `
             // Determine current context to use the same strategy as extraction
             const url = window.location.href;
             let detectedPlaylist = 'NOW_PLAYING';
-            
+
             if (url.includes('/playlist?list=')) {
                 detectedPlaylist = url.split('/playlist?list=')[1].split('&')[0];
             } else if (url.includes('/library/')) {
@@ -512,7 +517,7 @@ const injectedJavaScript = `
             let strategy = '';
 
             // If we're in "Now Playing" context, use queue items
-            if (currentPlaylistSelection === 'NOW_PLAYING' || 
+            if (currentPlaylistSelection === 'NOW_PLAYING' ||
                 (detectedPlaylist === 'NOW_PLAYING' && currentPlaylistSelection === 'NOW_PLAYING')) {
                 const allQueueItems = document.querySelectorAll('ytmusic-player-queue-item');
                 const queueItems = Array.from(allQueueItems).filter(item => !item.closest('#counterpart-renderer'));
@@ -555,7 +560,7 @@ const injectedJavaScript = `
             // Click the item at the specified index
             if (items[index]) {
                 console.log('Clicking item at index', index, 'using strategy:', strategy);
-                
+
                 if (strategy === 'now-playing-queue') {
                     // For queue items, look for play button
                     const playButton = items[index].querySelector('ytmusic-play-button-renderer');
@@ -836,28 +841,30 @@ const executeCommand = (command: string, ...args: any[]) => {
 // Function to sync YouTube Music playlists with our persistent storage
 const syncYouTubeMusicPlaylists = (ytmPlaylists: YTMusicPlaylist[]) => {
 	try {
-		for (const ytmPlaylist of ytmPlaylists) {
-			const existingPlaylist = getPlaylist(ytmPlaylist.id);
-			
-			if (existingPlaylist) {
-				// Update existing playlist with latest info
-				updatePlaylist(ytmPlaylist.id, {
-					name: ytmPlaylist.title,
-					count: ytmPlaylist.trackCount || 0,
-					// Don't update path for YTM playlists as they're web-based
-				});
-			} else {
-				// Add new YouTube Music playlist
-				addPlaylist({
-					id: ytmPlaylist.id,
-					name: ytmPlaylist.title,
-					path: `https://music.youtube.com/playlist?list=${ytmPlaylist.id}`,
-					count: ytmPlaylist.trackCount || 0,
-					type: "ytm",
-				});
+		batch(() => {
+			for (const ytmPlaylist of ytmPlaylists) {
+				const existingPlaylist = getPlaylist(ytmPlaylist.id);
+
+				if (existingPlaylist) {
+					// Update existing playlist with latest info
+					updatePlaylist(ytmPlaylist.id, {
+						name: ytmPlaylist.title,
+						count: ytmPlaylist.trackCount || 0,
+						// Don't update path for YTM playlists as they're web-based
+					});
+				} else {
+					// Add new YouTube Music playlist
+					addPlaylist({
+						id: ytmPlaylist.id,
+						name: ytmPlaylist.title,
+						path: `https://music.youtube.com/playlist?list=${ytmPlaylist.id}`,
+						count: ytmPlaylist.trackCount || 0,
+						type: "ytm",
+					});
+				}
 			}
-		}
-		
+		});
+
 		console.log(`Synced ${ytmPlaylists.length} YouTube Music playlists`);
 	} catch (error) {
 		console.error("Failed to sync YouTube Music playlists:", error);
@@ -894,21 +901,23 @@ export function YouTubeMusicPlayer() {
 	useEffect(() => {
 		try {
 			const allPlaylists = getAllPlaylists();
-			const ytmPlaylists = allPlaylists.filter(p => p.type === "ytm");
-			
+			const ytmPlaylists = allPlaylists.filter((p) => p.type === "ytm");
+
 			// Convert to YTMusicPlaylist format for playerState
-			const formattedPlaylists: YTMusicPlaylist[] = ytmPlaylists.map(p => ({
+			const formattedPlaylists: YTMusicPlaylist[] = ytmPlaylists.map((p) => ({
 				id: p.id,
 				title: p.name,
 				trackCount: p.count,
 				thumbnail: "", // Will be updated when available from web interface
 				creator: "YouTube Music",
 			}));
-			
+
 			// Pre-populate availablePlaylists with persisted data
 			if (formattedPlaylists.length > 0) {
 				playerState$.availablePlaylists.set(formattedPlaylists);
-				console.log(`Loaded ${formattedPlaylists.length} persisted YouTube Music playlists`);
+				console.log(
+					`Loaded ${formattedPlaylists.length} persisted YouTube Music playlists`,
+				);
 			}
 		} catch (error) {
 			console.error("Failed to load persisted playlists:", error);
@@ -922,15 +931,19 @@ export function YouTubeMusicPlayer() {
 			console.log({ message });
 
 			switch (message.type) {
-				case "playerState":
+				case "playerState": {
 					const newState = message.data;
 					playerState$.assign(newState);
-					
+
 					// Sync YouTube Music playlists when they're updated
-					if (newState.availablePlaylists && Array.isArray(newState.availablePlaylists)) {
+					if (
+						newState.availablePlaylists &&
+						Array.isArray(newState.availablePlaylists)
+					) {
 						syncYouTubeMusicPlaylists(newState.availablePlaylists);
 					}
 					break;
+				}
 				case "error":
 					playerState$.error.set(message.data.error);
 					playerState$.isLoading.set(false);
