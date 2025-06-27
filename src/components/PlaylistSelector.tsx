@@ -1,4 +1,5 @@
 import { use$, useObservable } from "@legendapp/state/react";
+import { useEffect } from "react";
 import { Text, View } from "react-native";
 
 import { Select } from "@/components/Select";
@@ -12,9 +13,7 @@ import { localMusicState$, setCurrentPlaylist } from "@/systems/LocalMusicState"
 export function PlaylistSelector() {
 	const playerState = use$(playerState$);
 	const localMusicState = use$(localMusicState$);
-	const selectedPlaylist$ = useObservable<YTMusicPlaylist>(undefined);
-	const selectedPlaylist = use$(selectedPlaylist$);
-
+	
 	// Create local files playlist
 	const localFilesPlaylist: YTMusicPlaylist = {
 		id: "LOCAL_FILES",
@@ -29,6 +28,17 @@ export function PlaylistSelector() {
 		localFilesPlaylist,
 		...playerState.availablePlaylists,
 	];
+	
+	// Find currently selected playlist based on currentPlaylistId
+	const currentPlaylistId = localMusicState.currentPlaylistId;
+	const selectedPlaylist = availablePlaylists.find(playlist => playlist.id === currentPlaylistId);
+	
+	const selectedPlaylist$ = useObservable<YTMusicPlaylist>(selectedPlaylist || undefined);
+	
+	// Keep selectedPlaylist$ in sync with currentPlaylistId changes
+	useEffect(() => {
+		selectedPlaylist$.set(selectedPlaylist || undefined);
+	}, [selectedPlaylist]);
 
 	const handlePlaylistSelect = (playlist: YTMusicPlaylist) => {
 		console.log("Navigating to playlist:", playlist.id);
