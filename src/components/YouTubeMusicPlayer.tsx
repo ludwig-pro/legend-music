@@ -66,18 +66,9 @@ const injectedJavaScript = `
                         playlistId = href.split('library/')[1] || 'library';
                     }
 
-                    // Only include items with actual playlist URLs or specific library items
-                    const isValidPlaylist = href.includes('playlist?list=') || 
-                                          href.includes('library/playlists') ||
-                                          title === 'Liked Music';
-                    
-                    // Exclude common non-playlist items
-                    const excludedItems = [
-                        'Home', 'Explore', 'Library', 'Recently Played', 'Your Mixtape',
-                        'Mixed for you', 'Discover Mix', 'Your supermix', 'My Mix', 'Replay Mix'
-                    ];
-                    
-                    if (title && isValidPlaylist && !excludedItems.includes(title)) {
+                    // Include ALL sidebar items - no filtering
+                    // Everything in the sidebar should be available to the user
+                    if (title) {
                         playlists.push({
                             id: playlistId,
                             title: title,
@@ -158,7 +149,11 @@ const injectedJavaScript = `
                 creator: ''
             });
 
-            const hasLikedMusic = playlists.some(p => p.id === 'LM' || p.title.toLowerCase().includes('liked'));
+            const hasLikedMusic = playlists.some(p => 
+                p.id === 'LM' || 
+                p.title.toLowerCase().includes('liked music') ||
+                p.title.toLowerCase() === 'liked music'
+            );
             if (!hasLikedMusic) {
                 playlists.push({
                     id: 'LM',
@@ -169,9 +164,12 @@ const injectedJavaScript = `
                 });
             }
 
-            // Remove duplicates based on ID
+            // Remove duplicates based on ID or title
             const uniquePlaylists = playlists.filter((playlist, index, self) =>
-                index === self.findIndex(p => p.id === playlist.id)
+                index === self.findIndex(p => 
+                    p.id === playlist.id || 
+                    p.title.toLowerCase() === playlist.title.toLowerCase()
+                )
             );
 
             console.log('Found playlists:', uniquePlaylists.length, uniquePlaylists.map(p => p.title));
