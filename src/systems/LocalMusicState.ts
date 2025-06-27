@@ -100,7 +100,15 @@ async function scanDirectory(directoryPath: string): Promise<LocalTrack[]> {
 
 		for (const item of items) {
 			if (item instanceof File && item.name.toLowerCase().endsWith(".mp3")) {
-				const filePath = `${directoryPath}/${item.name}`;
+				// Decode the filename for the file path
+				let decodedFileName = item.name;
+				try {
+					decodedFileName = decodeURIComponent(item.name);
+				} catch (error) {
+					console.warn(`Failed to decode filename: ${item.name}`, error);
+				}
+				
+				const filePath = `${directoryPath}/${decodedFileName}`;
 				const { title, artist } = parseFilename(item.name);
 
 				const track: LocalTrack = {
