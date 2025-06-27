@@ -253,8 +253,8 @@ const injectedJavaScript = `
                 // For specific playlists, separate songs from suggestions
                 console.log('Looking for playlist tracks and suggestions...');
 
-                // First, find the main playlist content
-                const playlistShelf = document.querySelector('ytmusic-playlist-shelf-renderer');
+                // First, find the main playlist content (actual playlist tracks)
+                const playlistShelf = document.querySelector('ytmusic-playlist-shelf-renderer[is-playlist-detail-page]');
                 if (playlistShelf) {
                     const playlistTracks = playlistShelf.querySelectorAll('ytmusic-responsive-list-item-renderer');
                     console.log('Found main playlist tracks:', playlistTracks.length);
@@ -300,54 +300,59 @@ const injectedJavaScript = `
                     });
                 }
 
-                // Look for suggestions sections
-                const suggestionShelves = document.querySelectorAll('ytmusic-shelf-renderer');
-                suggestionShelves.forEach(shelf => {
-                    const header = shelf.querySelector('ytmusic-shelf-header h2, .header .title');
+                // Look for suggestion carousels (these contain recommended tracks)
+                const suggestionCarousels = document.querySelectorAll('ytmusic-carousel-shelf-renderer');
+                console.log('Found suggestion carousels:', suggestionCarousels.length);
+                
+                suggestionCarousels.forEach(carousel => {
+                    // Get the header to identify the section type
+                    const header = carousel.querySelector('ytmusic-carousel-shelf-basic-header-renderer yt-formatted-string[role="heading"]');
                     const headerText = header?.textContent?.toLowerCase() || '';
                     
-                    // Check if this is likely a suggestions section
-                    if (headerText.includes('recommended') || 
-                        headerText.includes('suggestions') || 
-                        headerText.includes('more like') ||
-                        headerText.includes('similar') ||
-                        headerText.includes('you might') ||
-                        headerText.includes('related')) {
+                    console.log('Processing carousel section:', headerText);
+                    
+                    // Look for tracks in this carousel section
+                    const carouselTracks = carousel.querySelectorAll('ytmusic-responsive-list-item-renderer, ytmusic-two-row-item-renderer');
+                    carouselTracks.forEach((item, index) => {
+                        let titleEl, artistEl, durationEl;
                         
-                        console.log('Found suggestions section:', headerText);
+                        // Handle different track item types in carousels
+                        if (item.tagName.toLowerCase() === 'ytmusic-responsive-list-item-renderer') {
+                            titleEl = item.querySelector('.title-column .title, .flex-columns .title');
+                            artistEl = item.querySelector('.secondary-flex-columns .flex-column, .flex-columns .subtitle');
+                            durationEl = item.querySelector('.fixed-column, .duration');
+                        } else if (item.tagName.toLowerCase() === 'ytmusic-two-row-item-renderer') {
+                            titleEl = item.querySelector('.title-group .title a, .title-group .title');
+                            artistEl = item.querySelector('.subtitle-group .subtitle, .byline');
+                            durationEl = null; // Two-row items usually don't show duration
+                        }
                         
-                        const suggestionTracks = shelf.querySelectorAll('ytmusic-responsive-list-item-renderer');
-                        suggestionTracks.forEach((item, index) => {
-                            const titleEl = item.querySelector('.title-group .title, .title');
-                            const artistEl = item.querySelector('.subtitle-group .subtitle, .byline, .subtitle');
-                            const durationEl = item.querySelector('.duration, [class*="duration"], .time');
-                            const thumbnailEl = item.querySelector('img');
+                        const thumbnailEl = item.querySelector('img');
 
-                            if (titleEl && artistEl) {
-                                let title = titleEl.textContent?.trim() || '';
-                                let artist = artistEl.textContent?.trim() || '';
-                                const duration = durationEl?.textContent?.trim() || '';
+                        if (titleEl && artistEl) {
+                            let title = titleEl.textContent?.trim() || '';
+                            let artist = artistEl.textContent?.trim() || '';
+                            const duration = durationEl?.textContent?.trim() || '';
 
-                                // Clean up artist text
-                                if (artist.includes('•')) {
-                                    artist = artist.split('•')[0].trim();
-                                }
-
-                                if (title && artist && title !== artist) {
-                                    const track = {
-                                        title: title,
-                                        artist: artist,
-                                        duration: duration,
-                                        thumbnail: thumbnailEl?.src || '',
-                                        index: songs.length + suggestions.length,
-                                        isPlaying: false // Suggestions are typically not playing
-                                    };
-
-                                    suggestions.push(track);
-                                }
+                            // Clean up artist text
+                            if (artist.includes('•')) {
+                                artist = artist.split('•')[0].trim();
                             }
-                        });
-                    }
+
+                            if (title && artist && title !== artist) {
+                                const track = {
+                                    title: title,
+                                    artist: artist,
+                                    duration: duration,
+                                    thumbnail: thumbnailEl?.src || '',
+                                    index: songs.length + suggestions.length,
+                                    isPlaying: false // Suggestions are not currently playing
+                                };
+
+                                suggestions.push(track);
+                            }
+                        }
+                    });
                 });
 
                 // Fallback: if no playlist shelf found, try general selectors
