@@ -53,7 +53,15 @@ export const localMusicState$ = observable<LocalMusicState>({
 // Extract metadata from filename
 function parseFilename(fileName: string): { title: string; artist: string } {
 	// Remove extension
-	const name = fileName.replace(/\.mp3$/i, "");
+	let name = fileName.replace(/\.mp3$/i, "");
+	
+	// Decode URL-encoded characters (like %20 for spaces)
+	try {
+		name = decodeURIComponent(name);
+	} catch (error) {
+		// If decoding fails, use the original name
+		console.warn(`Failed to decode filename: ${fileName}`, error);
+	}
 
 	// Try to parse "Artist - Title" format
 	if (name.includes(" - ")) {
