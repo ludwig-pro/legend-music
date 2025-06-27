@@ -63,9 +63,9 @@ export function PlaylistSelector() {
 	};
 
 	return (
-		<View className="mx-6 mb-3 bg-white/5 rounded-lg border border-white/10 flex-1">
+		<View className="flex-1">
 			{/* Title bar area for playlist */}
-			<View className="px-4 py-3 border-b border-white/10">
+			<View className="px-3 py-1 border-t border-white/10">
 				<Select
 					items={availablePlaylists}
 					selected$={selectedPlaylist$}
@@ -95,9 +95,9 @@ export function PlaylistSelector() {
 					caretClassName="text-white/70 hover:text-white"
 				/>
 			</View>
-			
+
 			{/* Playlist content */}
-			<View className="flex-1 px-2 pb-2">
+			<View className="flex-1">
 				<Playlist />
 			</View>
 		</View>

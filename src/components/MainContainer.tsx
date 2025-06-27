@@ -13,10 +13,6 @@ export function MainContainer() {
 		<View className="flex-1 flex-row items-stretch">
 			<View className="flex-1">
 				<PlaybackArea />
-				
-				{/* Divider between now playing and playlist areas */}
-				<View className="h-px bg-white/10 mx-6 my-4" />
-				
 				<PlaylistSelector />
 			</View>
 			<View className={ShowYTM ? "flex-1" : "absolute -z-10 inset-0 hidden"}>
