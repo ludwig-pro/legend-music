@@ -1,5 +1,6 @@
 import { batch, observable } from "@legendapp/state";
-import React, { useEffect, useRef } from "react";
+import { use$ } from "@legendapp/state/react";
+import React, { useEffect, useMemo, useRef } from "react";
 import { View } from "react-native";
 import { WebView } from "react-native-webview";
 import { getPlaylistContent } from "@/systems/PlaylistContent";
@@ -1111,6 +1112,8 @@ const updatePlaylistContent = (
     }
 };
 
+const url$ = observable("https://music.youtube.com");
+
 // Expose control methods
 const controls = {
     playPause: () => executeCommand("playPause"),
@@ -1124,7 +1127,7 @@ const controls = {
         const playlist = getPlaylist(playlistId);
         console.log("navigateToPlaylist", playlist);
         if (playlist?.type === "ytm" && playlist.index !== undefined) {
-            executeCommand("navigateToPlaylistByIndex", playlist.index);
+            url$.set(`https://music.youtube.com/playlist?list=${playlistId.replace(/^VL/, "")}`);
         } else {
             executeCommand("navigateToPlaylist", playlistId);
         }
@@ -1185,11 +1188,13 @@ export function YouTubeMusicPlayer() {
         }
     };
 
+    const src = use$(url$);
+
     return (
         <View className="flex-1">
             <WebView
                 ref={localWebViewRef}
-                source={{ uri: "https://music.youtube.com" }}
+                source={{ uri: src }}
                 javaScriptEnabled={true}
                 webviewDebuggingEnabled
                 domStorageEnabled={true}
@@ -1207,7 +1212,7 @@ export function YouTubeMusicPlayer() {
                     playerState$.error.set(`WebView error: ${error.nativeEvent.description}`);
                     playerState$.isLoading.set(false);
                 }}
-                userAgent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:123.0) LegendMusic/1.0 Gecko/20100101 Firefox/123.0"
+                userAgent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36"
                 className="flex-1"
             />
         </View>
