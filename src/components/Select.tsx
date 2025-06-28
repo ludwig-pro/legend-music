@@ -1,7 +1,8 @@
+import { LegendList } from "@legendapp/list";
 import type { Observable, ObservableParam } from "@legendapp/state";
 import { use$, useObservable } from "@legendapp/state/react";
 import type { ReactNode } from "react";
-import { Text } from "react-native";
+import { Text, View } from "react-native";
 
 import { DropdownMenu } from "@/components/DropdownMenu";
 import { WithCheckbox } from "@/components/WithCheckbox";
@@ -17,8 +18,13 @@ export interface SelectPropsBase<T> {
     unstyled?: boolean;
     withCheckbox?: boolean;
     getItemKey: (item: NoInfer<T>) => string;
-    renderItem: (item: NoInfer<T>) => ReactNode;
+    renderItem: (item: NoInfer<T>, mode: "item" | "preview") => ReactNode;
     renderItemText?: (item: NoInfer<T>) => string;
+    showCaret?: boolean;
+    caretPosition?: "right" | "left";
+    textClassName?: string;
+    caretClassName?: string;
+    maxWidthMatchTrigger?: boolean;
 }
 
 export interface SelectProps<T> extends SelectPropsBase<T> {
@@ -69,6 +75,11 @@ export function SelectMultiple<T>({
     unstyled = false,
     withCheckbox,
     onSelectItem,
+    showCaret = false,
+    caretPosition = "right",
+    textClassName,
+    caretClassName,
+    maxWidthMatchTrigger = false,
 }: SelectMultipleProps<T>) {
     const selectedItems = use$<T[]>(selectedItems$);
 
@@ -87,23 +98,23 @@ export function SelectMultiple<T>({
     const renderWithCheckbox = (item: T) => {
         const arr = selectedItems$.get() || [];
         const checked = !!arr.find((it) => equals(item, it));
-        return <WithCheckbox checked={checked}>{renderItem(item)}</WithCheckbox>;
+        return <WithCheckbox checked={checked}>{renderItem(item, "item")}</WithCheckbox>;
     };
 
-    const renderItems = () => {
-        return items.map((item) => (
-            <DropdownMenu.Item key={getItemKey(item)} onSelect={() => handleSelectItem(item)}>
-                {withCheckbox ? renderWithCheckbox(item) : renderItem(item)}
-            </DropdownMenu.Item>
-        ));
-    };
+    const renderListItem = ({ item }: { item: T }) => (
+        <DropdownMenu.Item key={getItemKey(item)} onSelect={() => handleSelectItem(item)}>
+            {withCheckbox ? renderWithCheckbox(item) : renderItem(item, "item")}
+        </DropdownMenu.Item>
+    );
 
     const selectedCount = selectedItems$.length;
     const displayText =
         selectedCount > 1
             ? (renderItemText ? selectedItems.map(renderItemText) : selectedItems).join(", ")
             : selectedCount > 0
-              ? renderItem(selectedItems[0])
+              ? renderItemText
+                  ? renderItemText(selectedItems[0])
+                  : renderItem(selectedItems[0], "preview")
               : placeholder;
 
     return (
@@ -114,11 +125,41 @@ export function SelectMultiple<T>({
                         "bg-background-secondary hover:bg-background-tertiary rounded-md flex-row justify-between items-center overflow-hidden border border-border-primary h-8 px-2",
                     triggerClassName,
                 )}
+                unstyled={unstyled}
+                showCaret={showCaret}
+                caretPosition={caretPosition}
+                textClassName={textClassName}
+                caretClassName={caretClassName}
             >
-                <Text className="text-text-secondary text-xs">{displayText}</Text>
+                <Text
+                    className={cn(
+                        !unstyled
+                            ? "text-text-secondary text-xs"
+                            : "text-white/70 group-hover:text-white text-base font-medium",
+                        textClassName,
+                    )}
+                >
+                    {displayText}
+                </Text>
             </DropdownMenu.Trigger>
-            <DropdownMenu.Content className={className} maxHeightClassName="max-h-96">
-                {renderItems()}
+            <DropdownMenu.Content
+                className={className}
+                maxHeightClassName="max-h-96"
+                scrolls={false}
+                maxWidthMatchTrigger={maxWidthMatchTrigger}
+            >
+                <View style={{ maxHeight: 384 }}>
+                    <LegendList
+                        data={items}
+                        keyExtractor={getItemKey}
+                        renderItem={renderListItem}
+                        contentContainerStyle={{ padding: 4 }}
+                        style={{
+                            width: maxWidthMatchTrigger ? "100%" : 400,
+                            height: "100%",
+                        }}
+                    />
+                </View>
             </DropdownMenu.Content>
         </DropdownMenu.Root>
     );

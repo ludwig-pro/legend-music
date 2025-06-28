@@ -1,39 +1,44 @@
-import { useObservable } from "@legendapp/state/react";
-import React, { useRef } from "react";
+import { batch, observable } from "@legendapp/state";
+import React, { useEffect, useRef } from "react";
 import { View } from "react-native";
 import { WebView } from "react-native-webview";
+import { getPlaylistContent } from "@/systems/PlaylistContent";
+import { getAllPlaylists, getPlaylist, type Playlist, playlistsData$ } from "@/systems/Playlists";
+import { stateSaved$ } from "@/systems/State";
+import { arrayToObject } from "@/utils/arrayToObject";
+import type { M3UTrack } from "@/utils/m3u";
+import { parseDurationToSeconds } from "@/utils/m3u";
 
 interface Track {
-	title: string;
-	artist: string;
-	duration: string;
-	thumbnail: string;
-	id?: string;
+    title: string;
+    artist: string;
+    duration: string;
+    thumbnail: string;
+    id?: string;
 }
 
 interface PlaylistTrack extends Track {
-	isPlaying?: boolean;
-	index: number;
+    isPlaying?: boolean;
+    index: number;
 }
 
-interface YTMusicPlaylist {
-	id: string;
-	title: string;
-	thumbnail?: string;
-	trackCount?: number;
-	creator?: string;
+interface YTMusicPlaylist extends Playlist {
+    thumbnail?: string;
+    creator?: string;
 }
 
 interface PlayerState {
-	isPlaying: boolean;
-	currentTrack: Track | null;
-	currentTime: string;
-	isLoading: boolean;
-	error: string | null;
-	playlist: PlaylistTrack[];
-	currentTrackIndex: number;
-	availablePlaylists: YTMusicPlaylist[];
-	currentPlaylistId?: string;
+    isPlaying: boolean;
+    currentTrack: Track | null;
+    currentTime: string;
+    isLoading: boolean;
+    error: string | null;
+    playlist: PlaylistTrack[];
+    songs?: PlaylistTrack[];
+    suggestions?: PlaylistTrack[];
+    currentTrackIndex: number;
+    availablePlaylists: YTMusicPlaylist[];
+    currentPlaylistId?: string;
 }
 
 const injectedJavaScript = `
@@ -44,121 +49,162 @@ const injectedJavaScript = `
         try {
             const playlists = [];
 
-            // Strategy 1: Extract playlists from sidebar guide entries
-            const sidebarPlaylists = document.querySelectorAll('ytmusic-guide-entry-renderer[play-button-state="default"]');
+            // Strategy 1: Extract playlists from script tags containing JSON data
+            const scriptTags = document.querySelectorAll('script');
+            let guideData = null;
 
-            sidebarPlaylists.forEach((element, index) => {
-                const titleEl = element.querySelector('.title-column .title-group .title');
-                const creatorEl = element.querySelector('.title-column .subtitle-group .subtitle');
-                const thumbnailEl = element.querySelector('img');
-                const linkEl = element.querySelector('tp-yt-paper-item[href]');
+            for (const script of scriptTags) {
+                const scriptContent = script.textContent || script.innerHTML;
 
-                if (titleEl) {
-                    const title = titleEl.textContent?.trim() || '';
-                    const creator = creatorEl?.textContent?.trim() || '';
-                    const href = linkEl?.getAttribute('href') || '';
+                // Look for the initialData structure that YouTube Music actually uses
+                if (scriptContent.includes('const initialData') && scriptContent.includes('guideEntryRenderer')) {
+                    try {
+                        // Extract the initialData.push calls and find guide data
+                        const pushMatches = scriptContent.matchAll(/initialData\\.push\\(\\{path:\\s*'([^']+)',\\s*params:\\s*JSON\\.parse\\('([^']+)'\\),\\s*data:\\s*'([^']+)'\\}\\);/g);
+                        const pushMatchesArr = pushMatches?.toArray() || [];
 
-                    // Extract playlist ID from href (e.g., "playlist?list=PLnWuRxn_At6...")
-                    let playlistId = 'sidebar_' + index;
-                    if (href.includes('playlist?list=')) {
-                        playlistId = href.split('playlist?list=')[1].split('&')[0];
-                    } else if (href.includes('library/')) {
-                        playlistId = href.split('library/')[1] || 'library';
-                    }
+                        for (const match of pushMatchesArr) {
+                            const path = match[1];
+                            const dataString = match[3];
 
-                    if (title && title !== 'Home' && title !== 'Explore' && title !== 'Library') {
-                        playlists.push({
-                            id: playlistId,
-                            title: title,
-                            thumbnail: thumbnailEl?.src || '',
-                            trackCount: 0,
-                            creator: creator
-                        });
+                            // Look for guide data (sidebar navigation)
+                            if (path.includes('guide')) {
+                                // Decode the escaped JSON string
+                                const decodedData = dataString.replace(/\\\\x([0-9A-Fa-f]{2})/g, (match, hex) => String.fromCharCode(parseInt(hex, 16)));
+                                try {
+                                    const parsedData = JSON.parse(decodedData);
+                                    guideData = parsedData;
+                                    console.log('Found guide data in initialData', parsedData);
+                                    break;
+                                } catch {}
+                            }
+                        }
+                    } catch (e) {
+                        console.log('Failed to parse initialData from script tag:', e);
+                        continue;
                     }
                 }
-            });
+            }
 
-            // Strategy 2: Extract playlists from main library grid
-            const gridPlaylists = document.querySelectorAll('ytmusic-two-row-item-renderer');
+            // Extract playlists from guideData if found
+            if (guideData) {
+                console.log('Processing guide data for playlists...');
+                const results = [];
 
-            gridPlaylists.forEach((element, index) => {
-                const titleEl = element.querySelector('.title-group .title a, .title-group .title');
-                const thumbnailEl = element.querySelector('ytmusic-thumbnail-renderer img');
-                const subtitleEl = element.querySelector('.substring-group .subtitle');
-                const linkEl = element.querySelector('a[href*="playlist?list="]');
+                function findGuideEntryRenderers(obj, path = '', visitedIds = new Set()) {
+                    if (!obj || typeof obj !== 'object') return [];
 
-                if (titleEl) {
-                    const title = titleEl.textContent?.trim() || '';
-                    const subtitle = subtitleEl?.textContent?.trim() || '';
 
-                    // Extract playlist ID from href
-                    let playlistId = 'grid_' + index;
-                    if (linkEl) {
-                        const href = linkEl.getAttribute('href') || '';
-                        if (href.includes('playlist?list=')) {
-                            playlistId = href.split('playlist?list=')[1].split('&')[0];
+                    // Check if current object is a guideEntryRenderer
+                    if (obj.guideEntryRenderer) {
+                        const renderer = obj.guideEntryRenderer;
+
+                        // Extract playlist information
+                        if (renderer.navigationEndpoint?.browseEndpoint?.browseId && renderer.formattedTitle) {
+                            const browseId = renderer.navigationEndpoint.browseEndpoint.browseId;
+
+                            if (!browseId || !browseId.startsWith('VL')) {
+                                return [];
+                            }
+
+                            // Skip if we've already processed this browseId
+                            if (visitedIds.has(browseId)) {
+                                return [];
+                            }
+                            visitedIds.add(browseId);
+
+                            let title = '';
+
+                            // Extract title from various possible structures
+                            if (typeof renderer.formattedTitle === 'string') {
+                                title = renderer.formattedTitle;
+                            } else if (renderer.formattedTitle?.simpleText) {
+                                title = renderer.formattedTitle.simpleText;
+                            } else if (renderer.formattedTitle?.runs) {
+                                title = renderer.formattedTitle.runs.map(r => r.text).join('');
+                            }
+
+                            // Extract thumbnail if available
+                            let thumbnail = '';
+                            if (renderer.icon?.iconType || renderer.thumbnail?.thumbnails) {
+                                const thumbnails = renderer.thumbnail?.thumbnails;
+                                if (thumbnails && thumbnails.length > 0) {
+                                    thumbnail = thumbnails[thumbnails.length - 1].url; // Get highest quality
+                                }
+                            }
+
+                            // Determine playlist type and extract count if available
+                            let count = 0;
+                            let creator = '';
+
+                            if (renderer.formattedSubtitle) {
+                                let subtitleText = '';
+                                if (typeof renderer.formattedSubtitle === 'string') {
+                                    subtitleText = renderer.formattedSubtitle;
+                                } else if (renderer.formattedSubtitle?.simpleText) {
+                                    subtitleText = renderer.formattedSubtitle.simpleText;
+                                } else if (renderer.formattedSubtitle?.runs) {
+                                    subtitleText = renderer.formattedSubtitle.runs.map(r => r.text).join('');
+                                }
+
+                                // Extract count from subtitle
+                                const countMatch = subtitleText.match(/(\\d+)\\s+(songs?|tracks?)/i);
+                                if (countMatch) {
+                                    count = parseInt(countMatch[1]) || 0;
+                                }
+
+                                // Extract creator (everything before count usually)
+                                creator = subtitleText.replace(/\\s*•\\s*\\d+\\s+(songs?|tracks?).*$/i, '').trim();
+                            }
+
+                            if (title && browseId) {
+                                results.push({
+                                    id: browseId,
+                                    name: title,
+                                    thumbnail: thumbnail,
+                                    count: count,
+                                    creator: creator,
+                                    index: results.length
+                                });
+                            }
                         }
                     }
 
-                    // Extract track count from subtitle (e.g., "Playlist • Creator • 25 songs")
-                    let trackCount = 0;
-                    const trackMatch = subtitle.match(/(\d+)\s+(songs?|tracks?)/i);
-                    if (trackMatch) {
-                        trackCount = parseInt(trackMatch[1]) || 0;
-                    }
-
-                    // Extract creator from subtitle
-                    let creator = '';
-                    const creatorEl = subtitleEl?.querySelector('a[href*="channel/"]');
-                    if (creatorEl) {
-                        creator = creatorEl.textContent?.trim() || '';
-                    }
-
-                    if (title) {
-                        playlists.push({
-                            id: playlistId,
-                            title: title,
-                            thumbnail: thumbnailEl?.src || '',
-                            trackCount: trackCount,
-                            creator: creator
-                        });
+                    // Recursively search through all properties
+                    for (const key in obj) {
+                        if (obj.hasOwnProperty(key) && typeof obj[key] === 'object') {
+                            findGuideEntryRenderers(obj[key], path + '.' + key, visitedIds);
+                        }
                     }
                 }
-            });
 
-            // Strategy 3: Add "Now Playing" at the top and Liked Music if not found
+                findGuideEntryRenderers(guideData);
+                playlists.push(...results);
+                console.log('Found', results.length, 'playlists from guide data');
+            }
+
+
+            // Strategy 4: Add "Now Playing" at the top
             playlists.unshift({
                 id: 'NOW_PLAYING',
-                title: 'Now Playing',
+                name: 'Now Playing',
                 thumbnail: '',
-                trackCount: 0,
+                count: 0,
                 creator: ''
             });
 
-            const hasLikedMusic = playlists.some(p => p.id === 'LM' || p.title.toLowerCase().includes('liked'));
-            if (!hasLikedMusic) {
-                playlists.push({
-                    id: 'LM',
-                    title: 'Liked Music',
-                    thumbnail: 'https://www.gstatic.com/youtube/media/ytm/images/pbg/liked-music-@576.png',
-                    trackCount: 0,
-                    creator: ''
-                });
-            }
-
-            // Remove duplicates based on ID
-            const uniquePlaylists = playlists.filter((playlist, index, self) =>
-                index === self.findIndex(p => p.id === playlist.id)
-            );
-
-            console.log('Found playlists:', uniquePlaylists.length, uniquePlaylists.map(p => p.title));
-            return uniquePlaylists;
+            console.log('Final playlist count:', playlists.length);
+            console.log('Playlists found:', playlists.map(p => ({ id: p.id, name: p.name })));
+            return playlists;
         } catch (error) {
             console.error('Error extracting playlists:', error);
-            return [
-                { id: 'LM', title: 'Liked Music', thumbnail: '', trackCount: 0, creator: '' },
-                { id: 'history', title: 'History', thumbnail: '', trackCount: 0, creator: '' }
-            ];
+            return [{
+                id: 'NOW_PLAYING',
+                name: 'Now Playing',
+                thumbnail: '',
+                count: 0,
+                creator: ''
+            }];
         }
     }
 
@@ -167,7 +213,8 @@ const injectedJavaScript = `
 
     function extractPlaylistInfo() {
         try {
-            const playlist = [];
+            const songs = [];
+            const suggestions = [];
             let currentTrackIndex = -1;
 
             // Determine current playlist context
@@ -184,150 +231,121 @@ const injectedJavaScript = `
             console.log('Detected playlist from URL:', detectedPlaylist);
             console.log('Current playlist selection:', currentPlaylistSelection);
 
-            let items = [];
-            let strategy = '';
-
             // If we're viewing "Now Playing" or in a general context, use queue items
             if (currentPlaylistSelection === 'NOW_PLAYING' ||
                 (detectedPlaylist === 'NOW_PLAYING' && currentPlaylistSelection === 'NOW_PLAYING')) {
                 const allQueueItems = document.querySelectorAll('ytmusic-player-queue-item');
                 const queueItems = Array.from(allQueueItems).filter(item => !item.closest('#counterpart-renderer'));
                 if (queueItems.length > 0) {
-                    items = Array.from(queueItems);
-                    strategy = 'now-playing-queue';
-                    console.log('Using NOW PLAYING queue items:', items.length);
+                    console.log('Using NOW PLAYING queue items:', queueItems.length);
+
+                    queueItems.forEach((item, index) => {
+                        const titleEl = item.querySelector('.song-title, .title');
+                        const artistEl = item.querySelector('.byline a, .byline, .artist');
+                        const durationEl = item.querySelector('.duration-text, .duration');
+                        const thumbnailEl = item.querySelector('img');
+
+                        if (titleEl && artistEl) {
+                            let title = titleEl.textContent?.trim() || '';
+                            let artist = artistEl.textContent?.trim() || '';
+                            const duration = durationEl?.textContent?.trim() || '';
+
+                            // Clean up artist text
+                            if (artist.includes('•')) {
+                                artist = artist.split('•')[0].trim();
+                            }
+
+                            if (title && artist && title !== artist) {
+                                const isPlaying = item.classList.contains('playing') ||
+                                                item.getAttribute('aria-selected') === 'true' ||
+                                                item.classList.contains('selected') ||
+                                                item.querySelector('[class*="playing"]') !== null;
+
+                                const track = {
+                                    title: title,
+                                    artist: artist,
+                                    duration: duration,
+                                    thumbnail: thumbnailEl?.src || '',
+                                    index: index,
+                                    isPlaying: isPlaying
+                                };
+
+                                // For queue items, all are considered songs
+                                songs.push(track);
+
+                                if (isPlaying) {
+                                    currentTrackIndex = songs.length - 1;
+                                }
+                            }
+                        }
+                    });
                 }
             } else {
-                // If we're viewing a specific playlist, look for playlist items
-                console.log('Looking for playlist tracks on page...');
+                // For specific playlists, separate songs from suggestions
+                console.log('Looking for playlist tracks and suggestions...');
 
-                // Try multiple selectors for playlist tracks
-                let playlistPageItems = document.querySelectorAll('ytmusic-playlist-shelf-renderer ytmusic-responsive-list-item-renderer');
-                if (playlistPageItems.length === 0) {
-                    playlistPageItems = document.querySelectorAll('ytmusic-shelf-renderer ytmusic-responsive-list-item-renderer');
-                }
-                if (playlistPageItems.length === 0) {
-                    playlistPageItems = document.querySelectorAll('ytmusic-responsive-list-item-renderer');
-                }
+                // Helper function to extract tracks from a shelf
+                function extractTracksFromShelf(shelf, targetArray, arrayName) {
+                    if (!shelf) return;
 
-                console.log('Found responsive list items:', playlistPageItems.length);
+                    const tracks = shelf.querySelectorAll('ytmusic-responsive-list-item-renderer');
+                    console.log('Found ' + arrayName + ' tracks:', tracks.length);
 
-                if (playlistPageItems.length > 0) {
-                    // Filter to get items that are likely actual playlist tracks
-                    const filteredItems = Array.from(playlistPageItems).filter(item => {
-                        // Make sure it has title and artist elements
+                    tracks.forEach((item, index) => {
                         const titleEl = item.querySelector('.title-column .title');
                         const artistEl = item.querySelector('.secondary-flex-columns .flex-column');
-                        const hasValidContent = titleEl && artistEl &&
-                                              titleEl.textContent?.trim() &&
-                                              artistEl.textContent?.trim();
+                        const durationEl = item.querySelector('.fixed-column.MUSIC_RESPONSIVE_LIST_ITEM_COLUMN_DISPLAY_PRIORITY_HIGH');
+                        const thumbnailEl = item.querySelector('img');
 
-                        // Also check that it's not a header or navigation item
-                        const isTrackItem = !item.closest('ytmusic-header-renderer') &&
-                                          !item.closest('ytmusic-nav-bar');
+                        if (titleEl && artistEl) {
+                            let title = titleEl.textContent?.trim() || '';
+                            let artist = artistEl.textContent?.trim() || '';
+                            const duration = durationEl?.textContent?.trim() || '';
 
-                        return hasValidContent && isTrackItem;
-                    });
+                            // Clean up artist text
+                            if (artist.includes('•')) {
+                                artist = artist.split('•')[0].trim();
+                            }
 
-                    items = filteredItems;
-                    strategy = 'playlist-tracks';
-                    console.log('Using PLAYLIST TRACKS:', items.length, 'filtered from', playlistPageItems.length);
+                            if (title && artist && title !== artist) {
+                                const isPlaying = item.classList.contains('playing') ||
+                                                item.getAttribute('aria-selected') === 'true' ||
+                                                item.classList.contains('selected') ||
+                                                item.querySelector('[class*="playing"]') !== null;
 
-                    // Debug: log first few items
-                    if (items.length > 0) {
-                        console.log('First 3 playlist tracks:');
-                        items.slice(0, 3).forEach((item, idx) => {
-                            const titleEl = item.querySelector('.title-group .title, .title');
-                            const artistEl = item.querySelector('.subtitle-group .subtitle, .byline, .subtitle');
-                            console.log(idx + ':', titleEl?.textContent?.trim(), '-', artistEl?.textContent?.trim());
-                        });
-                    }
-                } else {
-                    console.log('No playlist tracks found, page may still be loading');
-                }
-            }
+                                const track = {
+                                    title: title,
+                                    artist: artist,
+                                    duration: duration,
+                                    thumbnail: thumbnailEl?.src || '',
+                                    index: targetArray.length, // Use target array length for proper indexing
+                                    isPlaying: isPlaying
+                                };
 
-            // Fallback strategies if nothing found
-            if (items.length === 0) {
-                // Try queue items as fallback
-                const allQueueItems = document.querySelectorAll('ytmusic-player-queue-item');
-                const queueItems = Array.from(allQueueItems).filter(item => !item.closest('#counterpart-renderer'));
-                if (queueItems.length > 0) {
-                    items = Array.from(queueItems);
-                    strategy = 'fallback-queue';
-                    console.log('Fallback to queue items:', items.length);
-                } else {
-                    // Last resort: any responsive list items
-                    const generalItems = document.querySelectorAll('ytmusic-shelf-renderer ytmusic-responsive-list-item-renderer');
-                    if (generalItems.length > 0) {
-                        items = Array.from(generalItems).slice(0, 20);
-                        strategy = 'fallback-general';
-                        console.log('Fallback to general items:', items.length);
-                    }
-                }
-            }
+                                targetArray.push(track);
 
-            // Process ALL items from the single selected source
-            items.forEach((item, index) => {
-                let titleEl, artistEl, durationEl;
-
-                if (strategy === 'now-playing-queue' || strategy === 'fallback-queue') {
-                    // More specific selectors for queue items
-                    titleEl = item.querySelector('.song-title, .title');
-                    artistEl = item.querySelector('.byline a, .byline, .artist');
-                    durationEl = item.querySelector('.duration-text, .duration');
-                } else if (strategy === 'playlist-tracks') {
-                    // Specific selectors for playlist page tracks
-                    titleEl = item.querySelector('.title-column .title');
-                    artistEl = item.querySelector('.secondary-flex-columns .flex-column');
-                    durationEl = item.querySelector('.fixed-column.MUSIC_RESPONSIVE_LIST_ITEM_COLUMN_DISPLAY_PRIORITY_HIGH');
-                } else {
-                    // General selectors for fallback strategies
-                    titleEl = item.querySelector('.title-group .title a, .title-group .title, .title');
-                    artistEl = item.querySelector('.subtitle-group .subtitle a, .byline a, .byline, .subtitle');
-                    durationEl = item.querySelector('.duration, [class*="duration"], .time');
-                }
-
-                const thumbnailEl = item.querySelector('img');
-
-                if (titleEl && artistEl) {
-                    let title = titleEl.textContent?.trim() || '';
-                    let artist = artistEl.textContent?.trim() || '';
-                    const duration = durationEl?.textContent?.trim() || '';
-
-                    // Clean up artist text (remove extra info like "• Album • Year")
-                    if (artist.includes('•')) {
-                        artist = artist.split('•')[0].trim();
-                    }
-
-                    // Only add if not empty and title != artist
-                    if (title && artist && title !== artist) {
-                        const isPlaying = item.classList.contains('playing') ||
-                                        item.getAttribute('aria-selected') === 'true' ||
-                                        item.classList.contains('selected') ||
-                                        item.querySelector('[class*="playing"]') !== null;
-
-                        playlist.push({
-                            title: title,
-                            artist: artist,
-                            duration: duration,
-                            thumbnail: thumbnailEl?.src || '',
-                            index: index, // Use original index from the source
-                            isPlaying: isPlaying
-                        });
-
-                        if (isPlaying) {
-                            currentTrackIndex = playlist.length - 1;
+                                if (isPlaying) {
+                                    currentTrackIndex = targetArray.length - 1;
+                                }
+                            }
                         }
-                    }
+                    });
                 }
-            });
 
-            console.log('Final playlist (' + strategy + '):', playlist.length, 'items from single source');
-            return { playlist, currentTrackIndex };
+                // Extract tracks from main playlist content
+                const playlistShelf = document.querySelector('ytmusic-playlist-shelf-renderer');
+                extractTracksFromShelf(playlistShelf, songs, 'main playlist');
+
+                // Extract tracks from suggestions shelf
+                const suggestionsShelf = document.querySelector('ytmusic-shelf-renderer');
+                extractTracksFromShelf(suggestionsShelf, suggestions, 'suggestions');
+            }
+
+            console.log('Extracted playlist - Songs:', songs.length, 'Suggestions:', suggestions.length);
+            return { songs, suggestions, currentTrackIndex };
         } catch (error) {
             console.error('Error extracting playlist:', error);
-            return { playlist: [], currentTrackIndex: -1 };
+            return { songs: [], suggestions: [], currentTrackIndex: -1 };
         }
     }
 
@@ -374,7 +392,7 @@ const injectedJavaScript = `
             const duration = durationElement?.textContent?.trim() || '0:00';
 
             // Get playlist info
-            const { playlist, currentTrackIndex } = extractPlaylistInfo();
+            const { songs, suggestions, currentTrackIndex } = extractPlaylistInfo();
 
             // Get available playlists (only update occasionally to avoid performance issues)
             const availablePlaylists = extractAvailablePlaylists();
@@ -385,7 +403,7 @@ const injectedJavaScript = `
                 thumbnailUrl = thumbnailElement.src;
                 // Try to get higher quality version
                 if (thumbnailUrl.includes('=w')) {
-                    thumbnailUrl = thumbnailUrl.replace(/=w\d+-h\d+/, '=w500-h500');
+                    thumbnailUrl = thumbnailUrl.replace(/=w\\d+-h\\d+/, '=w500-h500');
                 }
             }
 
@@ -398,7 +416,8 @@ const injectedJavaScript = `
                     thumbnail: thumbnailUrl
                 },
                 currentTime,
-                playlist,
+                songs,
+                suggestions,
                 currentTrackIndex,
                 availablePlaylists,
                 currentPlaylistId: undefined, // Will be detected from current page
@@ -477,7 +496,7 @@ const injectedJavaScript = `
             // Determine current context to use the same strategy as extraction
             const url = window.location.href;
             let detectedPlaylist = 'NOW_PLAYING';
-            
+
             if (url.includes('/playlist?list=')) {
                 detectedPlaylist = url.split('/playlist?list=')[1].split('&')[0];
             } else if (url.includes('/library/')) {
@@ -489,7 +508,7 @@ const injectedJavaScript = `
             let strategy = '';
 
             // If we're in "Now Playing" context, use queue items
-            if (currentPlaylistSelection === 'NOW_PLAYING' || 
+            if (currentPlaylistSelection === 'NOW_PLAYING' ||
                 (detectedPlaylist === 'NOW_PLAYING' && currentPlaylistSelection === 'NOW_PLAYING')) {
                 const allQueueItems = document.querySelectorAll('ytmusic-player-queue-item');
                 const queueItems = Array.from(allQueueItems).filter(item => !item.closest('#counterpart-renderer'));
@@ -532,7 +551,7 @@ const injectedJavaScript = `
             // Click the item at the specified index
             if (items[index]) {
                 console.log('Clicking item at index', index, 'using strategy:', strategy);
-                
+
                 if (strategy === 'now-playing-queue') {
                     // For queue items, look for play button
                     const playButton = items[index].querySelector('ytmusic-play-button-renderer');
@@ -562,6 +581,47 @@ const injectedJavaScript = `
         setCurrentPlaylist: function(playlistId) {
             console.log('Setting current playlist to:', playlistId);
             currentPlaylistSelection = playlistId;
+        },
+
+        navigateToPlaylistByIndex: function(index) {
+            console.log('Navigating to playlist by index:', index);
+
+            try {
+                const sidebarPlaylists = document.querySelectorAll('ytmusic-guide-entry-renderer[play-button-state="default"]');
+                if (sidebarPlaylists[index]) {
+                    const linkEl = sidebarPlaylists[index].querySelector('tp-yt-paper-item[href]');
+                    if (linkEl) {
+                        console.log('Found sidebar element at index', index, 'clicking...');
+                        linkEl.click();
+
+                        // Wait for page to load and then re-extract
+                        setTimeout(function() {
+                            console.log('Re-extracting after sidebar navigation...');
+                            extractPlayerInfo();
+                        }, 2000);
+
+                        return true;
+                    } else {
+                        console.log('No clickable link found in sidebar element at index', index);
+                        // Fallback: click the entire element
+                        sidebarPlaylists[index].click();
+
+                        // Wait for page to load and then re-extract
+                        setTimeout(function() {
+                            console.log('Re-extracting after sidebar fallback navigation...');
+                            extractPlayerInfo();
+                        }, 2000);
+
+                        return true;
+                    }
+                } else {
+                    console.log('No sidebar playlist found at index:', index);
+                    return false;
+                }
+            } catch (error) {
+                console.error('Error navigating to playlist by index:', error);
+                return false;
+            }
         },
 
         navigateToPlaylist: function(playlistId) {
@@ -790,107 +850,198 @@ const injectedJavaScript = `
 })();
 `;
 
+// Load cached playlists synchronously
+const loadCachedYTMPlaylists = (): YTMusicPlaylist[] => {
+    try {
+        const allPlaylists = getAllPlaylists();
+        const ytmPlaylists = allPlaylists.filter((p) => p.type === "ytm");
+
+        return ytmPlaylists;
+    } catch (error) {
+        console.warn("Failed to load cached playlists on startup:", error);
+        return [];
+    }
+};
+
 // Create observable player state outside component for global access
-const playerState$ = useObservable<PlayerState>({
-	isPlaying: false,
-	currentTrack: null,
-	currentTime: "0:00",
-	isLoading: true,
-	error: null,
-	playlist: [],
-	currentTrackIndex: -1,
-	availablePlaylists: [],
-	currentPlaylistId: undefined,
+const playerState$ = observable<PlayerState>({
+    isPlaying: false,
+    currentTrack: null,
+    currentTime: "0:00",
+    isLoading: true,
+    error: null,
+    playlist: [],
+    currentTrackIndex: -1,
+    availablePlaylists: loadCachedYTMPlaylists(),
+    currentPlaylistId: undefined,
 });
 
 let webViewRef: React.MutableRefObject<WebView | null> | null = null;
 
 const executeCommand = (command: string, ...args: any[]) => {
-	const script = `window.ytMusicControls.${command}(${args.map((arg) => JSON.stringify(arg)).join(", ")}); true;`;
-	webViewRef?.current?.injectJavaScript(script);
+    const script = `window.ytMusicControls.${command}(${args.map((arg) => JSON.stringify(arg)).join(", ")}); true;`;
+    webViewRef?.current?.injectJavaScript(script);
+};
+
+// Function to sync YouTube Music playlists with our persistent storage
+const syncYouTubeMusicPlaylists = (ytmPlaylists: YTMusicPlaylist[]) => {
+    try {
+        batch(() => {
+            playlistsData$.playlistsYtm.set(arrayToObject(ytmPlaylists, "id"));
+        });
+
+        console.log(`Synced ${ytmPlaylists.length} YouTube Music playlists`);
+    } catch (error) {
+        console.error("Failed to sync YouTube Music playlists:", error);
+    }
+};
+
+// Function to update playlist content (M3U format) when tracks are received
+const updatePlaylistContent = (
+    playlistId: string | undefined,
+    songs: PlaylistTrack[],
+    suggestions: PlaylistTrack[] = [],
+) => {
+    if (!playlistId || (songs.length === 0 && suggestions.length === 0)) {
+        return;
+    }
+
+    try {
+        // Convert YouTube Music songs to M3U format
+        const m3uSongs: M3UTrack[] = songs.map((track) => ({
+            duration: parseDurationToSeconds(track.duration), // Parse MM:SS format to seconds
+            title: track.title,
+            artist: track.artist,
+            filePath: track.id ? `ytm://${track.id}` : `ytm://search/${encodeURIComponent(track.title)}`,
+        }));
+
+        // Convert YouTube Music suggestions to M3U format
+        const m3uSuggestions: M3UTrack[] = suggestions.map((track) => ({
+            duration: parseDurationToSeconds(track.duration), // Parse MM:SS format to seconds
+            title: track.title,
+            artist: track.artist,
+            filePath: track.id ? `ytm://${track.id}` : `ytm://search/${encodeURIComponent(track.title)}`,
+        }));
+
+        // Get the playlist content observable and update it
+        const playlistContent$ = getPlaylistContent(playlistId);
+        playlistContent$.set({
+            songs: m3uSongs,
+            suggestions: m3uSuggestions,
+        });
+
+        console.log(
+            `Updated playlist content for ${playlistId} with ${m3uSongs.length} songs and ${m3uSuggestions.length} suggestions`,
+        );
+    } catch (error) {
+        console.error(`Failed to update playlist content for ${playlistId}:`, error);
+    }
 };
 
 // Expose control methods
 const controls = {
-	playPause: () => executeCommand("playPause"),
-	next: () => executeCommand("next"),
-	previous: () => executeCommand("previous"),
-	setVolume: (volume: number) => executeCommand("setVolume", volume),
-	seek: (seconds: number) => executeCommand("seek", seconds),
-	playTrackAtIndex: (index: number) =>
-		executeCommand("playTrackAtIndex", index),
-	navigateToPlaylist: (playlistId: string) =>
-		executeCommand("navigateToPlaylist", playlistId),
-	setCurrentPlaylist: (playlistId: string) =>
-		executeCommand("setCurrentPlaylist", playlistId),
+    playPause: () => executeCommand("playPause"),
+    next: () => executeCommand("next"),
+    previous: () => executeCommand("previous"),
+    setVolume: (volume: number) => executeCommand("setVolume", volume),
+    seek: (seconds: number) => executeCommand("seek", seconds),
+    playTrackAtIndex: (index: number) => executeCommand("playTrackAtIndex", index),
+    navigateToPlaylist: (playlistId: string) => {
+        // Look up the playlist to get its index if it's a YTM playlist
+        const playlist = getPlaylist(playlistId);
+        if (playlist?.type === "ytm" && playlist.index !== undefined) {
+            executeCommand("navigateToPlaylistByIndex", playlist.index);
+        } else {
+            executeCommand("navigateToPlaylist", playlistId);
+        }
+    },
+    setCurrentPlaylist: (playlistId: string) => executeCommand("setCurrentPlaylist", playlistId),
 };
 
 export function YouTubeMusicPlayer() {
-	const localWebViewRef = useRef<WebView>(null);
+    const localWebViewRef = useRef<WebView>(null);
 
-	// Set the global ref to this instance
-	React.useEffect(() => {
-		webViewRef = localWebViewRef;
-		return () => {
-			webViewRef = null;
-		};
-	}, []);
+    // Set the global ref to this instance
+    React.useEffect(() => {
+        webViewRef = localWebViewRef;
+        return () => {
+            webViewRef = null;
+        };
+    }, []);
 
-	const handleMessage = (event: any) => {
-		try {
-			const message = JSON.parse(event.nativeEvent.data);
+    // Log cached playlists on component mount
+    useEffect(() => {
+        const cachedPlaylists = playerState$.availablePlaylists.get();
+        if (cachedPlaylists.length > 0) {
+            console.log(`Loaded ${cachedPlaylists.length} persisted YouTube Music playlists on startup`);
+        }
+    }, []);
 
-			console.log({ message });
+    const handleMessage = (event: any) => {
+        try {
+            const message = JSON.parse(event.nativeEvent.data);
 
-			switch (message.type) {
-				case "playerState":
-					playerState$.assign(message.data);
-					break;
-				case "error":
-					playerState$.error.set(message.data.error);
-					playerState$.isLoading.set(false);
-					break;
-				case "injectionComplete":
-					playerState$.isLoading.set(false);
-					break;
-			}
-		} catch (error) {
-			console.error("Failed to parse WebView message:", error);
-			playerState$.error.set("Failed to parse player message");
-		}
-	};
+            console.log({ message });
 
-	return (
-		<View className="flex-1">
-			<WebView
-				ref={localWebViewRef}
-				source={{ uri: "https://music.youtube.com" }}
-				javaScriptEnabled={true}
-				webviewDebuggingEnabled
-				domStorageEnabled={true}
-				startInLoadingState={true}
-				mixedContentMode="compatibility"
-				allowsInlineMediaPlayback={true}
-				mediaPlaybackRequiresUserAction={false}
-				injectedJavaScript={injectedJavaScript}
-				onMessage={handleMessage}
-				onLoadStart={() => playerState$.isLoading.set(true)}
-				onLoadEnd={() => {
-					// Injection will set loading to false
-				}}
-				onError={(error) => {
-					playerState$.error.set(
-						`WebView error: ${error.nativeEvent.description}`,
-					);
-					playerState$.isLoading.set(false);
-				}}
-				userAgent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:123.0) LegendMusic/1.0 Gecko/20100101 Firefox/123.0"
-				className="flex-1"
-			/>
-		</View>
-	);
+            switch (message.type) {
+                case "playerState": {
+                    const newState = message.data;
+                    playerState$.assign(newState);
+
+                    // Sync YouTube Music playlists when they're updated
+                    if (newState.availablePlaylists && Array.isArray(newState.availablePlaylists)) {
+                        syncYouTubeMusicPlaylists(newState.availablePlaylists);
+                    }
+
+                    // Update playlist content (M3U format) when tracks are received
+                    if (newState.songs && Array.isArray(newState.songs)) {
+                        updatePlaylistContent(stateSaved$.playlist.get(), newState.songs, newState.suggestions || []);
+                    }
+                    break;
+                }
+                case "error":
+                    playerState$.error.set(message.data.error);
+                    playerState$.isLoading.set(false);
+                    break;
+                case "injectionComplete":
+                    playerState$.isLoading.set(false);
+                    break;
+            }
+        } catch (error) {
+            console.error("Failed to parse WebView message:", error);
+            playerState$.error.set("Failed to parse player message");
+        }
+    };
+
+    return (
+        <View className="flex-1">
+            <WebView
+                ref={localWebViewRef}
+                source={{ uri: "https://music.youtube.com" }}
+                javaScriptEnabled={true}
+                webviewDebuggingEnabled
+                domStorageEnabled={true}
+                startInLoadingState={true}
+                mixedContentMode="compatibility"
+                allowsInlineMediaPlayback={true}
+                mediaPlaybackRequiresUserAction={false}
+                injectedJavaScript={injectedJavaScript}
+                onMessage={handleMessage}
+                onLoadStart={() => playerState$.isLoading.set(true)}
+                onLoadEnd={() => {
+                    // Injection will set loading to false
+                }}
+                onError={(error) => {
+                    playerState$.error.set(`WebView error: ${error.nativeEvent.description}`);
+                    playerState$.isLoading.set(false);
+                }}
+                userAgent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:123.0) LegendMusic/1.0 Gecko/20100101 Firefox/123.0"
+                className="flex-1"
+            />
+        </View>
+    );
 }
 
 // Export player state and controls for use in other components
-export { playerState$, controls };
-export type { Track, PlaylistTrack, PlayerState, YTMusicPlaylist };
+export { controls, playerState$ };
+export type { PlayerState, PlaylistTrack, Track, YTMusicPlaylist };

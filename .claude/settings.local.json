@@ -4,7 +4,16 @@
       "Bash(mv:*)",
       "Bash(bun run lint:*)",
       "Bash(bunx biome check:*)",
-      "Bash(rg:*)"
+      "Bash(rg:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(mkdir:*)",
+      "Bash(grep:*)",
+      "Bash(bun add:*)",
+      "Bash(rm:*)",
+      "Bash(bun remove:*)",
+      "Bash(pod install:*)",
+      "Bash(find:*)"
     ],
     "deny": []
   }

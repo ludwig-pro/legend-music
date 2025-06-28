@@ -4,7 +4,7 @@ import { use$, useObservable } from "@legendapp/state/react";
 import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useEffect, useId, useRef, useState } from "react";
 import { type LayoutChangeEvent, type LayoutRectangle, ScrollView, Text, View } from "react-native";
-
+import { Icon } from "@/systems/Icon";
 import { state$ } from "@/systems/State";
 import { cn } from "@/utils/cn";
 import { ShadowDropdown } from "@/utils/styles";
@@ -84,9 +84,23 @@ interface TriggerProps {
     children: ReactNode;
     className?: string;
     asChild?: boolean;
+    unstyled?: boolean;
+    showCaret?: boolean;
+    caretPosition?: "right" | "left";
+    textClassName?: string;
+    caretClassName?: string;
 }
 
-function Trigger({ children, className, asChild = false }: TriggerProps) {
+function Trigger({
+    children,
+    className,
+    asChild = false,
+    unstyled = false,
+    showCaret = false,
+    caretPosition = "right",
+    textClassName,
+    caretClassName,
+}: TriggerProps) {
     const { isOpen$, triggerRef } = useDropdownContext();
 
     const onLayout = useCallback((event: LayoutChangeEvent) => {
@@ -114,6 +128,23 @@ function Trigger({ children, className, asChild = false }: TriggerProps) {
         );
     }
 
+    if (unstyled || showCaret) {
+        // Custom styled trigger with optional caret
+        return (
+            <Button className={cn("flex-row items-center group", className)} onPress={onToggle} onLayout={onLayout}>
+                {caretPosition === "left" && showCaret && (
+                    <Text className={cn("text-white/70 group-hover:text-white mr-2", caretClassName)}>⌄</Text>
+                )}
+                <View className={cn("flex-1", textClassName)}>{children}</View>
+                {caretPosition === "right" && showCaret && (
+                    <Text className={cn("text-white/70 group-hover:text-white ml-2", caretClassName)}>
+                        <Icon name="chevron.up.chevron.down" size={14} />
+                    </Text>
+                )}
+            </Button>
+        );
+    }
+
     return (
         <Button className={className} onPress={onToggle} onLayout={onLayout}>
             {children}
@@ -127,9 +158,18 @@ interface ContentProps {
     className?: string;
     maxHeightClassName?: `max-h-${number}`;
     offset?: { x?: number; y?: number };
+    scrolls?: boolean;
+    maxWidthMatchTrigger?: boolean;
 }
 
-function Content({ children, className = "", maxHeightClassName, offset = { x: 0, y: 0 } }: ContentProps) {
+function Content({
+    children,
+    className = "",
+    maxHeightClassName,
+    offset = { x: 0, y: 0 },
+    scrolls = true,
+    maxWidthMatchTrigger = false,
+}: ContentProps) {
     const contextValue = useDropdownContext();
     const { isOpen$, triggerRef, close } = contextValue;
     const isOpen = use$(isOpen$);
@@ -154,6 +194,9 @@ function Content({ children, className = "", maxHeightClassName, offset = { x: 0
                     {
                         left: triggerRef.current?.x! + (offset.x || 0),
                         top: triggerRef.current?.y! + triggerRef.current?.height! + 4 + (offset.y || 0),
+                        ...(maxWidthMatchTrigger && triggerRef.current?.width
+                            ? { width: triggerRef.current.width }
+                            : {}),
                     },
                     ShadowDropdown,
                 ]}
@@ -166,14 +209,20 @@ function Content({ children, className = "", maxHeightClassName, offset = { x: 0
                             level: 0,
                         }}
                     >
-                        <ScrollView
-                            onLayout={onDropdownContentLayout}
-                            className={cn("rounded-md border border-border-popup", maxHeightClassName)}
-                            contentContainerClassName="p-1"
-                            scrollEnabled={!!maxHeightClassName}
-                        >
-                            {children}
-                        </ScrollView>
+                        {scrolls ? (
+                            <ScrollView
+                                onLayout={onDropdownContentLayout}
+                                className={cn("rounded-md border border-border-popup", maxHeightClassName)}
+                                contentContainerClassName="p-1"
+                                scrollEnabled={!!maxHeightClassName}
+                            >
+                                {children}
+                            </ScrollView>
+                        ) : (
+                            <View className={cn("rounded-md border border-border-popup", maxHeightClassName)}>
+                                {children}
+                            </View>
+                        )}
                     </SubmenuContext.Provider>
                 </DropdownContext.Provider>
             </View>

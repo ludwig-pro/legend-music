@@ -13,11 +13,14 @@
 		514201552437B4B40078DB4F /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 514201532437B4B40078DB4F /* Main.storyboard */; };
 		514201582437B4B40078DB4F /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 514201572437B4B40078DB4F /* main.m */; };
 		690D93E62DD37F08002EFC73 /* AppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = 690D93E52DD37F08002EFC73 /* AppDelegate.mm */; };
+		696BC82C2E0EFA2500FFFA66 /* WindowControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 696BC8292E0EFA2500FFFA66 /* WindowControls.swift */; };
+		696BC82D2E0EFA2500FFFA66 /* WindowControlsBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = 696BC82A2E0EFA2500FFFA66 /* WindowControlsBridge.m */; };
 		6985727C2DC7BAF000A9B92D /* MarkdownEditor.html in Resources */ = {isa = PBXBuildFile; fileRef = 6985727A2DC7BAF000A9B92D /* MarkdownEditor.html */; };
 		69D53FB72DC6653D0004AD94 /* SFSymbol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69D53FB42DC6653D0004AD94 /* SFSymbol.swift */; };
 		69D53FB82DC6653D0004AD94 /* SFSymbolBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = 69D53FB52DC6653D0004AD94 /* SFSymbolBridge.m */; };
 		69EDA80D2DC90E2E00CCB7F7 /* WindowManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 69EDA80B2DC90E2E00CCB7F7 /* WindowManager.m */; };
 		69EDA8112DC910FA00CCB7F7 /* MenuEvents.m in Sources */ = {isa = PBXBuildFile; fileRef = 69EDA80F2DC910FA00CCB7F7 /* MenuEvents.m */; };
+		A1B2C3D4E5F607801234567 /* AudioPlayer.m in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D6E5F607801234567 /* AudioPlayer.m */; };
 		BEF2DD5FAECBF3C737045F10 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = E3812CA0776629430D89D5DA /* PrivacyInfo.xcprivacy */; };
 		DD7A5E943F53F74817727672 /* libPods-LegendMusic-macOS.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D923D34EAC788A5DE1EAAF00 /* libPods-LegendMusic-macOS.a */; };
 /* End PBXBuildFile section */
@@ -35,13 +38,18 @@
 		52F3B9566C7991859BDE0DEF /* Pods-LegendMusic-macOS.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-LegendMusic-macOS.debug.xcconfig"; path = "Target Support Files/Pods-LegendMusic-macOS/Pods-LegendMusic-macOS.debug.xcconfig"; sourceTree = "<group>"; };
 		690D93E42DD37F08002EFC73 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		690D93E52DD37F08002EFC73 /* AppDelegate.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = AppDelegate.mm; sourceTree = "<group>"; };
+		696BC8292E0EFA2500FFFA66 /* WindowControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowControls.swift; sourceTree = "<group>"; };
+		696BC82A2E0EFA2500FFFA66 /* WindowControlsBridge.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WindowControlsBridge.m; sourceTree = "<group>"; };
 		6985727A2DC7BAF000A9B92D /* MarkdownEditor.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = MarkdownEditor.html; sourceTree = "<group>"; };
+		69C9C0F32E0E056300FE0F5C /* LegendMusic-macOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "LegendMusic-macOS.entitlements"; sourceTree = "<group>"; };
 		69D53FB42DC6653D0004AD94 /* SFSymbol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SFSymbol.swift; sourceTree = "<group>"; };
 		69D53FB52DC6653D0004AD94 /* SFSymbolBridge.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SFSymbolBridge.m; sourceTree = "<group>"; };
 		69EDA80A2DC90E2E00CCB7F7 /* WindowManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WindowManager.h; sourceTree = "<group>"; };
 		69EDA80B2DC90E2E00CCB7F7 /* WindowManager.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WindowManager.m; sourceTree = "<group>"; };
 		69EDA80E2DC910FA00CCB7F7 /* MenuEvents.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MenuEvents.h; sourceTree = "<group>"; };
 		69EDA80F2DC910FA00CCB7F7 /* MenuEvents.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MenuEvents.m; sourceTree = "<group>"; };
+		A1B2C3D5E5F607801234567 /* AudioPlayer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AudioPlayer.h; sourceTree = "<group>"; };
+		A1B2C3D6E5F607801234567 /* AudioPlayer.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AudioPlayer.m; sourceTree = "<group>"; };
 		D923D34EAC788A5DE1EAAF00 /* libPods-LegendMusic-macOS.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-LegendMusic-macOS.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		E3812CA0776629430D89D5DA /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
@@ -86,6 +94,7 @@
 		5142014A2437B4B30078DB4F /* LegendMusic-macOS */ = {
 			isa = PBXGroup;
 			children = (
+				69C9C0F32E0E056300FE0F5C /* LegendMusic-macOS.entitlements */,
 				690D93E42DD37F08002EFC73 /* AppDelegate.h */,
 				690D93E52DD37F08002EFC73 /* AppDelegate.mm */,
 				514201512437B4B40078DB4F /* Assets.xcassets */,
@@ -93,9 +102,11 @@
 				514201592437B4B40078DB4F /* LegendMusic.entitlements */,
 				514201572437B4B40078DB4F /* main.m */,
 				514201532437B4B40078DB4F /* Main.storyboard */,
+				A1B2C3D7E5F607801234567 /* AudioPlayer */,
 				69EDA8102DC910FA00CCB7F7 /* MenuEvents */,
 				6985727B2DC7BAF000A9B92D /* Resources */,
 				69D53FB62DC6653D0004AD94 /* SFSymbol */,
+				696BC82B2E0EFA2500FFFA66 /* WindowControls */,
 				69EDA80C2DC90E2E00CCB7F7 /* WindowManager */,
 			);
 			path = "LegendMusic-macOS";
@@ -108,6 +119,15 @@
 				1F6FF62D68604C0C2E7B146C /* Pods-LegendMusic-macOS.release.xcconfig */,
 			);
 			path = Pods;
+			sourceTree = "<group>";
+		};
+		696BC82B2E0EFA2500FFFA66 /* WindowControls */ = {
+			isa = PBXGroup;
+			children = (
+				696BC8292E0EFA2500FFFA66 /* WindowControls.swift */,
+				696BC82A2E0EFA2500FFFA66 /* WindowControlsBridge.m */,
+			);
+			path = WindowControls;
 			sourceTree = "<group>";
 		};
 		6985727B2DC7BAF000A9B92D /* Resources */ = {
@@ -175,6 +195,15 @@
 				514201492437B4B30078DB4F /* LegendMusic.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		A1B2C3D7E5F607801234567 /* AudioPlayer */ = {
+			isa = PBXGroup;
+			children = (
+				A1B2C3D5E5F607801234567 /* AudioPlayer.h */,
+				A1B2C3D6E5F607801234567 /* AudioPlayer.m */,
+			);
+			path = AudioPlayer;
 			sourceTree = "<group>";
 		};
 		B669C9BC2CE56F5EFB57A35A /* ExpoModulesProviders */ = {
@@ -425,11 +454,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				514201582437B4B40078DB4F /* main.m in Sources */,
+				A1B2C3D4E5F607801234567 /* AudioPlayer.m in Sources */,
 				69EDA8112DC910FA00CCB7F7 /* MenuEvents.m in Sources */,
 				69D53FB72DC6653D0004AD94 /* SFSymbol.swift in Sources */,
 				690D93E62DD37F08002EFC73 /* AppDelegate.mm in Sources */,
 				69EDA80D2DC90E2E00CCB7F7 /* WindowManager.m in Sources */,
 				69D53FB82DC6653D0004AD94 /* SFSymbolBridge.m in Sources */,
+				696BC82C2E0EFA2500FFFA66 /* WindowControls.swift in Sources */,
+				696BC82D2E0EFA2500FFFA66 /* WindowControlsBridge.m in Sources */,
 				1F88FA766E6115322310F4C0 /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -504,8 +536,11 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = "LegendMusic-macOS/LegendMusic-macOS.entitlements";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = NO;
+				DEVELOPMENT_TEAM = 93M3EVVYB2;
 				INFOPLIST_FILE = "LegendMusic-macos/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -532,7 +567,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = "LegendMusic-macOS/LegendMusic-macOS.entitlements";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 93M3EVVYB2;
 				INFOPLIST_FILE = "LegendMusic-macos/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -611,10 +649,7 @@
 				);
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					" ",
-				);
+				OTHER_LDFLAGS = "$(inherited)  ";
 				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DEBUG";
@@ -673,10 +708,7 @@
 					"\"$(inherited)\"",
 				);
 				MTL_ENABLE_DEBUG_INFO = NO;
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					" ",
-				);
+				OTHER_LDFLAGS = "$(inherited)  ";
 				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
 				USE_HERMES = true;
