@@ -28,23 +28,30 @@ interface YTMusicPlaylist extends Playlist {
     creator?: string;
 }
 
-interface PlayerState {
+interface PlaybackState {
     isPlaying: boolean;
     currentTrack: Track | null;
     currentTime: string;
+    currentTrackIndex: number;
     isLoading: boolean;
     error: string | null;
+}
+
+interface PlaylistState {
     songs: PlaylistTrack[];
     suggestions: PlaylistTrack[];
-    currentTrackIndex: number;
-    availablePlaylists: YTMusicPlaylist[];
     currentPlaylistId?: string;
 }
 
+interface PlaylistsState {
+    availablePlaylists: YTMusicPlaylist[];
+}
+
+// Legacy interface for compatibility during transition
+interface PlayerState extends PlaybackState, PlaylistState, PlaylistsState {}
+
 const injectedJavaScript = `
 (function() {
-    let lastState = {};
-
     // Helper functions for common operations
     function extractTextFromRenderer(renderer) {
         if (typeof renderer === 'string') {
@@ -95,7 +102,8 @@ const injectedJavaScript = `
             // Wait for page to load and then re-extract
             setTimeout(function() {
                 console.log('Re-extracting after ' + actionName + '...');
-                extractPlayerInfo();
+                extractCurrentPlaylistInfo(); // Sidebar navigation affects playlist
+                extractAvailablePlaylistsInfo(); // May also affect available playlists
             }, 2000);
             
             return true;
@@ -528,7 +536,12 @@ const injectedJavaScript = `
         }
     }
 
-    function extractPlayerInfo() {
+    // Split state extraction into separate functions for different update patterns
+    let lastPlaybackState = {};
+    let lastPlaylistState = {};
+    let lastPlaylistsState = {};
+
+    function extractPlaybackInfo() {
         try {
             // Get current track info
             const titleElement = document.querySelector('.title.style-scope.ytmusic-player-bar');
@@ -570,12 +583,6 @@ const injectedJavaScript = `
             const durationElement = document.querySelector('#right-controls .time-info');
             const duration = durationElement?.textContent?.trim() || '0:00';
 
-            // Get playlist info
-            const { songs, suggestions, currentTrackIndex } = extractPlaylistInfo();
-
-            // Get available playlists (only update occasionally to avoid performance issues)
-            const availablePlaylists = extractAvailablePlaylists();
-
             // Get the best quality thumbnail URL
             let thumbnailUrl = '';
             if (thumbnailElement?.src) {
@@ -586,7 +593,7 @@ const injectedJavaScript = `
                 }
             }
 
-            const currentState = {
+            const playbackState = {
                 isPlaying,
                 currentTrack: {
                     title: titleElement?.textContent?.trim() || '',
@@ -595,22 +602,18 @@ const injectedJavaScript = `
                     thumbnail: thumbnailUrl
                 },
                 currentTime,
-                songs,
-                suggestions,
-                currentTrackIndex,
-                availablePlaylists,
-                currentPlaylistId: undefined, // Will be detected from current page
+                currentTrackIndex: -1, // Will be set by playlist extraction
                 isLoading: false,
                 error: null
             };
 
-            // Only send update if state changed
-            if (JSON.stringify(currentState) !== JSON.stringify(lastState)) {
+            // Only send update if playback state changed
+            if (JSON.stringify(playbackState) !== JSON.stringify(lastPlaybackState)) {
                 window.ReactNativeWebView.postMessage(JSON.stringify({
                     type: 'playerState',
-                    data: currentState
+                    data: playbackState
                 }));
-                lastState = currentState;
+                lastPlaybackState = playbackState;
             }
         } catch (error) {
             window.ReactNativeWebView.postMessage(JSON.stringify({
@@ -618,6 +621,66 @@ const injectedJavaScript = `
                 data: { error: error.message }
             }));
         }
+    }
+
+    function extractCurrentPlaylistInfo() {
+        try {
+            // Get playlist info
+            const { songs, suggestions, currentTrackIndex } = extractPlaylistInfo();
+
+            const playlistState = {
+                songs,
+                suggestions,
+                currentTrackIndex,
+                currentPlaylistId: extractPlaylistIdFromUrl(window.location.href)
+            };
+
+            // Only send update if playlist state changed
+            if (JSON.stringify(playlistState) !== JSON.stringify(lastPlaylistState)) {
+                window.ReactNativeWebView.postMessage(JSON.stringify({
+                    type: 'playerState',
+                    data: playlistState
+                }));
+                lastPlaylistState = playlistState;
+            }
+        } catch (error) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+                type: 'error',
+                data: { error: error.message }
+            }));
+        }
+    }
+
+    function extractAvailablePlaylistsInfo() {
+        try {
+            // Get available playlists (only update occasionally to avoid performance issues)
+            const availablePlaylists = extractAvailablePlaylists();
+
+            const playlistsState = {
+                availablePlaylists
+            };
+
+            // Only send update if playlists state changed
+            if (JSON.stringify(playlistsState) !== JSON.stringify(lastPlaylistsState)) {
+                window.ReactNativeWebView.postMessage(JSON.stringify({
+                    type: 'playerState',
+                    data: playlistsState
+                }));
+                lastPlaylistsState = playlistsState;
+            }
+        } catch (error) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+                type: 'error',
+                data: { error: error.message }
+            }));
+        }
+    }
+
+    // Legacy function for compatibility
+    function extractPlayerInfo() {
+        extractPlaybackInfo();
+        extractCurrentPlaylistInfo();
+        // Note: Available playlists will be extracted less frequently
     }
 
     // Control functions
@@ -804,7 +867,7 @@ const injectedJavaScript = `
                     // Wait for page to load and then re-extract
                     setTimeout(function() {
                         console.log('Re-extracting after navigation...');
-                        extractPlayerInfo();
+                        extractCurrentPlaylistInfo(); // Navigation affects playlist
                     }, 2000);
 
                     return true;
@@ -912,7 +975,7 @@ const injectedJavaScript = `
             }
 
             // Re-extract playlist info after a short delay
-            setTimeout(extractPlayerInfo, 1000);
+            setTimeout(extractCurrentPlaylistInfo, 1000);
         }
     };
 
@@ -920,7 +983,9 @@ const injectedJavaScript = `
     setInterval(checkUrlChange, 500);
 
     // Initial extraction
-    extractPlayerInfo();
+    extractPlaybackInfo();
+    extractCurrentPlaylistInfo();
+    extractAvailablePlaylistsInfo();
 
     // Set up observers for dynamic content
     const observer = new MutationObserver(function(mutations) {
@@ -931,7 +996,7 @@ const injectedJavaScript = `
             }
         });
         if (shouldUpdate) {
-            setTimeout(extractPlayerInfo, 100);
+            setTimeout(extractPlaybackInfo, 100); // Mutations mainly affect playback state
         }
     });
 
@@ -946,8 +1011,10 @@ const injectedJavaScript = `
         });
     }
 
-    // Periodic updates as fallback
-    setInterval(extractPlayerInfo, 1000);
+    // Periodic updates as fallback - with different frequencies for different types
+    setInterval(extractPlaybackInfo, 500);     // Playback state changes frequently
+    setInterval(extractCurrentPlaylistInfo, 2000);  // Playlist changes less frequently  
+    setInterval(extractAvailablePlaylistsInfo, 10000); // Available playlists change rarely
 
     // Signal that injection is complete
     window.ReactNativeWebView.postMessage(JSON.stringify({
@@ -970,18 +1037,38 @@ const loadCachedYTMPlaylists = (): YTMusicPlaylist[] => {
     }
 };
 
-// Create observable player state outside component for global access
-const playerState$ = observable<PlayerState>({
+// Create separate observable states for different update patterns
+const playbackState$ = observable<PlaybackState>({
     isPlaying: false,
     currentTrack: null,
     currentTime: "0:00",
+    currentTrackIndex: -1,
     isLoading: true,
     error: null,
+});
+
+const playlistState$ = observable<PlaylistState>({
     songs: [],
     suggestions: [],
-    currentTrackIndex: -1,
-    availablePlaylists: loadCachedYTMPlaylists(),
     currentPlaylistId: undefined,
+});
+
+const playlistsState$ = observable<PlaylistsState>({
+    availablePlaylists: loadCachedYTMPlaylists(),
+});
+
+// Legacy combined state for backward compatibility
+const playerState$ = observable<PlayerState>({
+    get isPlaying() { return playbackState$.isPlaying.get(); },
+    get currentTrack() { return playbackState$.currentTrack.get(); },
+    get currentTime() { return playbackState$.currentTime.get(); },
+    get currentTrackIndex() { return playbackState$.currentTrackIndex.get(); },
+    get isLoading() { return playbackState$.isLoading.get(); },
+    get error() { return playbackState$.error.get(); },
+    get songs() { return playlistState$.songs.get(); },
+    get suggestions() { return playlistState$.suggestions.get(); },
+    get currentPlaylistId() { return playlistState$.currentPlaylistId.get(); },
+    get availablePlaylists() { return playlistsState$.availablePlaylists.get(); },
 });
 
 let webViewRef: React.MutableRefObject<WebView | null> | null = null;
@@ -1097,30 +1184,58 @@ export function YouTubeMusicPlayer() {
             switch (message.type) {
                 case "playerState": {
                     const newState = message.data;
-                    playerState$.assign(newState);
-
-                    // Sync YouTube Music playlists when they're updated
-                    if (newState.availablePlaylists && Array.isArray(newState.availablePlaylists)) {
-                        syncYouTubeMusicPlaylists(newState.availablePlaylists);
+                    
+                    // Update playback state
+                    if ('isPlaying' in newState || 'currentTrack' in newState || 'currentTime' in newState || 
+                        'currentTrackIndex' in newState || 'isLoading' in newState || 'error' in newState) {
+                        playbackState$.assign({
+                            ...(newState.isPlaying !== undefined && { isPlaying: newState.isPlaying }),
+                            ...(newState.currentTrack !== undefined && { currentTrack: newState.currentTrack }),
+                            ...(newState.currentTime !== undefined && { currentTime: newState.currentTime }),
+                            ...(newState.currentTrackIndex !== undefined && { currentTrackIndex: newState.currentTrackIndex }),
+                            ...(newState.isLoading !== undefined && { isLoading: newState.isLoading }),
+                            ...(newState.error !== undefined && { error: newState.error }),
+                        });
                     }
-
-                    // Update playlist content (M3U format) when tracks are received
-                    if (newState.songs && Array.isArray(newState.songs)) {
-                        updatePlaylistContent(stateSaved$.playlist.get(), newState.songs, newState.suggestions || []);
+                    
+                    // Update playlist state
+                    if ('songs' in newState || 'suggestions' in newState || 'currentPlaylistId' in newState) {
+                        playlistState$.assign({
+                            ...(newState.songs !== undefined && { songs: newState.songs }),
+                            ...(newState.suggestions !== undefined && { suggestions: newState.suggestions }),
+                            ...(newState.currentPlaylistId !== undefined && { currentPlaylistId: newState.currentPlaylistId }),
+                        });
+                        
+                        // Update playlist content (M3U format) when tracks are received
+                        if (newState.songs && Array.isArray(newState.songs)) {
+                            updatePlaylistContent(stateSaved$.playlist.get(), newState.songs, newState.suggestions || []);
+                        }
+                    }
+                    
+                    // Update playlists state
+                    if ('availablePlaylists' in newState) {
+                        playlistsState$.assign({
+                            availablePlaylists: newState.availablePlaylists,
+                        });
+                        
+                        // Sync YouTube Music playlists when they're updated
+                        if (newState.availablePlaylists && Array.isArray(newState.availablePlaylists)) {
+                            syncYouTubeMusicPlaylists(newState.availablePlaylists);
+                        }
                     }
                     break;
                 }
                 case "error":
-                    playerState$.error.set(message.data.error);
-                    playerState$.isLoading.set(false);
+                    playbackState$.error.set(message.data.error);
+                    playbackState$.isLoading.set(false);
                     break;
                 case "injectionComplete":
-                    playerState$.isLoading.set(false);
+                    playbackState$.isLoading.set(false);
                     break;
             }
         } catch (error) {
             console.error("Failed to parse WebView message:", error);
-            playerState$.error.set("Failed to parse player message");
+            playbackState$.error.set("Failed to parse player message");
         }
     };
 
@@ -1138,13 +1253,13 @@ export function YouTubeMusicPlayer() {
                 mediaPlaybackRequiresUserAction={false}
                 injectedJavaScript={injectedJavaScript}
                 onMessage={handleMessage}
-                onLoadStart={() => playerState$.isLoading.set(true)}
+                onLoadStart={() => playbackState$.isLoading.set(true)}
                 onLoadEnd={() => {
                     // Injection will set loading to false
                 }}
                 onError={(error) => {
-                    playerState$.error.set(`WebView error: ${error.nativeEvent.description}`);
-                    playerState$.isLoading.set(false);
+                    playbackState$.error.set(`WebView error: ${error.nativeEvent.description}`);
+                    playbackState$.isLoading.set(false);
                 }}
                 userAgent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36"
                 className="flex-1"
@@ -1154,5 +1269,5 @@ export function YouTubeMusicPlayer() {
 }
 
 // Export player state and controls for use in other components
-export { controls, playerState$ };
-export type { PlayerState, PlaylistTrack, Track, YTMusicPlaylist };
+export { controls, playerState$, playbackState$, playlistState$, playlistsState$ };
+export type { PlayerState, PlaybackState, PlaylistState, PlaylistsState, PlaylistTrack, Track, YTMusicPlaylist };

@@ -9,11 +9,12 @@
 
 ## Steps
 
-[x] Remove "playlist" from PlayerState in YoutubeMusic.tsx. Make sure that nothing is using it. Playlist.tsx should use "songs" and "suggestions" instead.
-[x] Do a refactor to reduce duplication in code in YouTubeMusicPlayer.tsx. Use good coding practices and don't break anything.
-[] Do a refactor to remove files in the Components folder that are specific to Github, Issues, etc... Those are from the project I used to bootstrap this one. If anything could be a reusable component for this music player do not remove it.
+[x] Split the playerState code in the YouTubeMusicPlayer code into three different kinds of player state, because we will want them all to update at different times. So split out the playlistsState, playlistState, and playbackState.
+[] Instead of polling for changes in youtube music on an interval, use a less intensive strategy. Use MutationObserver on the specific areas of the UI that's being watched for changes to trigger updates.
 
 ## Plan for later (do not do these yet)
 
+[] The Playlist should use the cached playlist on load.
 [] Handle media keys
 [] Make an expanded playlist view
+[] Youtube Music seems to only load track thumbnails after scrolling down
