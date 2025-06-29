@@ -1078,13 +1078,15 @@ const updatePlaylistContent = (
         return;
     }
 
+    const playlistIdForUrl = playlistId.replace(/^VL/, "");
+
     try {
         // Convert YouTube Music songs to M3U format
         const m3uSongs: M3UTrack[] = songs.map((track) => ({
             duration: parseDurationToSeconds(track.duration), // Parse MM:SS format to seconds
             title: track.title,
             artist: track.artist,
-            filePath: track.id ? `ytm://${track.id}` : `ytm://search/${encodeURIComponent(track.title)}`,
+            filePath: `https://music.youtube.com/watch?v=${track.id}&list=${playlistIdForUrl}`,
             logo: track.thumbnail, // Include thumbnail as logo
         }));
 
@@ -1093,7 +1095,7 @@ const updatePlaylistContent = (
             duration: parseDurationToSeconds(track.duration), // Parse MM:SS format to seconds
             title: track.title,
             artist: track.artist,
-            filePath: track.id ? `ytm://${track.id}` : `ytm://search/${encodeURIComponent(track.title)}`,
+            filePath: `https://music.youtube.com/watch?v=${track.id}&list=${playlistIdForUrl}`,
             logo: track.thumbnail, // Include thumbnail as logo
         }));
 
