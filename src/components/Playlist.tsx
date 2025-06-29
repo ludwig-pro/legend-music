@@ -125,7 +125,11 @@ export function Playlist() {
               if (playlistState.songs.length > 0) {
                   // Use live data
                   songs = playlistState.songs;
-                  suggestions = playlistState.suggestions;
+                  suggestions = playlistState.suggestions.map((track, index) => ({
+                      ...track,
+                      index: playlistState.songs.length + index,
+                      fromSuggestions: true,
+                  }));
               } else if (cachedPlaylistContent?.songs || cachedPlaylistContent?.suggestions) {
                   // Transform cached M3U data to PlaylistTrack format
                   songs = (cachedPlaylistContent.songs || []).map((track, index) => ({
