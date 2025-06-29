@@ -9,12 +9,11 @@
 
 ## Steps
 
-[x] Split the playerState code in the YouTubeMusicPlayer code into three different kinds of player state, because we will want them all to update at different times. So split out the playlistsState, playlistState, and playbackState.
-[x] Instead of polling for changes in youtube music on an interval, use a less intensive strategy. Use MutationObserver on the specific areas of the UI that's being watched for changes to trigger updates.
+[x] The Playlist should use the cached playlist on load. Use playlistsData$ from Playlists.ts.
+[] Remove the verbose logging in YouTubeMusicPlayer now that it's working well.
 
 ## Plan for later (do not do these yet)
 
-[] The Playlist should use the cached playlist on load.
 [] Handle media keys
 [] Make an expanded playlist view
 [] Youtube Music seems to only load track thumbnails after scrolling down

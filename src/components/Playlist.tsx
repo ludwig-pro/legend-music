@@ -5,6 +5,9 @@ import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { localAudioControls, localPlayerState$ } from "@/components/LocalAudioPlayer";
 import { controls, playbackState$, playlistState$, playlistsState$ } from "@/components/YouTubeMusicPlayer";
 import { localMusicState$ } from "@/systems/LocalMusicState";
+import { getPlaylistContent } from "@/systems/PlaylistContent";
+import { playlistsData$ } from "@/systems/Playlists";
+import { stateSaved$ } from "@/systems/State";
 import { cn } from "@/utils/cn";
 
 interface PlaylistTrack {
@@ -90,11 +93,20 @@ export function Playlist() {
     const playlistsState = use$(playlistsState$);
     const localMusicState = use$(localMusicState$);
     const localPlayerState = use$(localPlayerState$);
+    const playlistsData = use$(playlistsData$);
+    const stateSaved = use$(stateSaved$);
     const clickedTrackIndex$ = useObservable<number | null>(null);
     const clickedTrackIndex = use$(clickedTrackIndex$);
 
     // Determine which playlist to show
     const isLocalFilesSelected = localMusicState.isLocalFilesSelected;
+    
+    // Get cached playlist content for the currently selected playlist
+    const selectedPlaylistId = stateSaved.playlist;
+    const selectedPlaylist = selectedPlaylistId ? playlistsData.playlistsYtm[selectedPlaylistId] : null;
+    const cachedPlaylistContent$ = selectedPlaylist ? getPlaylistContent(selectedPlaylist.id) : null;
+    const cachedPlaylistContent = cachedPlaylistContent$ ? use$(cachedPlaylistContent$) : null;
+
     const playlist: PlaylistTrackWithSuggestions[] = isLocalFilesSelected
         ? localMusicState.tracks.map((track, index) => ({
               title: track.title,
@@ -104,28 +116,38 @@ export function Playlist() {
               index,
               isPlaying: index === localPlayerState.currentIndex && localPlayerState.isPlaying,
           }))
-        : [
-              ...playlistState.songs,
-              ...(playlistState.suggestions.length > 0
-                  ? [
-                        // Add a separator item
-                        {
-                            title: "— Suggestions —",
-                            artist: "",
-                            duration: "",
-                            thumbnail: "",
-                            index: -1,
-                            isPlaying: false,
-                            isSeparator: true,
-                        },
-                        ...playlistState.suggestions.map((track, index) => ({
-                            ...track,
-                            index: playlistState.songs.length + index,
-                            fromSuggestions: true,
-                        })),
-                    ]
-                  : []),
-          ];
+        : (() => {
+              // Use live data from YouTube Music if available, otherwise fall back to cached data
+              const songs = playlistState.songs.length > 0 
+                  ? playlistState.songs 
+                  : cachedPlaylistContent?.songs || [];
+              const suggestions = playlistState.suggestions.length > 0 
+                  ? playlistState.suggestions 
+                  : cachedPlaylistContent?.suggestions || [];
+
+              return [
+                  ...songs,
+                  ...(suggestions.length > 0
+                      ? [
+                            // Add a separator item
+                            {
+                                title: "— Suggestions —",
+                                artist: "",
+                                duration: "",
+                                thumbnail: "",
+                                index: -1,
+                                isPlaying: false,
+                                isSeparator: true,
+                            },
+                            ...suggestions.map((track, index) => ({
+                                ...track,
+                                index: songs.length + index,
+                                fromSuggestions: true,
+                            })),
+                        ]
+                      : []),
+              ];
+          })();
 
     const currentTrackIndex = isLocalFilesSelected ? localPlayerState.currentIndex : playbackState.currentTrackIndex;
 
