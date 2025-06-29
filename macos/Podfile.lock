@@ -64,6 +64,28 @@ PODS:
   - fast_float (6.1.4)
   - FBLazyVector (0.78.3)
   - fmt (11.0.2)
+  - FRNCallout (0.27.3):
+    - DoubleConversion
+    - glog
+    - hermes-engine
+    - RCT-Folly (= 2024.11.18.00)
+    - RCTRequired
+    - RCTTypeSafety
+    - React
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - Yoga
   - FRNVibrancyView (0.3.0):
     - React
   - glog (0.3.5)
@@ -1748,6 +1770,7 @@ DEPENDENCIES:
   - fast_float (from `../node_modules/react-native-macos/third-party-podspecs/fast_float.podspec`)
   - FBLazyVector (from `../node_modules/react-native-macos/Libraries/FBLazyVector`)
   - fmt (from `../node_modules/react-native-macos/third-party-podspecs/fmt.podspec`)
+  - "FRNCallout (from `../node_modules/@fluentui-react-native/callout`)"
   - "FRNVibrancyView (from `../node_modules/@fluentui-react-native/vibrancy-view`)"
   - glog (from `../node_modules/react-native-macos/third-party-podspecs/glog.podspec`)
   - hermes-engine (from `../node_modules/react-native-macos/sdks/hermes-engine/hermes-engine.podspec`)
@@ -1846,6 +1869,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-macos/Libraries/FBLazyVector"
   fmt:
     :podspec: "../node_modules/react-native-macos/third-party-podspecs/fmt.podspec"
+  FRNCallout:
+    :path: "../node_modules/@fluentui-react-native/callout"
   FRNVibrancyView:
     :path: "../node_modules/@fluentui-react-native/vibrancy-view"
   glog:
@@ -1995,6 +2020,7 @@ SPEC CHECKSUMS:
   fast_float: 44983b3bddb2d2ed3021a98be86f60ec8abc9ffd
   FBLazyVector: b61b46a4137164b884a21e2ae3e289e1ccef5700
   fmt: f6af2d677a106e3e44c9536a4c0c7f03ab53c854
+  FRNCallout: e577aacb860692b6e0a5d2c5c3797ac9875ad068
   FRNVibrancyView: 975f7e8ea14999015c3224743057418574833afa
   glog: b7594b792ee4e02ed1f44b01d046ca25fa713e3d
   hermes-engine: 2771b98fb813fdc6f92edd7c9c0035ecabf9fee7

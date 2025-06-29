@@ -1,19 +1,18 @@
-import { Portal } from "@gorhom/portal";
+import { Callout } from "@fluentui-react-native/callout";
 import type { Observable } from "@legendapp/state";
 import { use$, useObservable } from "@legendapp/state/react";
-import type { ReactNode } from "react";
+import type { Component, ReactNode } from "react";
 import { createContext, useCallback, useContext, useEffect, useId, useRef, useState } from "react";
-import { type LayoutChangeEvent, type LayoutRectangle, ScrollView, Text, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 import { Icon } from "@/systems/Icon";
 import { state$ } from "@/systems/State";
 import { cn } from "@/utils/cn";
-import { ShadowDropdown } from "@/utils/styles";
 import { Button } from "./Button";
 
 // Context for sharing dropdown state
 interface DropdownContextValue {
     isOpen$: Observable<boolean>;
-    triggerRef: { current: LayoutRectangle | null };
+    triggerRef: React.RefObject<View | null>;
     close: () => void;
     onSelect?: (value: string) => void;
     closeOnSelect?: boolean;
@@ -23,15 +22,13 @@ const DropdownContext = createContext<DropdownContextValue | null>(null);
 
 // Context for submenu state
 interface SubmenuContextValue {
-    parentPosition: LayoutRectangle | null;
-    dropdownContentRect: LayoutRectangle | null;
+    parentRef: React.RefObject<View | null> | null;
     level: number;
     submenuId?: string;
 }
 
 const SubmenuContext = createContext<SubmenuContextValue>({
-    parentPosition: null,
-    dropdownContentRect: null,
+    parentRef: null,
     level: 0,
 });
 
@@ -53,7 +50,7 @@ interface RootProps {
 
 function Root({ children, onSelect, closeOnSelect = true, onOpenChange }: RootProps) {
     const isOpen$ = useObservable(false);
-    const triggerRef = useRef<LayoutRectangle>(null);
+    const triggerRef = useRef<View>(null);
 
     const close = useCallback(() => {
         isOpen$.set(false);
@@ -103,18 +100,6 @@ function Trigger({
 }: TriggerProps) {
     const { isOpen$, triggerRef } = useDropdownContext();
 
-    const onLayout = useCallback((event: LayoutChangeEvent) => {
-        const layout = event.nativeEvent.layout;
-        event.target.measureInWindow((x, y) => {
-            triggerRef.current = {
-                x,
-                y,
-                width: layout.width,
-                height: layout.height,
-            };
-        });
-    }, []);
-
     const onToggle = useCallback(() => {
         isOpen$.toggle();
     }, []);
@@ -122,7 +107,7 @@ function Trigger({
     if (asChild) {
         // If asChild, we should not render a button, just the children
         return (
-            <View onLayout={onLayout}>
+            <View ref={triggerRef}>
                 <Button onPress={onToggle}>{children}</Button>
             </View>
         );
@@ -131,24 +116,28 @@ function Trigger({
     if (unstyled || showCaret) {
         // Custom styled trigger with optional caret
         return (
-            <Button className={cn("flex-row items-center group", className)} onPress={onToggle} onLayout={onLayout}>
-                {caretPosition === "left" && showCaret && (
-                    <Text className={cn("text-white/70 group-hover:text-white mr-2", caretClassName)}>⌄</Text>
-                )}
-                <View className={cn("flex-1", textClassName)}>{children}</View>
-                {caretPosition === "right" && showCaret && (
-                    <Text className={cn("text-white/70 group-hover:text-white ml-2", caretClassName)}>
-                        <Icon name="chevron.up.chevron.down" size={14} />
-                    </Text>
-                )}
-            </Button>
+            <View ref={triggerRef}>
+                <Button className={cn("flex-row items-center group", className)} onPress={onToggle}>
+                    {caretPosition === "left" && showCaret && (
+                        <Text className={cn("text-white/70 group-hover:text-white mr-2", caretClassName)}>⌄</Text>
+                    )}
+                    <View className={cn("flex-1", textClassName)}>{children}</View>
+                    {caretPosition === "right" && showCaret && (
+                        <Text className={cn("text-white/70 group-hover:text-white ml-2", caretClassName)}>
+                            <Icon name="chevron.up.chevron.down" size={14} />
+                        </Text>
+                    )}
+                </Button>
+            </View>
         );
     }
 
     return (
-        <Button className={className} onPress={onToggle} onLayout={onLayout}>
-            {children}
-        </Button>
+        <View ref={triggerRef}>
+            <Button className={className} onPress={onToggle}>
+                {children}
+            </Button>
+        </View>
     );
 }
 
@@ -157,76 +146,64 @@ interface ContentProps {
     children: ReactNode;
     className?: string;
     maxHeightClassName?: `max-h-${number}`;
-    offset?: { x?: number; y?: number };
     scrolls?: boolean;
-    maxWidthMatchTrigger?: boolean;
+    directionalHint?:
+        | "bottonLeftEdge"
+        | "bottomCenter"
+        | "bottomRightEdge"
+        | "topLeftEdge"
+        | "topCenter"
+        | "topRightEdge";
 }
 
 function Content({
     children,
     className = "",
     maxHeightClassName,
-    offset = { x: 0, y: 0 },
     scrolls = true,
-    maxWidthMatchTrigger = false,
+    directionalHint = "bottonLeftEdge",
 }: ContentProps) {
     const contextValue = useDropdownContext();
     const { isOpen$, triggerRef, close } = contextValue;
     const isOpen = use$(isOpen$);
-    const [dropdownContentRect, setDropdownContentRect] = useState<LayoutRectangle | null>(null);
-
-    const onDropdownContentLayout = useCallback((event: LayoutChangeEvent) => {
-        setDropdownContentRect(event.nativeEvent.layout);
-    }, []);
 
     if (!isOpen) {
         return null;
     }
 
     return (
-        <Portal>
-            <View className="absolute z-10 top-0 left-0 right-0 bottom-0">
-                <Button onPress={close} className="flex-1" />
-            </View>
-            <View
-                className={cn("absolute z-10 bg-background-secondary rounded-md", className)}
-                style={[
-                    {
-                        left: triggerRef.current?.x! + (offset.x || 0),
-                        top: triggerRef.current?.y! + triggerRef.current?.height! + 4 + (offset.y || 0),
-                        ...(maxWidthMatchTrigger && triggerRef.current?.width
-                            ? { width: triggerRef.current.width }
-                            : {}),
-                    },
-                    ShadowDropdown,
-                ]}
-            >
-                <DropdownContext.Provider value={contextValue}>
-                    <SubmenuContext.Provider
-                        value={{
-                            parentPosition: triggerRef.current,
-                            dropdownContentRect,
-                            level: 0,
-                        }}
-                    >
-                        {scrolls ? (
-                            <ScrollView
-                                onLayout={onDropdownContentLayout}
-                                className={cn("rounded-md border border-border-popup", maxHeightClassName)}
-                                contentContainerClassName="p-1"
-                                scrollEnabled={!!maxHeightClassName}
-                            >
-                                {children}
-                            </ScrollView>
-                        ) : (
-                            <View className={cn("rounded-md border border-border-popup", maxHeightClassName)}>
-                                {children}
-                            </View>
-                        )}
-                    </SubmenuContext.Provider>
-                </DropdownContext.Provider>
-            </View>
-        </Portal>
+        <Callout
+            target={triggerRef as React.RefObject<Component>}
+            onDismiss={close}
+            directionalHint={directionalHint}
+            gapSpace={4}
+            minWidth={400}
+            dismissBehaviors={["preventDismissOnKeyDown"]}
+            allowsVibrancy
+        >
+            <DropdownContext.Provider value={contextValue}>
+                <SubmenuContext.Provider
+                    value={{
+                        parentRef: triggerRef,
+                        level: 0,
+                    }}
+                >
+                    {scrolls ? (
+                        <ScrollView
+                            className={cn("rounded border border-border-popup", maxHeightClassName, className)}
+                            contentContainerClassName="p-1"
+                            scrollEnabled={!!maxHeightClassName}
+                        >
+                            {children}
+                        </ScrollView>
+                    ) : (
+                        <View className={cn("rounded border border-border-popup", maxHeightClassName, className)}>
+                            <View className="p-1">{children}</View>
+                        </View>
+                    )}
+                </SubmenuContext.Provider>
+            </DropdownContext.Provider>
+        </Callout>
     );
 }
 
@@ -346,12 +323,8 @@ function Sub({ children, className = "" }: SubProps) {
     const submenuId = useId();
     const [isOpen, setIsOpen] = useState(false);
     const activeSubmenuId = use$(state$.activeSubmenuId);
-    const { parentPosition, dropdownContentRect, level } = useContext(SubmenuContext);
-    const itemLayout = useRef<LayoutRectangle | null>(null);
-
-    const onLayout = useCallback((event: LayoutChangeEvent) => {
-        itemLayout.current = event.nativeEvent.layout;
-    }, []);
+    const { level } = useContext(SubmenuContext);
+    const subRef = useRef<View>(null);
 
     useEffect(() => {
         if (activeSubmenuId !== null && activeSubmenuId !== submenuId && isOpen) {
@@ -370,36 +343,15 @@ function Sub({ children, className = "" }: SubProps) {
         return () => unsubscribe();
     }, []);
 
-    const getSubmenuPosition = () => {
-        if (!itemLayout.current || !parentPosition || !dropdownContentRect) {
-            return null;
-        }
-
-        return {
-            left: parentPosition.x + dropdownContentRect.width + 1,
-            top: parentPosition.y + parentPosition.height + itemLayout.current.y + 4,
-        };
-    };
-
-    const submenuPosition = getSubmenuPosition();
-
     return (
         <SubmenuContext.Provider
             value={{
-                parentPosition: submenuPosition
-                    ? {
-                          x: submenuPosition.left,
-                          y: submenuPosition.top,
-                          width: itemLayout.current?.width || 0,
-                          height: itemLayout.current?.height || 0,
-                      }
-                    : null,
-                dropdownContentRect: null,
+                parentRef: subRef,
                 level: level + 1,
                 submenuId,
             }}
         >
-            <View className={className} onLayout={onLayout}>
+            <View ref={subRef} className={className}>
                 {children}
             </View>
         </SubmenuContext.Provider>
@@ -437,12 +389,24 @@ interface SubContentProps {
     children: ReactNode;
     className?: string;
     maxHeightClassName?: `max-h-${number}`;
+    directionalHint?:
+        | "rightTopEdge"
+        | "rightCenter"
+        | "rightBottomEdge"
+        | "leftTopEdge"
+        | "leftCenter"
+        | "leftBottomEdge";
 }
 
-function SubContent({ children, className = "", maxHeightClassName }: SubContentProps) {
+function SubContent({
+    children,
+    className = "",
+    maxHeightClassName,
+    directionalHint = "rightTopEdge",
+}: SubContentProps) {
     const [isOpen, setIsOpen] = useState(false);
     const activeSubmenuId = use$(state$.activeSubmenuId);
-    const { parentPosition, submenuId } = useContext(SubmenuContext);
+    const { parentRef, submenuId } = useContext(SubmenuContext);
     const contextValue = useDropdownContext();
 
     useEffect(() => {
@@ -453,34 +417,28 @@ function SubContent({ children, className = "", maxHeightClassName }: SubContent
         }
     }, [activeSubmenuId, submenuId]);
 
-    if (!isOpen || !parentPosition) {
+    if (!isOpen || !parentRef) {
         return null;
     }
 
     return (
-        <Portal>
-            <View
-                className={cn("absolute z-20 bg-background-secondary", className)}
-                style={[
-                    {
-                        left: parentPosition.x,
-                        top: parentPosition.y,
-                        minWidth: parentPosition.width,
-                    },
-                    ShadowDropdown,
-                ]}
-            >
-                <DropdownContext.Provider value={contextValue}>
-                    <ScrollView
-                        className={cn("rounded-md border border-border-popup", maxHeightClassName)}
-                        contentContainerClassName="p-1"
-                        scrollEnabled={!!maxHeightClassName}
-                    >
-                        {children}
-                    </ScrollView>
-                </DropdownContext.Provider>
-            </View>
-        </Portal>
+        <Callout
+            target={parentRef as React.RefObject<Component>}
+            directionalHint={directionalHint}
+            gapSpace={1}
+            dismissBehaviors={["preventDismissOnKeyDown"]}
+            minWidth={400}
+        >
+            <DropdownContext.Provider value={contextValue}>
+                <ScrollView
+                    className={cn("rounded border border-border-popup", maxHeightClassName, className)}
+                    contentContainerClassName="p-1"
+                    scrollEnabled={!!maxHeightClassName}
+                >
+                    {children}
+                </ScrollView>
+            </DropdownContext.Provider>
+        </Callout>
     );
 }
 

@@ -9,11 +9,10 @@
 
 ## Steps
 
-[x] The Playlist should use the cached playlist on load. Use playlistsData$ from Playlists.ts.
-[x] Remove the verbose logging in YouTubeMusicPlayer now that it's working well.
 
 ## Plan for later (do not do these yet)
 
 [] Handle media keys
 [] Make an expanded playlist view
 [] Youtube Music seems to only load track thumbnails after scrolling down
+[] Make a native module for opening new windows.

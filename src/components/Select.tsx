@@ -153,7 +153,7 @@ export function SelectMultiple<T>({
                         data={items}
                         keyExtractor={getItemKey}
                         renderItem={renderListItem}
-                        contentContainerStyle={{ padding: 4 }}
+                        // contentContainerStyle={{ padding: 4 }}
                         style={{
                             width: maxWidthMatchTrigger ? "100%" : 400,
                             height: "100%",

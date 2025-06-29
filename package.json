@@ -13,6 +13,7 @@
     "dependencies": {
         "@aptabase/react-native": "^0.3.10",
         "@craftzdog/react-native-buffer": "^6.0.5",
+        "@fluentui-react-native/callout": "^0.27.3",
         "@fluentui-react-native/vibrancy-view": "^0.3.0",
         "@gorhom/portal": "^1.0.14",
         "@legendapp/list": "^1.0.15",

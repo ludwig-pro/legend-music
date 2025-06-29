@@ -20,7 +20,7 @@ export const colors = {
         },
         border: {
             primary: "#252730",
-            popup: "#33353a",
+            popup: "#4f4e4f",
         },
     },
 
