@@ -16,6 +16,7 @@ interface DropdownContextValue {
     close: () => void;
     onSelect?: (value: string) => void;
     closeOnSelect?: boolean;
+    openedWithMouseDown$: Observable<boolean>;
 }
 
 const DropdownContext = createContext<DropdownContextValue | null>(null);
@@ -50,10 +51,12 @@ interface RootProps {
 
 function Root({ children, onSelect, closeOnSelect = true, onOpenChange }: RootProps) {
     const isOpen$ = useObservable(false);
+    const openedWithMouseDown$ = useObservable(false);
     const triggerRef = useRef<View>(null);
 
     const close = useCallback(() => {
         isOpen$.set(false);
+        openedWithMouseDown$.set(false);
         state$.isDropdownOpen.set(false);
         onOpenChange?.(false);
     }, [onOpenChange]);
@@ -62,6 +65,9 @@ function Root({ children, onSelect, closeOnSelect = true, onOpenChange }: RootPr
         return isOpen$.onChange(({ value: open }) => {
             state$.isDropdownOpen.set(open);
             onOpenChange?.(open);
+            if (!open) {
+                openedWithMouseDown$.set(false);
+            }
         });
     }, [onOpenChange]);
 
@@ -71,6 +77,7 @@ function Root({ children, onSelect, closeOnSelect = true, onOpenChange }: RootPr
         close,
         onSelect,
         closeOnSelect,
+        openedWithMouseDown$,
     };
 
     return <DropdownContext.Provider value={contextValue}>{children}</DropdownContext.Provider>;
@@ -98,17 +105,27 @@ function Trigger({
     textClassName,
     caretClassName,
 }: TriggerProps) {
-    const { isOpen$, triggerRef } = useDropdownContext();
+    const { isOpen$, triggerRef, openedWithMouseDown$ } = useDropdownContext();
+
+    const onMouseDown = useCallback(() => {
+        if (!isOpen$.get()) {
+            isOpen$.set(true);
+            openedWithMouseDown$.set(true);
+        }
+    }, []);
 
     const onToggle = useCallback(() => {
         isOpen$.toggle();
+        if (isOpen$.get()) {
+            openedWithMouseDown$.set(false);
+        }
     }, []);
 
     if (asChild) {
         // If asChild, we should not render a button, just the children
         return (
             <View ref={triggerRef}>
-                <Button onPress={onToggle}>{children}</Button>
+                <Button onPress={onToggle} onMouseDown={onMouseDown}>{children}</Button>
             </View>
         );
     }
@@ -117,7 +134,7 @@ function Trigger({
         // Custom styled trigger with optional caret
         return (
             <View ref={triggerRef}>
-                <Button className={cn("flex-row items-center group", className)} onPress={onToggle}>
+                <Button className={cn("flex-row items-center group", className)} onPress={onToggle} onMouseDown={onMouseDown}>
                     {caretPosition === "left" && showCaret && (
                         <Text className={cn("text-white/70 group-hover:text-white mr-2", caretClassName)}>⌄</Text>
                     )}
@@ -134,7 +151,7 @@ function Trigger({
 
     return (
         <View ref={triggerRef}>
-            <Button className={className} onPress={onToggle}>
+            <Button className={className} onPress={onToggle} onMouseDown={onMouseDown}>
                 {children}
             </Button>
         </View>
@@ -227,7 +244,8 @@ interface ItemProps {
 }
 
 function Item({ children, onSelect, value, className = "", disabled = false }: ItemProps) {
-    const { close, onSelect: contextOnSelect, closeOnSelect } = useDropdownContext();
+    const { close, onSelect: contextOnSelect, closeOnSelect, openedWithMouseDown$ } = useDropdownContext();
+    const openedWithMouseDown = use$(openedWithMouseDown$);
 
     const handlePress = useCallback(() => {
         if (disabled) return;
@@ -243,6 +261,13 @@ function Item({ children, onSelect, value, className = "", disabled = false }: I
         }
     }, [onSelect, value, contextOnSelect, closeOnSelect, close, disabled]);
 
+    const handleMouseUp = useCallback(() => {
+        if (disabled || !openedWithMouseDown) return;
+        
+        // Only trigger selection on mouse up if dropdown was opened with mouse down
+        handlePress();
+    }, [disabled, openedWithMouseDown, handlePress]);
+
     return (
         <Button
             className={cn(
@@ -250,7 +275,8 @@ function Item({ children, onSelect, value, className = "", disabled = false }: I
                 disabled && "opacity-50",
                 className,
             )}
-            onPress={handlePress}
+            onPress={openedWithMouseDown ? undefined : handlePress}
+            onMouseUp={openedWithMouseDown ? handleMouseUp : undefined}
             disabled={disabled}
         >
             {children}
@@ -278,7 +304,8 @@ interface CheckboxItemProps {
 }
 
 function CheckboxItem({ children, checked = false, onCheckedChange, value, className = "" }: CheckboxItemProps) {
-    const { close, onSelect: contextOnSelect, closeOnSelect } = useDropdownContext();
+    const { close, onSelect: contextOnSelect, closeOnSelect, openedWithMouseDown$ } = useDropdownContext();
+    const openedWithMouseDown = use$(openedWithMouseDown$);
 
     const handlePress = useCallback(() => {
         const newChecked = !checked;
@@ -293,10 +320,18 @@ function CheckboxItem({ children, checked = false, onCheckedChange, value, class
         }
     }, [checked, onCheckedChange, value, contextOnSelect, closeOnSelect, close]);
 
+    const handleMouseUp = useCallback(() => {
+        if (!openedWithMouseDown) return;
+        
+        // Only trigger selection on mouse up if dropdown was opened with mouse down
+        handlePress();
+    }, [openedWithMouseDown, handlePress]);
+
     return (
         <Button
             className={cn("py-2 px-3 rounded-md hover:bg-white/10 flex-row items-center", className)}
-            onPress={handlePress}
+            onPress={openedWithMouseDown ? undefined : handlePress}
+            onMouseUp={openedWithMouseDown ? handleMouseUp : undefined}
         >
             {children}
         </Button>

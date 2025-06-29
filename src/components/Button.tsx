@@ -12,6 +12,8 @@ export interface ButtonProps extends PressableProps {
     variant?: "icon" | "icon-bg" | "primary" | "secondary" | "accent" | "destructive" | "inverse";
     size?: "small" | "medium" | "large";
     iconSize?: number;
+    onMouseDown?: () => void;
+    onMouseUp?: () => void;
 }
 
 export function Button({
@@ -22,6 +24,8 @@ export function Button({
     variant,
     size,
     iconSize: iconSizeProp,
+    onMouseDown,
+    onMouseUp,
     ...props
 }: PropsWithChildren<ButtonProps>) {
     const handlePress = (e: any) => {
@@ -57,6 +61,8 @@ export function Button({
                 className,
             )}
             onPress={handlePress}
+            onPressIn={onMouseDown}
+            onPressOut={onMouseUp}
         >
             {icon && <Icon name={icon} size={iconSize} />}
             {children}

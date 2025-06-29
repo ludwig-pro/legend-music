@@ -1273,7 +1273,7 @@ export function YouTubeMusicPlayer() {
         const playlistId = stateSaved$.playlist.get();
         const playlistType = stateSaved$.playlistType.get();
 
-        if (playlistType === "ytm") {
+        if (playlistType === "ytm" && playlistId) {
             return `https://music.youtube.com/playlist?list=${playlistId.replace(/^VL/, "")}`;
         }
 
