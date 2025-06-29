@@ -215,9 +215,24 @@ export function parseDurationToSeconds(duration: string): number {
     const minutes = Number.parseInt(match[1], 10);
     const seconds = Number.parseInt(match[2], 10);
 
-    if (isNaN(minutes) || isNaN(seconds) || seconds >= 60) {
+    if (Number.isNaN(minutes) || Number.isNaN(seconds) || seconds >= 60) {
         return -1;
     }
 
     return minutes * 60 + seconds;
+}
+
+/**
+ * Format duration from seconds to "MM:SS" format
+ * @param seconds Duration in seconds
+ * @returns Duration string in "MM:SS" format, or "0:00" if invalid
+ */
+export function formatSecondsToMmSs(seconds: number): string {
+    if (typeof seconds !== "number" || seconds < 0 || !Number.isFinite(seconds)) {
+        return "0:00";
+    }
+
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
 }

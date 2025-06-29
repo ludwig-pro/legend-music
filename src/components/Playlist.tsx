@@ -9,6 +9,7 @@ import { getPlaylistContent } from "@/systems/PlaylistContent";
 import { playlistsData$ } from "@/systems/Playlists";
 import { stateSaved$ } from "@/systems/State";
 import { cn } from "@/utils/cn";
+import { formatSecondsToMmSs } from "@/utils/m3u";
 
 interface PlaylistTrack {
     title: string;
@@ -118,12 +119,34 @@ export function Playlist() {
           }))
         : (() => {
               // Use live data from YouTube Music if available, otherwise fall back to cached data
-              const songs = playlistState.songs.length > 0 
-                  ? playlistState.songs 
-                  : cachedPlaylistContent?.songs || [];
-              const suggestions = playlistState.suggestions.length > 0 
-                  ? playlistState.suggestions 
-                  : cachedPlaylistContent?.suggestions || [];
+              let songs: PlaylistTrackWithSuggestions[] = [];
+              let suggestions: PlaylistTrackWithSuggestions[] = [];
+
+              if (playlistState.songs.length > 0) {
+                  // Use live data
+                  songs = playlistState.songs;
+                  suggestions = playlistState.suggestions;
+              } else if (cachedPlaylistContent?.songs || cachedPlaylistContent?.suggestions) {
+                  // Transform cached M3U data to PlaylistTrack format
+                  songs = (cachedPlaylistContent.songs || []).map((track, index) => ({
+                      title: track.title,
+                      artist: track.artist || "",
+                      duration: formatSecondsToMmSs(track.duration),
+                      thumbnail: track.logo || "",
+                      index,
+                      isPlaying: false,
+                  }));
+
+                  suggestions = (cachedPlaylistContent.suggestions || []).map((track, index) => ({
+                      title: track.title,
+                      artist: track.artist || "",
+                      duration: formatSecondsToMmSs(track.duration),
+                      thumbnail: track.logo || "",
+                      index: songs.length + index,
+                      isPlaying: false,
+                      fromSuggestions: true,
+                  }));
+              }
 
               return [
                   ...songs,
@@ -139,11 +162,7 @@ export function Playlist() {
                                 isPlaying: false,
                                 isSeparator: true,
                             },
-                            ...suggestions.map((track, index) => ({
-                                ...track,
-                                index: songs.length + index,
-                                fromSuggestions: true,
-                            })),
+                            ...suggestions,
                         ]
                       : []),
               ];
