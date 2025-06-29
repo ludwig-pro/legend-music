@@ -10,6 +10,19 @@ import { arrayToObject } from "@/utils/arrayToObject";
 import type { M3UTrack } from "@/utils/m3u";
 import { parseDurationToSeconds } from "@/utils/m3u";
 
+// Helper function to generate YouTube Music watch URLs
+function generateYouTubeMusicWatchUrl(trackId: string, playlistIdForUrl: string): string {
+    const songId = stateSaved$.songId.get();
+    const baseUrl = `https://music.youtube.com/watch?v=${trackId}&list=${playlistIdForUrl}`;
+    
+    // Include songId in URL if available
+    if (songId) {
+        return `${baseUrl}&t=${songId}`;
+    }
+    
+    return baseUrl;
+}
+
 interface Track {
     title: string;
     artist: string;
@@ -1228,7 +1241,7 @@ const updatePlaylistContent = (
             duration: parseDurationToSeconds(track.duration), // Parse MM:SS format to seconds
             title: track.title,
             artist: track.artist,
-            filePath: `https://music.youtube.com/watch?v=${track.id}&list=${playlistIdForUrl}`,
+            filePath: generateYouTubeMusicWatchUrl(track.id || '', playlistIdForUrl),
             logo: track.thumbnail, // Include thumbnail as logo
         }));
 
@@ -1237,7 +1250,7 @@ const updatePlaylistContent = (
             duration: parseDurationToSeconds(track.duration), // Parse MM:SS format to seconds
             title: track.title,
             artist: track.artist,
-            filePath: `https://music.youtube.com/watch?v=${track.id}&list=${playlistIdForUrl}`,
+            filePath: generateYouTubeMusicWatchUrl(track.id || '', playlistIdForUrl),
             logo: track.thumbnail, // Include thumbnail as logo
         }));
 
