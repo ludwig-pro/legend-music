@@ -28,7 +28,7 @@ export interface SelectPropsBase<T> {
 }
 
 export interface SelectProps<T> extends SelectPropsBase<T> {
-    selected$?: ObservableParam<NoInfer<T>>;
+    selected$?: ObservableParam<NoInfer<T> | undefined>;
     selected?: T;
     onSelectItem?: (item: NoInfer<T>) => void;
 }
@@ -39,7 +39,7 @@ export interface SelectMultipleProps<T> extends SelectPropsBase<T> {
 }
 
 export function Select<T>({ selected, selected$, placeholder, onSelectItem, renderItemText, ...rest }: SelectProps<T>) {
-    selected = selected$ ? use$<T>(selected$) : selected;
+    selected = selected$ ? use$<T | undefined>(selected$) : selected;
 
     // Create internal array observable that mirrors the single selection
     const selectedItems$ = useObservable<T[]>(selected ? [selected] : []);
@@ -79,7 +79,7 @@ export function SelectMultiple<T>({
     caretPosition = "right",
     textClassName,
     caretClassName,
-    maxWidthMatchTrigger = false,
+    // maxWidthMatchTrigger = false,
 }: SelectMultipleProps<T>) {
     const selectedItems = use$<T[]>(selectedItems$);
 
@@ -146,7 +146,7 @@ export function SelectMultiple<T>({
                 className={className}
                 maxHeightClassName="max-h-96"
                 scrolls={false}
-                maxWidthMatchTrigger={maxWidthMatchTrigger}
+                // maxWidthMatchTrigger={maxWidthMatchTrigger}
             >
                 <View style={{ maxHeight: 384 }}>
                     <LegendList
@@ -155,7 +155,7 @@ export function SelectMultiple<T>({
                         renderItem={renderListItem}
                         // contentContainerStyle={{ padding: 4 }}
                         style={{
-                            width: maxWidthMatchTrigger ? "100%" : 400,
+                            // width: maxWidthMatchTrigger ? "100%" : 400,
                             height: "100%",
                         }}
                     />

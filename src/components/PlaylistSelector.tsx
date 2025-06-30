@@ -1,12 +1,10 @@
-import { batch } from "@legendapp/state";
-import { use$, useObservable } from "@legendapp/state/react";
-import { synced } from "@legendapp/state/sync";
+import { use$ } from "@legendapp/state/react";
 import { Text, View } from "react-native";
 import { Playlist } from "@/components/Playlist";
 import { Select } from "@/components/Select";
-import { controls, type YTMusicPlaylist } from "@/components/YouTubeMusicPlayer";
+import type { YTMusicPlaylist } from "@/components/YouTubeMusicPlayer";
 import { localMusicState$, setCurrentPlaylist } from "@/systems/LocalMusicState";
-import { type Playlist as PlaylistType, playlistsData$ } from "@/systems/Playlists";
+import { playlistsData$ } from "@/systems/Playlists";
 import { stateSaved$ } from "@/systems/State";
 
 export function PlaylistSelector() {
@@ -28,53 +26,34 @@ export function PlaylistSelector() {
 
     // Combine YouTube Music playlists with local files
     const availablePlaylists = [localFilesPlaylist, ...playlistsArr];
-
-    // Find currently selected playlist based on currentPlaylistId
-    const currentPlaylistId = localMusicState.currentPlaylistId;
-    const selectedPlaylist = availablePlaylists.find((playlist) => playlist.id === currentPlaylistId);
+    const availablePlaylistIds = availablePlaylists.map((playlist) => playlist.id);
 
     const selectedPlaylist$ = stateSaved$.playlist;
-    const selected$ = useObservable<PlaylistType>(
-        synced({
-            get: () => {
-                const id = selectedPlaylist$.get();
 
-                return availablePlaylists.find((playlist) => playlist.id === id);
-            },
-            set: ({ value }) => {
-                selectedPlaylist$.set(value!.id);
-            },
-        }),
-    );
+    const handlePlaylistSelect = (playlistId: string) => {
+        console.log("Navigating to playlist:", playlistId);
+        setCurrentPlaylist(playlistId, playlistId === "LOCAL_FILES" ? "file" : "ytm");
 
-    const handlePlaylistSelect = (playlist: YTMusicPlaylist) => {
-        console.log("Navigating to playlist:", playlist.id);
-        selectedPlaylist$.set(playlist.id);
-        setCurrentPlaylist(playlist.id);
-
-        if (playlist.id === "LOCAL_FILES") {
+        if (playlistId === "LOCAL_FILES") {
             // Handle local files selection
             console.log("Selected local files playlist");
-        } else {
-            // Handle YouTube Music playlists
-            batch(() => {
-                stateSaved$.playlistType.set("ytm");
-                stateSaved$.playlist.set(playlist.id);
-            });
         }
     };
 
     return (
         <View className="flex-1">
             {/* Title bar area for playlist */}
-            <View className="px-3 py-1 border-t border-white/10">
+            <View className="px-2 py-1 border-t border-white/10">
                 <Select
-                    items={availablePlaylists}
-                    selected$={selected$}
+                    items={availablePlaylistIds}
+                    selected$={selectedPlaylist$}
                     placeholder="Local Files"
                     onSelectItem={handlePlaylistSelect}
-                    getItemKey={(playlist) => playlist.id}
-                    renderItem={(playlist, mode) => {
+                    getItemKey={(playlist) => playlist}
+                    renderItem={(playlistId, mode) => {
+                        if (!playlistId) return <Text>Null</Text>;
+                        const playlist = playlistId === "LOCAL_FILES" ? localFilesPlaylist : playlistsObj[playlistId];
+
                         if (mode === "preview") {
                             return (
                                 <Text className="text-white/90 group-hover:text-white text-base font-semibold">

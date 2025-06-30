@@ -26,7 +26,6 @@ export interface LocalMusicState {
     scanProgress: number;
     scanTotal: number;
     error: string | null;
-    currentPlaylistId: string | null;
     isLocalFilesSelected: boolean;
 }
 
@@ -47,7 +46,6 @@ export const localMusicState$ = observable<LocalMusicState>({
     scanProgress: 0,
     scanTotal: 0,
     error: null,
-    currentPlaylistId: null,
     isLocalFilesSelected: false,
 });
 
@@ -227,24 +225,28 @@ export async function scanLocalMusic(): Promise<void> {
 }
 
 // Set current playlist selection
-export function setCurrentPlaylist(playlistId: string): void {
-    localMusicState$.currentPlaylistId.set(playlistId);
-    localMusicState$.isLocalFilesSelected.set(playlistId === "LOCAL_FILES");
+export function setCurrentPlaylist(playlistId: string, playlistType: "ytm" | "file"): void {
+    localMusicState$.isLocalFilesSelected.set(playlistType === "file");
+
+    console.log("setCurrentPlaylist", playlistId, playlistType);
 
     // Save current playlist to persistent state
-    stateSaved$.playlist.set(playlistId);
+    stateSaved$.assign({
+        playlist: playlistId,
+        playlistType,
+    });
 }
+
+stateSaved$.playlist.onChange(({ value }) => {
+    console.log("stateSaved$.playlist.onChange", value);
+});
+stateSaved$.playlistType.onChange(({ value }) => {
+    console.log("stateSaved$.playlistType.onChange", value);
+});
 
 // Initialize and scan on app start
 export function initializeLocalMusic(): void {
     const settings = localMusicSettings$.get();
-
-    // Restore saved playlist selection
-    const savedPlaylist = stateSaved$.playlist.get();
-    if (savedPlaylist) {
-        console.log("Restoring saved playlist:", savedPlaylist);
-        setCurrentPlaylist(savedPlaylist);
-    }
 
     if (settings.autoScanOnStart) {
         console.log("Auto-scanning local music on startup...");
