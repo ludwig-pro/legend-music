@@ -49,11 +49,11 @@ export function PlaybackArea() {
         <View className="mx-3 mt-3">
             <View className="flex-row items-center">
                 {/* Album Art */}
-                <View className="size-16 bg-orange-300 rounded-xl items-center justify-center mr-4">
+                <View className="size-12 items-center justify-center mr-4">
                     {currentTrack?.thumbnail ? (
                         <Image
                             source={{ uri: currentTrack.thumbnail }}
-                            className="w-full h-full rounded-xl"
+                            className="w-full h-full rounded-lg"
                             resizeMode="cover"
                         />
                     ) : (
@@ -63,14 +63,14 @@ export function PlaybackArea() {
 
                 {/* Song Info */}
                 <View className="flex-1 flex-col">
-                    <Text className="text-white text-lg font-semibold" numberOfLines={1}>
+                    <Text className="text-white text-sm font-semibold" numberOfLines={1}>
                         {currentTrack?.title || (isLoading ? "Loading..." : "No track")}
                     </Text>
-                    <Text className="text-white/70 text-base" numberOfLines={1}>
+                    <Text className="text-white/70 text-sm" numberOfLines={1}>
                         {currentTrack?.artist || ""}
                     </Text>
                     {currentTrack && (
-                        <Text className="text-white/50 text-sm mt-1" style={{ fontVariant: ["tabular-nums"] }}>
+                        <Text className="text-white/50 text-xs" style={{ fontVariant: ["tabular-nums"] }}>
                             {currentTime}
                         </Text>
                     )}
@@ -106,7 +106,7 @@ export function PlaybackArea() {
 
             <View className="pb-1">
                 <CustomSlider
-                    style={{ height: 40 }}
+                    style={{ height: 32 }}
                     minimumValue={0}
                     maximumValue={duration || 100}
                     value={currentTimeSeconds}
