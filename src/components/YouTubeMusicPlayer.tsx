@@ -260,19 +260,18 @@ const injectedJavaScript = `
 
                 findGuideEntryRenderers(guideData);
                 playlists.push(...results);
-                }
 
+                // Strategy 4: Add "Now Playing" at the top
+                playlists.unshift({
+                    id: 'NOW_PLAYING',
+                    name: 'Now Playing',
+                    thumbnail: '',
+                    count: 0,
+                    creator: ''
+                });
 
-            // Strategy 4: Add "Now Playing" at the top
-            playlists.unshift({
-                id: 'NOW_PLAYING',
-                name: 'Now Playing',
-                thumbnail: '',
-                count: 0,
-                creator: ''
-            });
-
-            return playlists;
+                return playlists;
+            }
         } catch (error) {
             console.error('Error extracting playlists:', error);
             return [{
@@ -708,17 +707,19 @@ const injectedJavaScript = `
             // Get available playlists (only update occasionally to avoid performance issues)
             const availablePlaylists = extractAvailablePlaylists();
 
-            const playlistsState = {
-                availablePlaylists
-            };
+            if (availablePlaylists) {
+                const playlistsState = {
+                    availablePlaylists
+                };
 
-            // Only send update if playlists state changed
-            if (JSON.stringify(playlistsState) !== JSON.stringify(lastPlaylistsState)) {
-                window.ReactNativeWebView.postMessage(JSON.stringify({
-                    type: 'playlistsState',
-                    data: playlistsState
-                }));
-                lastPlaylistsState = playlistsState;
+                // Only send update if playlists state changed
+                if (JSON.stringify(playlistsState) !== JSON.stringify(lastPlaylistsState)) {
+                    window.ReactNativeWebView.postMessage(JSON.stringify({
+                        type: 'playlistsState',
+                        data: playlistsState
+                    }));
+                    lastPlaylistsState = playlistsState;
+                }
             }
         } catch (error) {
             window.ReactNativeWebView.postMessage(JSON.stringify({
@@ -726,13 +727,6 @@ const injectedJavaScript = `
                 data: { error: error.message }
             }));
         }
-    }
-
-    // Legacy function for compatibility
-    function extractPlayerInfo() {
-        extractPlaybackInfo();
-        extractCurrentPlaylistInfo();
-        // Note: Available playlists will be extracted less frequently
     }
 
     // Control functions
@@ -1147,11 +1141,6 @@ const injectedJavaScript = `
         subtree: true
     });
 
-    // Temporary increased frequency polling for debugging
-    setInterval(extractPlaybackInfo, 1000);       // Back to more frequent for debugging
-    setInterval(extractCurrentPlaylistInfo, 3000);   // Back to more frequent for debugging
-    setInterval(extractAvailablePlaylistsInfo, 10000); // Keep this less frequent
-
     // Signal that injection is complete
     window.ReactNativeWebView.postMessage(JSON.stringify({
         type: 'injectionComplete',
@@ -1228,26 +1217,40 @@ const updatePlaylistContent = (
     const playlistIdForUrl = playlistId.replace(/^VL/, "");
 
     try {
-        // Convert YouTube Music songs to M3U format
-        const m3uSongs: M3UTrack[] = songs.map((track) => ({
-            duration: parseDurationToSeconds(track.duration), // Parse MM:SS format to seconds
-            title: track.title,
-            artist: track.artist,
-            filePath: generateYouTubeMusicWatchUrl(track.id || "", playlistIdForUrl),
-            logo: track.thumbnail, // Include thumbnail as logo
-        }));
-
-        // Convert YouTube Music suggestions to M3U format
-        const m3uSuggestions: M3UTrack[] = suggestions.map((track) => ({
-            duration: parseDurationToSeconds(track.duration), // Parse MM:SS format to seconds
-            title: track.title,
-            artist: track.artist,
-            filePath: generateYouTubeMusicWatchUrl(track.id || "", playlistIdForUrl),
-            logo: track.thumbnail, // Include thumbnail as logo
-        }));
-
-        // Get the playlist content observable and update it
+        // Get existing playlist content
         const playlistContent$ = getPlaylistContent(playlistId);
+        const existingContent = playlistContent$.get();
+        const existingSongs = existingContent.songs || [];
+        const existingSuggestions = existingContent.suggestions || [];
+
+        // Helper function to merge new track with existing track data
+        const mergeTrackData = (newTrack: PlaylistTrack, existingTracks: M3UTrack[]): M3UTrack => {
+            const existingTrack = existingTracks.find(
+                (existing) => existing.title === newTrack.title && existing.artist === newTrack.artist,
+            );
+
+            const merged: M3UTrack = {
+                duration: parseDurationToSeconds(newTrack.duration),
+                title: newTrack.title,
+                artist: newTrack.artist,
+                filePath: generateYouTubeMusicWatchUrl(newTrack.id || "", playlistIdForUrl),
+                logo: newTrack.thumbnail || existingTrack?.logo,
+            };
+
+            if (existingTrack?.id) {
+                merged.id = existingTrack.id;
+            }
+
+            return merged;
+        };
+
+        // Merge songs with existing songs (preserving new order)
+        const m3uSongs: M3UTrack[] = songs.map((track) => mergeTrackData(track, existingSongs));
+
+        // Merge suggestions with existing suggestions (preserving new order)
+        const m3uSuggestions: M3UTrack[] = suggestions.map((track) => mergeTrackData(track, existingSuggestions));
+
+        // Update playlist content with merged data
         playlistContent$.set({
             songs: m3uSongs,
             suggestions: m3uSuggestions,

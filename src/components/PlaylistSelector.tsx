@@ -54,6 +54,12 @@ export function PlaylistSelector() {
                         if (!playlistId) return <Text>Null</Text>;
                         const playlist = playlistId === "LOCAL_FILES" ? localFilesPlaylist : playlistsObj[playlistId];
 
+                        console.log("playlists", playlistsObj, localFilesPlaylist);
+                        if (!playlist) {
+                            console.log("Playlist not found:", playlistId);
+                            return <Text>Null</Text>;
+                        }
+
                         if (mode === "preview") {
                             return (
                                 <Text className="text-white/90 group-hover:text-white text-base font-semibold">
