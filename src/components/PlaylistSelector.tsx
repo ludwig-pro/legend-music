@@ -1,10 +1,13 @@
-import { use$ } from "@legendapp/state/react";
+import { use$, useObservable } from "@legendapp/state/react";
 import { Text, View } from "react-native";
 import { Button } from "@/components/Button";
+import { DropdownMenu } from "@/components/DropdownMenu";
+import { localAudioControls } from "@/components/LocalAudioPlayer";
 import { Playlist } from "@/components/Playlist";
 import { Select } from "@/components/Select";
+import { StyledInput } from "@/components/StyledInput";
 import type { YTMusicPlaylist } from "@/components/YouTubeMusicPlayer";
-import { localMusicState$, setCurrentPlaylist } from "@/systems/LocalMusicState";
+import { localMusicState$, setCurrentPlaylist, type LocalTrack } from "@/systems/LocalMusicState";
 import { playlistsData$ } from "@/systems/Playlists";
 import { stateSaved$ } from "@/systems/State";
 
@@ -32,6 +35,10 @@ export function PlaylistSelector() {
     const selectedPlaylist$ = stateSaved$.playlist;
     const selectedPlaylist = use$(selectedPlaylist$);
 
+    // Search state
+    const searchQuery$ = useObservable("");
+    const searchQuery = use$(searchQuery$);
+
     const handlePlaylistSelect = (playlistId: string) => {
         console.log("Navigating to playlist:", playlistId);
         setCurrentPlaylist(playlistId, playlistId === "LOCAL_FILES" ? "file" : "ytm");
@@ -44,10 +51,37 @@ export function PlaylistSelector() {
 
     const handleSearchPress = () => {
         console.log("Search button pressed");
-        // TODO: Implement search functionality
+        // The dropdown will open automatically when the button is pressed
     };
 
     const isLocalFilesSelected = selectedPlaylist === "LOCAL_FILES";
+
+    // Filter search results
+    const searchResults = searchQuery.trim() 
+        ? localMusicState.tracks.filter(track => 
+            track.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            track.artist.toLowerCase().includes(searchQuery.toLowerCase())
+          ).slice(0, 10) // Limit to 10 results
+        : [];
+
+    const handleTrackSelect = (track: LocalTrack) => {
+        console.log("Selected track:", track);
+        
+        // Find the index of the selected track in the full tracks list
+        const trackIndex = localMusicState.tracks.findIndex(t => t.id === track.id);
+        
+        if (trackIndex !== -1) {
+            // Load the entire local music library as playlist, starting with the selected track
+            localAudioControls.loadPlaylist(localMusicState.tracks, trackIndex);
+            console.log(`Started playing "${track.title}" by ${track.artist}`);
+        } else {
+            // If track not found in main list, play it as a single track
+            localAudioControls.loadTrack(track.filePath, track.title, track.artist);
+            console.log(`Started playing single track: "${track.title}" by ${track.artist}`);
+        }
+        
+        searchQuery$.set(""); // Clear search after selection
+    };
 
     return (
         <View className="flex-1">
@@ -93,13 +127,51 @@ export function PlaylistSelector() {
                         />
                     </View>
                     {isLocalFilesSelected && (
-                        <Button
-                            icon="magnifyingglass"
-                            variant="icon"
-                            size="medium"
-                            onPress={handleSearchPress}
-                            className="ml-2 hover:bg-white/10"
-                        />
+                        <DropdownMenu.Root closeOnSelect={false}>
+                            <DropdownMenu.Trigger asChild>
+                                <Button
+                                    icon="magnifyingglass"
+                                    variant="icon"
+                                    size="medium"
+                                    onPress={handleSearchPress}
+                                    className="ml-2 hover:bg-white/10"
+                                />
+                            </DropdownMenu.Trigger>
+                            <DropdownMenu.Content className="w-96 p-0">
+                                <View className="p-2">
+                                    <StyledInput
+                                        value$={searchQuery$}
+                                        placeholder="Search tracks..."
+                                        className="mb-2"
+                                    />
+                                    {searchResults.length > 0 && (
+                                        <View className="max-h-64">
+                                            {searchResults.map((track) => (
+                                                <DropdownMenu.Item
+                                                    key={track.id}
+                                                    onSelect={() => handleTrackSelect(track)}
+                                                    className="p-2 hover:bg-white/10 rounded-md"
+                                                >
+                                                    <View className="flex-1">
+                                                        <Text className="text-white font-medium text-sm">
+                                                            {track.title}
+                                                        </Text>
+                                                        <Text className="text-white/60 text-xs">
+                                                            {track.artist} • {track.duration}
+                                                        </Text>
+                                                    </View>
+                                                </DropdownMenu.Item>
+                                            ))}
+                                        </View>
+                                    )}
+                                    {searchQuery.trim() && searchResults.length === 0 && (
+                                        <Text className="text-white/60 text-sm p-2">
+                                            No tracks found
+                                        </Text>
+                                    )}
+                                </View>
+                            </DropdownMenu.Content>
+                        </DropdownMenu.Root>
                     )}
                 </View>
             </View>

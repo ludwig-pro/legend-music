@@ -9,7 +9,7 @@
 
 ## Steps
 
-[] Add a search button to the right of the playlist selector which is only visible if the local files playlist is selected
+[x] Add a search button to the right of the playlist selector which is only visible if the local files playlist is selected
 [] Clicking the search button should show a dropdown menu with a textbox and a list of results
 [] Searching should search through all local files and playlists and display them in the list of results
 [] Selecting a track in search should add it to now playing and start playing it
