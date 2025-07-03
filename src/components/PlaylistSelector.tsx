@@ -1,5 +1,6 @@
 import { use$ } from "@legendapp/state/react";
 import { Text, View } from "react-native";
+import { Button } from "@/components/Button";
 import { Playlist } from "@/components/Playlist";
 import { Select } from "@/components/Select";
 import type { YTMusicPlaylist } from "@/components/YouTubeMusicPlayer";
@@ -29,6 +30,7 @@ export function PlaylistSelector() {
     const availablePlaylistIds = availablePlaylists.map((playlist) => playlist.id);
 
     const selectedPlaylist$ = stateSaved$.playlist;
+    const selectedPlaylist = use$(selectedPlaylist$);
 
     const handlePlaylistSelect = (playlistId: string) => {
         console.log("Navigating to playlist:", playlistId);
@@ -40,46 +42,66 @@ export function PlaylistSelector() {
         }
     };
 
+    const handleSearchPress = () => {
+        console.log("Search button pressed");
+        // TODO: Implement search functionality
+    };
+
+    const isLocalFilesSelected = selectedPlaylist === "LOCAL_FILES";
+
     return (
         <View className="flex-1">
             {/* Title bar area for playlist */}
             <View className="px-2 py-1 border-t border-white/10">
-                <Select
-                    items={availablePlaylistIds}
-                    selected$={selectedPlaylist$}
-                    placeholder="Local Files"
-                    onSelectItem={handlePlaylistSelect}
-                    getItemKey={(playlist) => playlist}
-                    renderItem={(playlistId, mode) => {
-                        if (!playlistId) return <Text>Null</Text>;
-                        const playlist = playlistId === "LOCAL_FILES" ? localFilesPlaylist : playlistsObj[playlistId];
+                <View className="flex-row items-center">
+                    <View className="flex-1">
+                        <Select
+                            items={availablePlaylistIds}
+                            selected$={selectedPlaylist$}
+                            placeholder="Local Files"
+                            onSelectItem={handlePlaylistSelect}
+                            getItemKey={(playlist) => playlist}
+                            renderItem={(playlistId, mode) => {
+                                if (!playlistId) return <Text>Null</Text>;
+                                const playlist = playlistId === "LOCAL_FILES" ? localFilesPlaylist : playlistsObj[playlistId];
 
-                        console.log("playlists", playlistsObj, localFilesPlaylist);
-                        if (!playlist) {
-                            console.log("Playlist not found:", playlistId);
-                            return <Text>Null</Text>;
-                        }
+                                console.log("playlists", playlistsObj, localFilesPlaylist);
+                                if (!playlist) {
+                                    console.log("Playlist not found:", playlistId);
+                                    return <Text>Null</Text>;
+                                }
 
-                        if (mode === "preview") {
-                            return (
-                                <Text className="text-white/90 group-hover:text-white text-base font-semibold">
-                                    {playlist.name}
-                                </Text>
-                            );
-                        }
-                        return (
-                            <View className="flex-row items-center">
-                                <Text className="text-white text-base font-medium flex-1">{playlist.name}</Text>
-                            </View>
-                        );
-                    }}
-                    unstyled={true}
-                    showCaret={true}
-                    caretPosition="right"
-                    triggerClassName="hover:bg-white/10 rounded-md h-8 px-2"
-                    caretClassName="text-white/70 hover:text-white"
-                    maxWidthMatchTrigger={true}
-                />
+                                if (mode === "preview") {
+                                    return (
+                                        <Text className="text-white/90 group-hover:text-white text-base font-semibold">
+                                            {playlist.name}
+                                        </Text>
+                                    );
+                                }
+                                return (
+                                    <View className="flex-row items-center">
+                                        <Text className="text-white text-base font-medium flex-1">{playlist.name}</Text>
+                                    </View>
+                                );
+                            }}
+                            unstyled={true}
+                            showCaret={true}
+                            caretPosition="right"
+                            triggerClassName="hover:bg-white/10 rounded-md h-8 px-2"
+                            caretClassName="text-white/70 hover:text-white"
+                            maxWidthMatchTrigger={true}
+                        />
+                    </View>
+                    {isLocalFilesSelected && (
+                        <Button
+                            icon="magnifyingglass"
+                            variant="icon"
+                            size="medium"
+                            onPress={handleSearchPress}
+                            className="ml-2 hover:bg-white/10"
+                        />
+                    )}
+                </View>
             </View>
 
             {/* Playlist content */}

@@ -9,11 +9,19 @@
 
 ## Steps
 
+[] Add a search button to the right of the playlist selector which is only visible if the local files playlist is selected
+[] Clicking the search button should show a dropdown menu with a textbox and a list of results
+[] Searching should search through all local files and playlists and display them in the list of results
+[] Selecting a track in search should add it to now playing and start playing it
+
 
 ## Plan for later (do not do these yet)
 
-[] Clicking a song clears the list of playlists (Clicking a song opens now playing and overwrites the playlist, it should somehow merge to not overwrite ids?)
-[] Handle media keys
-[] Make an expanded playlist view
-[] Youtube Music seems to only load track thumbnails after scrolling down
+[] Playing a song overwrites the logos
+[] Hotkey to open a search
+[] Clicking a song on a playlist that's not currently open does not immediately play it until clicking it again
 [] Make a native module for opening new windows.
+[] Selecting a song in a non-playlist should switch to now playing
+[] Have a menu item / hotkey to enable ytm view where it shows it to the right
+[] Make an expanded playlist view
+    [] Local files should display as a tree of artist / album
