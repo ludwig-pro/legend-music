@@ -5,18 +5,19 @@ import { StyleSheet, View } from "react-native";
 
 import { Sidebar } from "@/components/Sidebar";
 import { GeneralSettings } from "@/settings/GeneralSettings";
+import { LibrarySettings } from "@/settings/LibrarySettings";
 import { YouTubeMusicSettings } from "@/settings/YouTubeMusicSettings";
 import { state$ } from "@/systems/State";
 import { ThemeProvider } from "@/theme/ThemeProvider";
 
-export type SettingsPage = "general" | "youtube-music" | "account" | "repositories";
+export type SettingsPage = "general" | "library" | "youtube-music" | "account" | "repositories";
 
 // Define the categories for settings
 const SETTING_PAGES: { id: SettingsPage; name: string }[] = [
     { id: "general", name: "General" },
+    { id: "library", name: "Library" },
     { id: "youtube-music", name: "YouTube Music" },
     { id: "account", name: "Account" },
-    { id: "repositories", name: "Repositories" },
     // Add more categories as needed
 ];
 
@@ -29,10 +30,11 @@ export const SettingsContainer = () => {
         switch (selectedItem) {
             case "general":
                 return <GeneralSettings />;
+            case "library":
+                return <LibrarySettings />;
             case "youtube-music":
                 return <YouTubeMusicSettings />;
             case "account":
-            case "repositories":
             default:
                 return null;
         }

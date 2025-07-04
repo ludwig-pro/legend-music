@@ -1,122 +1,79 @@
-import { useSelector } from "@legendapp/state/react";
+import { observer, use$ } from "@legendapp/state/react";
 import { Text, View } from "react-native";
 
-import { Button } from "@/native-modules/Button";
-import { FilePicker } from "@/native-modules/FilePicker";
-import { addLibraryPath } from "@/plugins/PluginLocalFiles";
-import { settings$ } from "@/settings/SettingsFile";
+import { Button } from "@/components/Button";
+import { Checkbox } from "@/components/Checkbox";
+import { localMusicSettings$, scanLocalMusic } from "@/systems/LocalMusicState";
 
-export const LibrarySettings = () => {
-    const librarySettings = useSelector(settings$.library);
+export const LibrarySettings = observer(function LibrarySettings() {
+    const localMusicSettings = use$(localMusicSettings$);
 
-    const handleAddFolderPath = (path: string) => {
-        addLibraryPath(path);
+    const handleRescanLibrary = () => {
+        scanLocalMusic();
     };
-
-    const handleRemovePath = async (path: string) => {
-        const currentPaths = settings$.library.paths.get();
-        const idx = currentPaths.indexOf(path);
-        settings$.library.paths.splice(idx, 1);
-    };
-
-    //   const handlePreviewSizeChange = async (size: 'small' | 'medium' | 'large') => {
-    //     settings$.library.previewSize.set(size);
-    //   };
-
-    //   const handleShowFilenamesChange = async (show: boolean) => {
-    //     settings$.library.showFilenames.set(show);
-    //   };
-
-    //   const handleSortChange = async (sortBy: 'name' | 'date' | 'size' | 'type') => {
-    //     settings$.library.sortBy.set(sortBy);
-    //   };
-
-    //   const handleSortDirectionChange = async (sortDirection: 'asc' | 'desc') => {
-    //     settings$.library.sortDirection.set(sortDirection);
-    //   };
 
     return (
-        <View className="space-y-8 p-5">
-            <Text className="text-2xl font-bold text-white mb-2">Library Settings</Text>
+        <View className="p-6">
+            <Text className="text-2xl font-bold text-white mb-6">Library Settings</Text>
 
-            {/* Library Paths */}
-            <View className="pb-8">
-                <View className="flex-row justify-between items-center mb-3">
-                    <Text className="text-base font-medium text-white">Library Paths</Text>
-                    <FilePicker
-                        title="Add Folder"
-                        onFileSelected={handleAddFolderPath}
-                        pickFolder={true}
-                        bezelStyle="rounded"
-                        controlSize="regular"
+            {/* Auto Scan Settings */}
+            <View className="mb-6">
+                <Text className="text-lg font-semibold text-white mb-3">Scanning</Text>
+                
+                <View className="flex-row items-center mb-4">
+                    <Checkbox
+                        $checked={localMusicSettings$.autoScanOnStart}
+                        label="Auto-scan on startup"
+                        labelClassName="text-white text-base ml-3"
                     />
                 </View>
+                
+                <Text className="text-white/60 text-sm mb-4 ml-6">
+                    Automatically scan for new music files when the app starts
+                </Text>
 
-                <View className="gap-y-2">
-                    {librarySettings.paths.length > 0 ? (
-                        librarySettings.paths.map((path) => (
+                <Button
+                    variant="primary"
+                    onPress={handleRescanLibrary}
+                    className="w-fit"
+                >
+                    <Text className="text-white font-medium">Rescan Library Now</Text>
+                </Button>
+            </View>
+
+            {/* Library Paths */}
+            <View className="mb-6">
+                <Text className="text-lg font-semibold text-white mb-3">Library Paths</Text>
+                
+                <View className="bg-white/10 rounded-lg p-4 border border-white/20">
+                    {localMusicSettings.libraryPaths.length > 0 ? (
+                        localMusicSettings.libraryPaths.map((path, index) => (
                             <View
-                                key={path}
-                                className="flex-row items-center justify-between bg-[#222] p-2 rounded-md border border-[#444]"
+                                key={index}
+                                className="flex-row items-center justify-between py-2"
                             >
-                                <Text className="text-white">{path}</Text>
-                                <Button
-                                    title="Remove"
-                                    bezelStyle="textured"
-                                    controlSize="regular"
-                                    onPress={() => handleRemovePath(path)}
-                                />
+                                <Text className="text-white text-sm font-mono">{path}</Text>
                             </View>
                         ))
                     ) : (
-                        <View className="py-3 px-4 bg-[#222] rounded-md border border-[#444]">
-                            <Text className="text-gray-400 text-center">No library paths added yet</Text>
-                        </View>
+                        <Text className="text-white/60 text-sm text-center">No library paths configured</Text>
                     )}
                 </View>
+                
+                <Text className="text-white/60 text-sm mt-2">
+                    Currently configured library paths for local music scanning
+                </Text>
             </View>
 
-            {/* Preview Size */}
-            {/* <View className="pb-8 w-64">
-        <Text className="text-base font-medium text-white mb-6">Preview Size</Text>
-        <SegmentedControl
-          options={['small', 'medium', 'large'] as const}
-          selectedValue={librarySettings.previewSize}
-          onValueChange={handlePreviewSizeChange}
-          labelExtractor={(value) => value.charAt(0).toUpperCase() + value.slice(1)}
-          size="large"
-        />
-      </View> */}
-
-            {/* Show Filenames */}
-            {/* <View className="pb-8 w-32">
-        <Text className="text-base font-medium text-white mb-6">Show Filenames</Text>
-        <Switch value={librarySettings.showFilenames} onValueChange={handleShowFilenamesChange} />
-      </View> */}
-
-            {/* Sort Options */}
-            {/* <View className="pb-8 w-64">
-        <Text className="text-base font-medium text-white mb-6">Sort By</Text>
-        <SegmentedControl
-          options={['name', 'date', 'size', 'type'] as const}
-          selectedValue={librarySettings.sortBy}
-          onValueChange={handleSortChange}
-          labelExtractor={(value) => value.charAt(0).toUpperCase() + value.slice(1)}
-          size="large"
-        />
-      </View> */}
-
-            {/* Sort Direction */}
-            {/* <View className="w-56">
-        <Text className="text-base font-medium text-white mb-6">Sort Direction</Text>
-        <SegmentedControl
-          options={['asc', 'desc'] as const}
-          selectedValue={librarySettings.sortDirection}
-          onValueChange={handleSortDirectionChange}
-          labelExtractor={(value) => (value === 'asc' ? 'Ascending' : 'Descending')}
-          size="large"
-        />
-      </View> */}
+            {/* Last Scan Info */}
+            {localMusicSettings.lastScanTime > 0 && (
+                <View className="mb-6">
+                    <Text className="text-lg font-semibold text-white mb-3">Last Scan</Text>
+                    <Text className="text-white/60 text-sm">
+                        {new Date(localMusicSettings.lastScanTime).toLocaleString()}
+                    </Text>
+                </View>
+            )}
         </View>
     );
-};
+});
