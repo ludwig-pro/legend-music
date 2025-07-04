@@ -9,13 +9,10 @@
 
 ## Steps
 
-[x] Bug: Clicking a song on a playlist that's not currently open does not immediately play it until clicking it again
-[x] Bug: Playing a song overwrites the logos
-[x] Make the playback buttons look prettier
-[x] Make the playlist items look prettier. TouchableOpacity is ugly. Change them to be highlighted in some why while playing and while hovered, and have a simple but cool effect when clicked.
 
 ## Plan for later (do not do these yet)
 
+[] Clicking song in playlist may have broken
 
 ## Plan for even later (do not do these yet)
 

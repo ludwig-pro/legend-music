@@ -11,6 +11,7 @@ export const state$ = observable({
     showSettings: false,
     showSettingsPage: undefined as SettingsPage | undefined,
     songId: undefined as string | undefined,
+    listeningForKeyPress: false,
 });
 
 export const stateSaved$ = createJSONManager({

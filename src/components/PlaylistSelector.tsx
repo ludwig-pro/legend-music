@@ -1,12 +1,14 @@
 import { use$, useObservable } from "@legendapp/state/react";
+import { useRef } from "react";
 import { Text, View } from "react-native";
 import { Button } from "@/components/Button";
-import { DropdownMenu } from "@/components/DropdownMenu";
+import { DropdownMenu, type DropdownMenuRootRef } from "@/components/DropdownMenu";
 import { localAudioControls } from "@/components/LocalAudioPlayer";
 import { Playlist } from "@/components/Playlist";
 import { Select } from "@/components/Select";
 import { StyledInput } from "@/components/StyledInput";
 import type { YTMusicPlaylist } from "@/components/YouTubeMusicPlayer";
+import { useOnHotkeys } from "@/systems/keyboard/Keyboard";
 import { type LocalTrack, localMusicState$, setCurrentPlaylist } from "@/systems/LocalMusicState";
 import { playlistsData$ } from "@/systems/Playlists";
 import { stateSaved$ } from "@/systems/State";
@@ -38,6 +40,9 @@ export function PlaylistSelector() {
     // Search state
     const searchQuery$ = useObservable("");
     const searchQuery = use$(searchQuery$);
+
+    // Dropdown menu ref
+    const dropdownMenuRef = useRef<DropdownMenuRootRef>(null);
 
     const handlePlaylistSelect = (playlistId: string) => {
         console.log("Navigating to playlist:", playlistId);
@@ -80,6 +85,13 @@ export function PlaylistSelector() {
 
         searchQuery$.set(""); // Clear search after selection
     };
+
+    useOnHotkeys({
+        Search: () => {
+            console.log("Opening search menu");
+            dropdownMenuRef.current?.open();
+        },
+    });
 
     return (
         <View className="flex-1">
@@ -124,7 +136,7 @@ export function PlaylistSelector() {
                             maxWidthMatchTrigger={true}
                         />
                     </View>
-                    <DropdownMenu.Root closeOnSelect={false}>
+                    <DropdownMenu.Root ref={dropdownMenuRef} closeOnSelect={false}>
                         <DropdownMenu.Trigger asChild>
                             <Button
                                 icon="magnifyingglass"

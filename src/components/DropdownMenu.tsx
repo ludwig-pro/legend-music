@@ -5,11 +5,13 @@ import type { Component, ReactNode } from "react";
 import {
     cloneElement,
     createContext,
+    forwardRef,
     isValidElement,
     useCallback,
     useContext,
     useEffect,
     useId,
+    useImperativeHandle,
     useRef,
     useState,
 } from "react";
@@ -50,6 +52,11 @@ function useDropdownContext() {
     return context;
 }
 
+// Export type for the ref
+export interface DropdownMenuRootRef {
+    open: () => void;
+}
+
 // Root component
 interface RootProps {
     children: ReactNode;
@@ -58,7 +65,10 @@ interface RootProps {
     onOpenChange?: (open: boolean) => void;
 }
 
-function Root({ children, onSelect, closeOnSelect = true, onOpenChange }: RootProps) {
+const Root = forwardRef<DropdownMenuRootRef, RootProps>(function Root(
+    { children, onSelect, closeOnSelect = true, onOpenChange },
+    ref,
+) {
     const isOpen$ = useObservable(false);
     const openedWithMouseDown$ = useObservable(false);
     const triggerRef = useRef<View>(null);
@@ -71,6 +81,19 @@ function Root({ children, onSelect, closeOnSelect = true, onOpenChange }: RootPr
         }, 60);
         onOpenChange?.(false);
     }, [onOpenChange]);
+
+    const open = useCallback(() => {
+        isOpen$.set(true);
+        onOpenChange?.(true);
+    }, [onOpenChange]);
+
+    useImperativeHandle(
+        ref,
+        () => ({
+            open,
+        }),
+        [open],
+    );
 
     useEffect(() => {
         return isOpen$.onChange(({ value: open }) => {
@@ -91,7 +114,7 @@ function Root({ children, onSelect, closeOnSelect = true, onOpenChange }: RootPr
     };
 
     return <DropdownContext.Provider value={contextValue}>{children}</DropdownContext.Provider>;
-}
+});
 
 // Trigger component
 interface TriggerProps {
