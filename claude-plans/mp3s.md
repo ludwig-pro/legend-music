@@ -16,7 +16,6 @@
 
 ## Plan for even later (do not do these yet)
 
-[] Hotkey to open a search
 [] Make a native module for opening new windows.
 [] Selecting a song in a non-playlist should switch to now playing
 [] Have a menu item / hotkey to enable ytm view where it shows it to the right

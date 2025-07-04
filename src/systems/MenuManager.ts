@@ -1,7 +1,7 @@
 // import { AutoUpdaterModule } from '@/native-modules/AutoUpdater';
 import { menuManager } from "@/native-modules/NativeMenuManager";
 // import { settings$ } from '@/settings/SettingsFile';
-import { state$ } from "@/systems/State";
+import { state$, stateSaved$ } from "@/systems/State";
 
 export function initializeMenuManager() {
     menuManager.addListener("onMenuCommand", (e) => {
@@ -9,6 +9,14 @@ export function initializeMenuManager() {
         switch (e.commandId) {
             case "settings":
                 state$.showSettings.set(true);
+                break;
+            case "jump":
+                console.log("jump");
+                // state$.listeningForSearch.set(true);
+                break;
+            case "ytm":
+                console.log("ytm");
+                stateSaved$.showYtm.toggle();
                 break;
             //   case 'checkForUpdates':
             //     AutoUpdaterModule.checkForUpdates();

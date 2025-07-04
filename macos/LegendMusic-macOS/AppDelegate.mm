@@ -45,8 +45,8 @@
   // Set up menu items
   [self setupMenuCommand:@"settings" itemTitle:@"Settings…" inMenu:@"LegendMusic"];
 //   [self setupMenuCommand:@"checkForUpdates" itemTitle:@"Check for Updates..." inMenu:@"LegendPhotos"];
-//   [self setupMenuCommand:@"showSidebar" itemTitle:@"Show Sidebar" inMenu:@"View"];
-//   [self setupMenuCommand:@"showFilmstrip" itemTitle:@"Show Filmstrip" inMenu:@"View"];
+  [self setupMenuCommand:@"jump" itemTitle:@"Jump" inMenu:@"File"];
+  [self setupMenuCommand:@"ytm" itemTitle:@"Toggle YouTube Music" inMenu:@"View"];
 }
 
 // Combined method to setup a menu command and connect it to a menu item
