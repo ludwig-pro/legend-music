@@ -4,40 +4,38 @@ import { use$, useObservable } from "@legendapp/state/react";
 import { StyleSheet, View } from "react-native";
 
 import { Sidebar } from "@/components/Sidebar";
+import { GeneralSettings } from "@/settings/GeneralSettings";
+import { YouTubeMusicSettings } from "@/settings/YouTubeMusicSettings";
 import { state$ } from "@/systems/State";
 import { ThemeProvider } from "@/theme/ThemeProvider";
 
-export type SettingsPage = "account" | "repositories";
+export type SettingsPage = "general" | "youtube-music" | "account" | "repositories";
 
 // Define the categories for settings
 const SETTING_PAGES: { id: SettingsPage; name: string }[] = [
-    //   { id: 'general', label: 'General' },
+    { id: "general", name: "General" },
+    { id: "youtube-music", name: "YouTube Music" },
     { id: "account", name: "Account" },
     { id: "repositories", name: "Repositories" },
-    // { type: 'item', path: 'themes', text: 'Themes' },
-    //   { id: 'plugins', label: 'Plugins' },
     // Add more categories as needed
 ];
 
 export const SettingsContainer = () => {
     const showSettingsPage = use$(state$.showSettingsPage);
-    const selectedItem$ = useObservable<SettingsPage>(showSettingsPage || "account");
+    const selectedItem$ = useObservable<SettingsPage>(showSettingsPage || "general");
     const selectedItem = use$(selectedItem$);
 
     const renderContent = () => {
-        switch (
-            selectedItem
-            //     return <ThemeSettings />;
-            // case 'plugins':
-            //     return <PluginSettings />;
-            // case 'library':
-            //     return <LibrarySettings />;
-            // default:
-            //     return <AccountSettings />;
-        ) {
+        switch (selectedItem) {
+            case "general":
+                return <GeneralSettings />;
+            case "youtube-music":
+                return <YouTubeMusicSettings />;
+            case "account":
+            case "repositories":
+            default:
+                return null;
         }
-
-        return null;
     };
 
     return (

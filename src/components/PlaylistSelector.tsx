@@ -146,7 +146,7 @@ export function PlaylistSelector() {
                             />
                         </DropdownMenu.Trigger>
                         <DropdownMenu.Content>
-                            <View className="p-2">
+                            {/* <View className="p-2">
                                 <StyledInput value$={searchQuery$} placeholder="Search tracks..." className="mb-2" />
                                 {searchResults.length > 0 && (
                                     <View className="max-h-64">
@@ -171,7 +171,7 @@ export function PlaylistSelector() {
                                 {searchQuery.trim() && searchResults.length === 0 && (
                                     <Text className="text-white/60 text-sm p-2">No tracks found</Text>
                                 )}
-                            </View>
+                            </View> */}
                         </DropdownMenu.Content>
                     </DropdownMenu.Root>
                 </View>

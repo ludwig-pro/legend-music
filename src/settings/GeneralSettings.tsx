@@ -1,53 +1,40 @@
-import { observer } from "@legendapp/state/react";
+import { observer, use$ } from "@legendapp/state/react";
 import { Text, View } from "react-native";
 
+import { Select } from "@/components/Select";
+import { settings$ } from "@/systems/Settings";
+
 export const GeneralSettings = observer(function GeneralSettings() {
-    // const { enabled: autoUpdateEnabled$, checkInterval: autoUpdateInterval$ } = settings$.general.autoUpdate;
-
-    // const autoUpdateEnabled = useSelector(autoUpdateEnabled$);
-    // const autoUpdateInterval = useSelector(autoUpdateInterval$);
-
-    // const handleIntervalChange = (text: string) => {
-    //     let value = Number.parseInt(text || '0', 10);
-    //     if (Number.isNaN(value) || value < 1) {
-    //         value = 1;
-    //     }
-    //     autoUpdateInterval$.set(value);
-    // };
+    const playlistStyleOptions = [
+        { id: "compact", label: "Compact" },
+        { id: "comfortable", label: "Comfortable" },
+    ] as const;
 
     return (
-        <View>
-            <Text className="text-2xl font-bold text-white mb-5">General Settings</Text>
+        <View className="p-6">
+            <Text className="text-2xl font-bold text-white mb-6">General Settings</Text>
 
-            {/* Auto-Update Settings */}
-            {/* <View className="mb-4">
-                <Text className="text-lg font-semibold text-white mb-2">Auto Update</Text>
-
-                <View className="flex-row items-center mb-2">
-                    <Text className="text-white flex-1">Check for updates automatically</Text>
-                    <Switch value={autoUpdateEnabled} onValueChange={(value) => autoUpdateEnabled$.set(value)} />
-                </View>
-
-                {autoUpdateEnabled && (
-                    <View className="flex-row items-center mb-2">
-                        <Text className="text-white flex-1">Check interval (hours)</Text>
-                        <TextInput
-                            className="bg-gray-700 text-white px-2 py-1 rounded w-20 text-right"
-                            value={autoUpdateInterval.toString()}
-                            onChangeText={handleIntervalChange}
-                            keyboardType="number-pad"
+            {/* Playlist Style Settings */}
+            <View className="mb-6">
+                <Text className="text-lg font-semibold text-white mb-3">Appearance</Text>
+                
+                <View className="flex-row items-center justify-between">
+                    <Text className="text-white text-base">Playlist Style</Text>
+                    <View className="w-48">
+                        <Select
+                            selected$={settings$.general.playlistStyle}
+                            items={playlistStyleOptions}
+                            getItemKey={(item) => item.id}
+                            renderItem={(item, mode) => (
+                                <Text className="text-white text-sm">{item.label}</Text>
+                            )}
+                            placeholder="Select style..."
+                            className="bg-white/10 border border-white/20 rounded-md"
+                            triggerClassName="px-3 py-2"
                         />
                     </View>
-                )}
-
-                <View className="mt-2">
-                    <Text className="text-blue-400 underline" onPress={() => AutoUpdaterModule.checkForUpdates()}>
-                        Check for updates now
-                    </Text>
                 </View>
-            </View> */}
-
-            {/* Other general settings would go here */}
+            </View>
         </View>
     );
 });

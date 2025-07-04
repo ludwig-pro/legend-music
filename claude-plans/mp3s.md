@@ -8,15 +8,11 @@
 
 ## Steps
 
-[x] When a youtube music playlist loads it should not update the playlist content if the local files playlist is selected
-[x] If the Local Files playlist is selected on startup it should show the local files playlist
+[x] Set up the settings window: It should have two pages: General, YouTube Music. General should have just one option: "Playlist Style" with a Select for two options ["Compact", "Comfortable"]. YouTube should have one option: a checkbox "Enabled".
 
 ## Plan for later (do not do these yet)
 
-[] Clicking song in playlist is not immediately playing the song. It opens the song correctly but I think it just needs to click the play button.
-
-## Plan for even later (do not do these yet)
-
+[] Sometimes on load is says "Sponsored" with 0:00
 [] Make a native module for opening new windows.
 [] Selecting a song in a non-playlist should switch to now playing
 [] Have a menu item / hotkey to enable ytm view where it shows it to the right
