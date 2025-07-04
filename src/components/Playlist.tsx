@@ -8,6 +8,7 @@ import { controls, playbackState$, playlistState$, playlistsState$ } from "@/com
 import { localMusicState$ } from "@/systems/LocalMusicState";
 import { getPlaylistContent } from "@/systems/PlaylistContent";
 import { playlistsData$ } from "@/systems/Playlists";
+import { settings$ } from "@/systems/Settings";
 import { state$, stateSaved$ } from "@/systems/State";
 import { cn } from "@/utils/cn";
 import { formatSecondsToMmSs } from "@/utils/m3u";
@@ -37,6 +38,8 @@ const TrackItem = ({ track, index, onTrackClick }: TrackItemProps) => {
         const currentTrack = localPlayerState$.currentTrack.get();
         return currentTrack === track || currentTrack?.id === track.id;
     });
+    
+    const playlistStyle = use$(settings$.general.playlistStyle);
 
     // Handle separator items
     if (track.isSeparator) {
@@ -51,18 +54,42 @@ const TrackItem = ({ track, index, onTrackClick }: TrackItemProps) => {
         );
     }
 
+    // Compact mode: single line format "${number}. ${artist} - ${song}"
+    if (playlistStyle === "compact") {
+        return (
+            <Button
+                className={cn(
+                    "flex-row items-center px-4 py-1",
+                    // Playing state styling
+                    isPlaying ? "bg-blue-500/20 border-blue-400/30" : "",
+                    "hover:bg-white/10 active:bg-white/15 border border-transparent hover:border-white/10",
+                    // Suggestions styling
+                    track.fromSuggestions ? "opacity-75" : "",
+                )}
+                onPress={() => onTrackClick(index)}
+            >
+                <Text
+                    className={cn("text-sm flex-1", track.fromSuggestions ? "text-white/70" : "text-white")}
+                    numberOfLines={1}
+                >
+                    {track.index >= 0 ? `${track.index + 1}. ` : ""}{track.artist} - {track.title}
+                </Text>
+                
+                <Text className={cn("text-sm ml-4", track.fromSuggestions ? "text-white/40" : "text-white/60")}>
+                    {track.duration}
+                </Text>
+            </Button>
+        );
+    }
+
+    // Comfortable mode: current existing layout
     return (
         <Button
             className={cn(
                 "flex-row items-center px-4 py-1",
                 // Playing state styling
                 isPlaying ? "bg-blue-500/20 border-blue-400/30" : "",
-                // // Clicked state styling with orange highlight
-                // clickedTrackIndex === index ? "bg-orange-500/25 border border-orange-400/40 scale-[0.98]" : "",
-                // // Default styling when not playing or clicked
-                // index !== currentTrackIndex && clickedTrackIndex !== index
                 "hover:bg-white/10 active:bg-white/15 border border-transparent hover:border-white/10",
-                //     : "",
                 // Suggestions styling
                 track.fromSuggestions ? "opacity-75" : "",
             )}

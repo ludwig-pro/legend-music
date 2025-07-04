@@ -8,7 +8,7 @@
 
 ## Steps
 
-[x] Set up the settings window: It should have two pages: General, YouTube Music. General should have just one option: "Playlist Style" with a Select for two options ["Compact", "Comfortable"]. YouTube should have one option: a checkbox "Enabled".
+[x] Use the settings$.general.playlistStyle setting to adjust how playlists look in Playlist.tsx. The existing look should be "Comfortable" mode. "Compact" mode should not display a thumbnail and should render everything on one line in the format `${number}. ${artist} - ${song}`
 
 ## Plan for later (do not do these yet)
 
