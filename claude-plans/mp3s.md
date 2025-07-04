@@ -9,17 +9,17 @@
 
 ## Steps
 
-[x] Add a search button to the right of the playlist selector which is only visible if the local files playlist is selected
-[x] Clicking the search button should show a dropdown menu with a textbox and a list of results
-[x] Searching should search through all local files and playlists and display them in the list of results
-[x] Selecting a track in search should add it to now playing and start playing it
-
+[] Bug: Clicking a song on a playlist that's not currently open does not immediately play it until clicking it again
+[] Bug: Playing a song overwrites the logos
+[] Make the playback buttons look prettier
+[] Make the playlist items look prettier. TouchableOpacity is ugly. Change them to be highlighted in some why while playing and while hovered, and have a simple but cool effect when clicked.
 
 ## Plan for later (do not do these yet)
 
-[] Playing a song overwrites the logos
+
+## Plan for even later (do not do these yet)
+
 [] Hotkey to open a search
-[] Clicking a song on a playlist that's not currently open does not immediately play it until clicking it again
 [] Make a native module for opening new windows.
 [] Selecting a song in a non-playlist should switch to now playing
 [] Have a menu item / hotkey to enable ytm view where it shows it to the right
