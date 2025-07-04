@@ -1234,7 +1234,7 @@ const updatePlaylistContent = (
                 title: newTrack.title,
                 artist: newTrack.artist,
                 filePath: generateYouTubeMusicWatchUrl(newTrack.id || "", playlistIdForUrl),
-                logo: newTrack.thumbnail || existingTrack?.logo,
+                logo: existingTrack?.logo || newTrack.thumbnail,
             };
 
             if (existingTrack?.id) {
