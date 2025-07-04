@@ -217,39 +217,18 @@ export function Playlist() {
                 localAudioControls.loadPlaylist(tracks, index);
             }
         } else {
-            // Handle YouTube Music playback
-            const currentPlaylistId = playlistState.currentPlaylistId;
-            const isPlaylistLoaded = playlistState.songs.length > 0;
-
-            // Check if we need to navigate to the correct playlist first
-            if (!isPlaylistLoaded || currentPlaylistId !== selectedPlaylistId) {
-                console.log("Navigating to playlist:", selectedPlaylistId, "before playing track at index:", index);
-
-                // First navigate to the correct playlist
-                if (selectedPlaylistId) {
-                    controls.navigateToPlaylist(selectedPlaylistId);
-
-                    // Wait a bit for the playlist to load, then play the track
-                    setTimeout(() => {
-                        controls.playTrackAtIndex(index);
-                        console.log("Playing track at index:", index, "after playlist navigation");
-                    }, 1500); // Give time for playlist to load
-                }
+            // Handle YouTube Music playback - use playTrackAtIndex for proper track selection
+            if (track?.fromSuggestions || !track?.id) {
+                // For suggestions, use playTrackAtIndex to play them
+                console.log("Playing suggestion at index:", index, "track:", track.title);
+                controls.playTrackAtIndex(index);
             } else {
-                // Playlist is already loaded, play the track directly
-                if (track?.fromSuggestions || !track?.id) {
-                    // For suggestions, use playTrackAtIndex to play them
-                    console.log("Playing suggestion at index:", index, "track:", track.title);
-                    controls.playTrackAtIndex(index);
+                // For regular playlist tracks, set the songId
+                if (track?.id) {
+                    state$.songId.set(track.id);
+                    console.log("Set songId:", track.id, "for track:", track.title);
                 } else {
-                    // For regular playlist tracks, set the songId
-                    if (track?.id) {
-                        state$.songId.set(track.id);
-                        console.log("Set songId:", track.id, "for track:", track.title);
-                    } else {
-                        console.warn("Track missing ID, using playTrackAtIndex as fallback");
-                        controls.playTrackAtIndex(index);
-                    }
+                    console.warn("Track missing ID, cannot set songId:", track);
                 }
             }
         }

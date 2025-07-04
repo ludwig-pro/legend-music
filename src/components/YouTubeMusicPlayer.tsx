@@ -1272,7 +1272,6 @@ const controls = {
     setVolume: (volume: number) => executeCommand("setVolume", volume),
     seek: (seconds: number) => executeCommand("seek", seconds),
     playTrackAtIndex: (index: number) => executeCommand("playTrackAtIndex", index),
-    navigateToPlaylist: (playlistId: string) => executeCommand("navigateToPlaylist", playlistId),
 };
 
 export function YouTubeMusicPlayer() {
