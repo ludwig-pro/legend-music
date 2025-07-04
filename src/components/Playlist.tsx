@@ -1,5 +1,5 @@
 import { LegendList } from "@legendapp/list";
-import { use$, useObservable, useSelector } from "@legendapp/state/react";
+import { use$, useSelector } from "@legendapp/state/react";
 import { Image, StyleSheet, Text, View } from "react-native";
 
 import { Button } from "@/components/Button";

@@ -243,6 +243,13 @@ stateSaved$.playlistType.onChange(({ value }) => {
 export function initializeLocalMusic(): void {
     const settings = localMusicSettings$.get();
 
+    // Restore isLocalFilesSelected state based on saved playlist type
+    const savedPlaylistType = stateSaved$.playlistType.get();
+    if (savedPlaylistType === "file") {
+        localMusicState$.isLocalFilesSelected.set(true);
+        console.log("Restored Local Files playlist selection on startup");
+    }
+
     if (settings.autoScanOnStart) {
         console.log("Auto-scanning local music on startup...");
         scanLocalMusic().catch((error) => {

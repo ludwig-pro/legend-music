@@ -1230,6 +1230,7 @@ const updatePlaylistContent = (
             );
 
             const merged: M3UTrack = {
+                id: existingTrack?.id || newTrack.id,
                 duration: parseDurationToSeconds(newTrack.duration),
                 title: newTrack.title,
                 artist: newTrack.artist,
@@ -1325,15 +1326,19 @@ export function YouTubeMusicPlayer() {
                     break;
                 }
                 case "playlistState": {
-                    playlistState$.assign(message.data);
+                    // Only update playlist state if Local Files playlist is not selected
+                    const currentPlaylistType = stateSaved$.playlistType.get();
+                    if (currentPlaylistType !== "file") {
+                        playlistState$.assign(message.data);
 
-                    // Update playlist content (M3U format) when tracks are received
-                    if (message.data.songs && Array.isArray(message.data.songs)) {
-                        updatePlaylistContent(
-                            stateSaved$.playlist.get(),
-                            message.data.songs,
-                            message.data.suggestions || [],
-                        );
+                        // Update playlist content (M3U format) when tracks are received
+                        if (message.data.songs && Array.isArray(message.data.songs)) {
+                            updatePlaylistContent(
+                                stateSaved$.playlist.get(),
+                                message.data.songs,
+                                message.data.suggestions || [],
+                            );
+                        }
                     }
                     break;
                 }

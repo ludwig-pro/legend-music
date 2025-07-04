@@ -1,18 +1,19 @@
 ## Instructions
 
 - Follow all of the steps in order, one by one
-- Check them off in this file as they are completed
-- Do a git commit with a brief description of the change for each step before moving to the next step, including this file
+- After each step is completed, check off the completed step in this file. Then do a git commit with a brief description of the change.
 - Remember that this is a React Native MacOS app, so iOS only APIs will not work.
 - Use Legend State for state
 - Use Reanimated for animations
 
 ## Steps
 
-[] Clicking song in playlist is not immediately playing the song. It opens the song correctly but I think it just needs to click the play button.
+[x] When a youtube music playlist loads it should not update the playlist content if the local files playlist is selected
+[x] If the Local Files playlist is selected on startup it should show the local files playlist
 
 ## Plan for later (do not do these yet)
 
+[] Clicking song in playlist is not immediately playing the song. It opens the song correctly but I think it just needs to click the play button.
 
 ## Plan for even later (do not do these yet)
 
