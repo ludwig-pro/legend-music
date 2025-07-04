@@ -7,7 +7,7 @@ import { Playlist } from "@/components/Playlist";
 import { Select } from "@/components/Select";
 import { StyledInput } from "@/components/StyledInput";
 import type { YTMusicPlaylist } from "@/components/YouTubeMusicPlayer";
-import { localMusicState$, setCurrentPlaylist, type LocalTrack } from "@/systems/LocalMusicState";
+import { type LocalTrack, localMusicState$, setCurrentPlaylist } from "@/systems/LocalMusicState";
 import { playlistsData$ } from "@/systems/Playlists";
 import { stateSaved$ } from "@/systems/State";
 
@@ -49,27 +49,25 @@ export function PlaylistSelector() {
         }
     };
 
-    const handleSearchPress = () => {
-        console.log("Search button pressed");
-        // The dropdown will open automatically when the button is pressed
-    };
-
     const isLocalFilesSelected = selectedPlaylist === "LOCAL_FILES";
 
     // Filter search results
-    const searchResults = searchQuery.trim() 
-        ? localMusicState.tracks.filter(track => 
-            track.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            track.artist.toLowerCase().includes(searchQuery.toLowerCase())
-          ).slice(0, 10) // Limit to 10 results
+    const searchResults = searchQuery.trim()
+        ? localMusicState.tracks
+              .filter(
+                  (track) =>
+                      track.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      track.artist.toLowerCase().includes(searchQuery.toLowerCase()),
+              )
+              .slice(0, 10) // Limit to 10 results
         : [];
 
     const handleTrackSelect = (track: LocalTrack) => {
         console.log("Selected track:", track);
-        
+
         // Find the index of the selected track in the full tracks list
-        const trackIndex = localMusicState.tracks.findIndex(t => t.id === track.id);
-        
+        const trackIndex = localMusicState.tracks.findIndex((t) => t.id === track.id);
+
         if (trackIndex !== -1) {
             // Load the entire local music library as playlist, starting with the selected track
             localAudioControls.loadPlaylist(localMusicState.tracks, trackIndex);
@@ -79,7 +77,7 @@ export function PlaylistSelector() {
             localAudioControls.loadTrack(track.filePath, track.title, track.artist);
             console.log(`Started playing single track: "${track.title}" by ${track.artist}`);
         }
-        
+
         searchQuery$.set(""); // Clear search after selection
     };
 
@@ -97,7 +95,8 @@ export function PlaylistSelector() {
                             getItemKey={(playlist) => playlist}
                             renderItem={(playlistId, mode) => {
                                 if (!playlistId) return <Text>Null</Text>;
-                                const playlist = playlistId === "LOCAL_FILES" ? localFilesPlaylist : playlistsObj[playlistId];
+                                const playlist =
+                                    playlistId === "LOCAL_FILES" ? localFilesPlaylist : playlistsObj[playlistId];
 
                                 console.log("playlists", playlistsObj, localFilesPlaylist);
                                 if (!playlist) {
@@ -133,7 +132,6 @@ export function PlaylistSelector() {
                                     icon="magnifyingglass"
                                     variant="icon"
                                     size="medium"
-                                    onPress={handleSearchPress}
                                     className="ml-2 hover:bg-white/10"
                                 />
                             </DropdownMenu.Trigger>
@@ -165,9 +163,7 @@ export function PlaylistSelector() {
                                         </View>
                                     )}
                                     {searchQuery.trim() && searchResults.length === 0 && (
-                                        <Text className="text-white/60 text-sm p-2">
-                                            No tracks found
-                                        </Text>
+                                        <Text className="text-white/60 text-sm p-2">No tracks found</Text>
                                     )}
                                 </View>
                             </DropdownMenu.Content>

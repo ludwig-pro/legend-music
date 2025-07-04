@@ -2,7 +2,17 @@ import { Callout } from "@fluentui-react-native/callout";
 import type { Observable } from "@legendapp/state";
 import { use$, useObservable } from "@legendapp/state/react";
 import type { Component, ReactNode } from "react";
-import { createContext, useCallback, useContext, useEffect, useId, useRef, useState } from "react";
+import {
+    cloneElement,
+    createContext,
+    isValidElement,
+    useCallback,
+    useContext,
+    useEffect,
+    useId,
+    useRef,
+    useState,
+} from "react";
 import { type GestureResponderEvent, ScrollView, Text, View } from "react-native";
 import { Icon } from "@/systems/Icon";
 import { state$ } from "@/systems/State";
@@ -114,7 +124,18 @@ function Trigger({
     }, []);
 
     if (asChild) {
-        // If asChild, we should not render a button, just the children
+        // Clone the child element and pass our props to it
+        if (isValidElement(children)) {
+            return (
+                <View ref={triggerRef}>
+                    {cloneElement(children, {
+                        onMouseDown,
+                        ...(children.props as any),
+                    })}
+                </View>
+            );
+        }
+        // Fallback if children is not a valid element
         return (
             <View ref={triggerRef}>
                 <Button onMouseDown={onMouseDown}>{children}</Button>
