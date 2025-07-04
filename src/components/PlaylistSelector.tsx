@@ -98,7 +98,6 @@ export function PlaylistSelector() {
                                 const playlist =
                                     playlistId === "LOCAL_FILES" ? localFilesPlaylist : playlistsObj[playlistId];
 
-                                console.log("playlists", playlistsObj, localFilesPlaylist);
                                 if (!playlist) {
                                     console.log("Playlist not found:", playlistId);
                                     return <Text>Null</Text>;

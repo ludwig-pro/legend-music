@@ -112,11 +112,6 @@ function formatDuration(seconds: number): string {
     return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
 }
 
-// Generate unique ID for track
-function generateTrackId(filePath: string): string {
-    return `local_${filePath.replace(/[^a-zA-Z0-9]/g, "_")}`;
-}
-
 // Scan directory for MP3 files
 async function scanDirectory(directoryPath: string): Promise<LocalTrack[]> {
     const tracks: LocalTrack[] = [];
@@ -148,7 +143,7 @@ async function scanDirectory(directoryPath: string): Promise<LocalTrack[]> {
                     const metadata = await extractId3Metadata(filePath, item.name);
 
                     const track: LocalTrack = {
-                        id: generateTrackId(filePath),
+                        id: filePath,
                         title: metadata.title,
                         artist: metadata.artist,
                         duration: metadata.duration || "0:00",

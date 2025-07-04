@@ -1,5 +1,5 @@
 import { LegendList } from "@legendapp/list";
-import { use$, useObservable } from "@legendapp/state/react";
+import { use$, useObservable, useSelector } from "@legendapp/state/react";
 import { Image, StyleSheet, Text, View } from "react-native";
 
 import { Button } from "@/components/Button";
@@ -26,12 +26,17 @@ interface PlaylistTrack {
 interface TrackItemProps {
     track: PlaylistTrack;
     index: number;
-    currentTrackIndex: number;
-    clickedTrackIndex: number | null;
+    // currentTrackIndex: number;
+    // clickedTrackIndex: number | null;
     onTrackClick: (index: number) => void;
 }
 
-const TrackItem = ({ track, index, currentTrackIndex, clickedTrackIndex, onTrackClick }: TrackItemProps) => {
+const TrackItem = ({ track, index, onTrackClick }: TrackItemProps) => {
+    const isPlaying = useSelector(() => {
+        const currentTrack = localPlayerState$.currentTrack.get();
+        return currentTrack === track || currentTrack?.id === track.id;
+    });
+
     // Handle separator items
     if (track.isSeparator) {
         return (
@@ -48,19 +53,15 @@ const TrackItem = ({ track, index, currentTrackIndex, clickedTrackIndex, onTrack
     return (
         <Button
             className={cn(
-                "flex-row items-center px-4 py-3 mx-2 my-0.5 rounded-xl transition-all duration-200",
+                "flex-row items-center px-4 py-1",
                 // Playing state styling
-                index === currentTrackIndex 
-                    ? "bg-blue-500/20 border border-blue-400/30 shadow-lg" 
-                    : "",
-                // Clicked state styling with orange highlight
-                clickedTrackIndex === index 
-                    ? "bg-orange-500/25 border border-orange-400/40 scale-[0.98]" 
-                    : "",
-                // Default styling when not playing or clicked
-                index !== currentTrackIndex && clickedTrackIndex !== index
-                    ? "bg-white/5 hover:bg-white/10 active:bg-white/15 border border-white/5 hover:border-white/10"
-                    : "",
+                isPlaying ? "bg-blue-500/20 border-blue-400/30" : "",
+                // // Clicked state styling with orange highlight
+                // clickedTrackIndex === index ? "bg-orange-500/25 border border-orange-400/40 scale-[0.98]" : "",
+                // // Default styling when not playing or clicked
+                // index !== currentTrackIndex && clickedTrackIndex !== index
+                "hover:bg-white/10 active:bg-white/15 border border-transparent hover:border-white/10",
+                //     : "",
                 // Suggestions styling
                 track.fromSuggestions ? "opacity-75" : "",
             )}
@@ -73,7 +74,7 @@ const TrackItem = ({ track, index, currentTrackIndex, clickedTrackIndex, onTrack
             {track.thumbnail ? (
                 <Image source={{ uri: track.thumbnail }} className="size-9 rounded-lg" resizeMode="cover" />
             ) : (
-                <View className="w-12 h-12 bg-white/20 rounded-lg ml-4 items-center justify-center">
+                <View className="w-12 h-12 bg-white/20 rounded-lg items-center justify-center">
                     <Text className="text-white text-xs">♪</Text>
                 </View>
             )}
@@ -113,8 +114,8 @@ export function Playlist() {
     const localPlayerState = use$(localPlayerState$);
     const playlistsData = use$(playlistsData$);
     const stateSaved = use$(stateSaved$);
-    const clickedTrackIndex$ = useObservable<number | null>(null);
-    const clickedTrackIndex = use$(clickedTrackIndex$);
+    // const clickedTrackIndex$ = useObservable<number | null>(null);
+    // const clickedTrackIndex = use$(clickedTrackIndex$);
 
     // Determine which playlist to show
     const isLocalFilesSelected = localMusicState.isLocalFilesSelected;
@@ -127,6 +128,7 @@ export function Playlist() {
 
     const playlist: PlaylistTrackWithSuggestions[] = isLocalFilesSelected
         ? localMusicState.tracks.map((track, index) => ({
+              id: track.id,
               title: track.title,
               artist: track.artist,
               duration: track.duration,
@@ -189,8 +191,6 @@ export function Playlist() {
               ];
           })();
 
-    const currentTrackIndex = isLocalFilesSelected ? localPlayerState.currentIndex : playbackState.currentTrackIndex;
-
     const handleTrackClick = (index: number) => {
         const track = playlist[index];
 
@@ -199,7 +199,7 @@ export function Playlist() {
             return;
         }
 
-        clickedTrackIndex$.set(index);
+        // clickedTrackIndex$.set(index);
 
         if (isLocalFilesSelected) {
             // Handle local file playback
@@ -216,15 +216,15 @@ export function Playlist() {
             // Handle YouTube Music playback
             const currentPlaylistId = playlistState.currentPlaylistId;
             const isPlaylistLoaded = playlistState.songs.length > 0;
-            
+
             // Check if we need to navigate to the correct playlist first
             if (!isPlaylistLoaded || currentPlaylistId !== selectedPlaylistId) {
                 console.log("Navigating to playlist:", selectedPlaylistId, "before playing track at index:", index);
-                
+
                 // First navigate to the correct playlist
                 if (selectedPlaylistId) {
                     controls.navigateToPlaylist(selectedPlaylistId);
-                    
+
                     // Wait a bit for the playlist to load, then play the track
                     setTimeout(() => {
                         controls.playTrackAtIndex(index);
@@ -251,9 +251,9 @@ export function Playlist() {
         }
 
         // Clear the clicked state after a short delay
-        setTimeout(() => {
-            clickedTrackIndex$.set(null);
-        }, 1000);
+        // setTimeout(() => {
+        //     clickedTrackIndex$.set(null);
+        // }, 1000);
     };
 
     // Check if we have playlists available to show
@@ -293,14 +293,7 @@ export function Playlist() {
                     contentContainerStyle={styles.container}
                     recycleItems
                     renderItem={({ item: track, index }) => (
-                        <TrackItem
-                            key={index}
-                            track={track}
-                            index={index}
-                            currentTrackIndex={currentTrackIndex}
-                            clickedTrackIndex={clickedTrackIndex}
-                            onTrackClick={handleTrackClick}
-                        />
+                        <TrackItem key={index} track={track} index={index} onTrackClick={handleTrackClick} />
                     )}
                 />
             )}

@@ -82,28 +82,31 @@ export function PlaybackArea() {
                     <Button
                         icon="backward.fill"
                         variant="icon-bg"
+                        iconSize={16}
                         size="medium"
                         onPress={isLocalFilesSelected ? localAudioControls.playPrevious : controls.previous}
                         disabled={isLoading}
-                        className="w-10 h-10 bg-white/15 hover:bg-white/25 active:bg-white/35 rounded-xl border border-white/10"
+                        className="bg-white/15 hover:bg-white/25 active:bg-white/35 border-white/10 rounded-full"
                     />
 
                     <Button
                         icon={isLoading ? "ellipsis" : isPlaying ? "pause.fill" : "play.fill"}
                         variant="icon-bg"
-                        size="large"
+                        iconSize={18}
+                        size="medium"
                         onPress={isLocalFilesSelected ? localAudioControls.togglePlayPause : controls.playPause}
                         disabled={isLoading}
-                        className="w-12 h-12 bg-white/20 hover:bg-white/30 active:bg-white/40 rounded-xl border border-white/15 shadow-lg"
+                        className="bg-white/15 hover:bg-white/25 active:bg-white/35 border-white/15 rounded-full"
                     />
 
                     <Button
                         icon="forward.fill"
                         variant="icon-bg"
+                        iconSize={16}
                         size="medium"
                         onPress={isLocalFilesSelected ? localAudioControls.playNext : controls.next}
                         disabled={isLoading}
-                        className="w-10 h-10 bg-white/15 hover:bg-white/25 active:bg-white/35 rounded-xl border border-white/10"
+                        className="bg-white/15 hover:bg-white/25 active:bg-white/35 border-white/10 rounded-full"
                     />
                 </View>
             </View>

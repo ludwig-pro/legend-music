@@ -4,7 +4,7 @@ import { View } from "react-native";
 import { useAudioPlayer } from "@/native-modules/AudioPlayer";
 import type { LocalTrack } from "@/systems/LocalMusicState";
 
-interface LocalPlayerState {
+export interface LocalPlayerState {
     isPlaying: boolean;
     currentTrack: LocalTrack | null;
     currentTime: number;
@@ -16,7 +16,7 @@ interface LocalPlayerState {
 }
 
 // Create observable player state for local music
-const localPlayerState$ = observable<LocalPlayerState>({
+export const localPlayerState$ = observable<LocalPlayerState>({
     isPlaying: false,
     currentTrack: null,
     currentTime: 0,
@@ -31,15 +31,16 @@ let currentPlaylist: LocalTrack[] = [];
 let audioPlayer: ReturnType<typeof useAudioPlayer> | null = null;
 
 // Expose control methods for local audio
-const localAudioControls = {
+export const localAudioControls = {
     loadTrack: async (filePath: string, title: string, artist: string) => {
         console.log("Loading track:", filePath, title, artist);
         const track = {
+            id: filePath,
             filePath,
             title,
             artist,
             duration: "0:00",
-            id: `local_${Date.now()}`,
+
             fileName: title,
         };
         localPlayerState$.currentTrack.set(track);
@@ -217,7 +218,3 @@ export function LocalAudioPlayer() {
 
     return <View className="w-0 h-0 opacity-0 absolute" />;
 }
-
-// Export player state and controls for use in other components
-export { localAudioControls, localPlayerState$ };
-export type { LocalPlayerState };
