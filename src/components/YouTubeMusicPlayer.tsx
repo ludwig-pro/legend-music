@@ -1,10 +1,10 @@
 import { batch, observable } from "@legendapp/state";
-import { use$, useSelector } from "@legendapp/state/react";
-import React, { useEffect, useMemo, useRef } from "react";
+import { useSelector } from "@legendapp/state/react";
+import React, { useEffect, useRef } from "react";
 import { View } from "react-native";
 import { WebView } from "react-native-webview";
 import { getPlaylistContent } from "@/systems/PlaylistContent";
-import { getAllPlaylists, getPlaylist, type Playlist, playlistsData$ } from "@/systems/Playlists";
+import { getAllPlaylists, type Playlist, playlistsData$ } from "@/systems/Playlists";
 import { state$, stateSaved$ } from "@/systems/State";
 import { arrayToObject } from "@/utils/arrayToObject";
 import type { M3UTrack } from "@/utils/m3u";
@@ -16,11 +16,11 @@ function generateYouTubeMusicWatchUrl(trackId: string, playlistIdForUrl: string)
 }
 
 interface Track {
+    id: string;
     title: string;
     artist: string;
     duration: string;
     thumbnail: string;
-    id?: string;
 }
 
 interface PlaylistTrack extends Track {
@@ -1391,5 +1391,5 @@ export function YouTubeMusicPlayer() {
 }
 
 // Export player state and controls for use in other components
-export { controls, playbackState$, playlistState$, playlistsState$ };
-export type { PlayerState, PlaybackState, PlaylistState, PlaylistsState, PlaylistTrack, Track, YTMusicPlaylist };
+export { controls, playbackState$, playlistsState$, playlistState$ };
+export type { PlaybackState, PlayerState, PlaylistsState, PlaylistState, PlaylistTrack, Track, YTMusicPlaylist };

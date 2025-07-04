@@ -13,6 +13,7 @@ import { cn } from "@/utils/cn";
 import { formatSecondsToMmSs } from "@/utils/m3u";
 
 interface PlaylistTrack {
+    id: string;
     title: string;
     artist: string;
     duration: string;
@@ -152,6 +153,7 @@ export function Playlist() {
               } else if (cachedPlaylistContent?.songs || cachedPlaylistContent?.suggestions) {
                   // Transform cached M3U data to PlaylistTrack format
                   songs = (cachedPlaylistContent.songs || []).map((track, index) => ({
+                      id: track.id,
                       title: track.title,
                       artist: track.artist || "",
                       duration: formatSecondsToMmSs(track.duration),
@@ -161,6 +163,7 @@ export function Playlist() {
                   }));
 
                   suggestions = (cachedPlaylistContent.suggestions || []).map((track, index) => ({
+                      id: track.id,
                       title: track.title,
                       artist: track.artist || "",
                       duration: formatSecondsToMmSs(track.duration),
@@ -177,6 +180,7 @@ export function Playlist() {
                       ? [
                             // Add a separator item
                             {
+                                id: "separator",
                                 title: "— Suggestions —",
                                 artist: "",
                                 duration: "",

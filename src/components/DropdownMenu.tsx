@@ -145,18 +145,13 @@ function Trigger({
 
     if (unstyled || showCaret) {
         // Custom styled trigger with optional caret
+        const caret = showCaret ? <Icon name="chevron.up.chevron.down" size={14} marginTop={-6} /> : null;
         return (
             <View ref={triggerRef}>
                 <Button className={cn("flex-row items-center group", className)} onMouseDown={onMouseDown}>
-                    {caretPosition === "left" && showCaret && (
-                        <Text className={cn("text-white/70 group-hover:text-white mr-2", caretClassName)}>⌄</Text>
-                    )}
+                    {caretPosition === "left" && caret}
                     <View className={cn("flex-1", textClassName)}>{children}</View>
-                    {caretPosition === "right" && showCaret && (
-                        <Text className={cn("text-white/70 group-hover:text-white ml-2", caretClassName)}>
-                            <Icon name="chevron.up.chevron.down" size={14} />
-                        </Text>
-                    )}
+                    {caretPosition === "right" && caret}
                 </Button>
             </View>
         );
