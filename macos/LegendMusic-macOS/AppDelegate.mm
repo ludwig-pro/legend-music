@@ -30,10 +30,46 @@
                                                name:NSWindowDidBecomeKeyNotification
                                              object:nil];
 
-
   [self performSelector:@selector(setupMenuConnections) withObject:nil afterDelay:0.5];
 
   return [super applicationDidFinishLaunching:notification];
+}
+
+- (void)loadReactNativeWindow:(NSDictionary *)launchOptions
+{
+  RCTPlatformView *rootView = [self.rootViewFactory viewWithModuleName:self.moduleName
+                                                     initialProperties:self.initialProps
+                                                         launchOptions:launchOptions];
+
+  // Create window with default size - autosave will override if available
+  NSRect defaultFrame = NSMakeRect(0, 0, 1280, 720);
+  self.window = [[NSWindow alloc] initWithContentRect:defaultFrame
+                                           styleMask:NSWindowStyleMaskTitled | NSWindowStyleMaskResizable | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable
+                                             backing:NSBackingStoreBuffered
+                                               defer:NO];
+  self.window.title = self.moduleName;
+  self.window.autorecalculatesKeyViewLoop = YES;
+  
+  // Set frame autosave name BEFORE making the window visible
+  // This will automatically restore the saved frame if one exists
+  [self.window setFrameAutosaveName:@"MainWindow"];
+  
+  NSViewController *rootViewController = [NSViewController new];
+  rootViewController.view = rootView;
+  
+  // Set the root view frame to match the window's content size
+  rootView.frame = self.window.contentView.bounds;
+  rootView.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+  
+  self.window.contentViewController = rootViewController;
+  
+  // Only center if no saved frame exists
+  if (![[NSUserDefaults standardUserDefaults] objectForKey:@"NSWindow Frame MainWindow"]) {
+    [self.window center];
+  }
+  
+  // Now make the window visible - frame should already be restored by autosave
+  [self.window makeKeyAndOrderFront:self];
 }
 
 // Setup menu item connections
@@ -138,6 +174,7 @@
 }
 
 
+
 /**
  * Ensures that the window is fully initialized and has become the key window before you attempt to modify its properties
  */
@@ -145,8 +182,7 @@
 {
   NSWindow *window = notification.object;
 
-  // Enable automatic window frame saving/restoring
-  [window setFrameAutosaveName:@"MainWindow"];
+  // Autosave name should already be set in loadReactNativeWindow
   
   [window setTitleVisibility:NSWindowTitleHidden];
   [window setTitlebarAppearsTransparent:YES];
