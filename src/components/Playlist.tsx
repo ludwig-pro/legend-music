@@ -1,7 +1,8 @@
 import { LegendList } from "@legendapp/list";
 import { use$, useSelector } from "@legendapp/state/react";
-import { Image, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
+import { AlbumArt } from "@/components/AlbumArt";
 import { Button } from "@/components/Button";
 import { localAudioControls, localPlayerState$ } from "@/components/LocalAudioPlayer";
 import { controls, playbackState$, playlistState$, playlistsState$ } from "@/components/YouTubeMusicPlayer";
@@ -123,13 +124,12 @@ const TrackItem = ({ track, index, onTrackClick }: TrackItemProps) => {
                 {track.index >= 0 ? track.index + 1 : ""}
             </Text>
 
-            {track.thumbnail ? (
-                <Image source={{ uri: track.thumbnail }} className="size-9 rounded-lg" resizeMode="cover" />
-            ) : (
-                <View className="w-12 h-12 bg-white/20 rounded-lg items-center justify-center">
-                    <Text className="text-white text-xs">♪</Text>
-                </View>
-            )}
+            <AlbumArt
+                uri={track.thumbnail}
+                size="medium"
+                fallbackIcon="♪"
+                className={track.fromSuggestions ? "opacity-75" : ""}
+            />
 
             <View className="flex-1 ml-4 mr-8">
                 <Text

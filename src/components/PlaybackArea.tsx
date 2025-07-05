@@ -1,6 +1,7 @@
 import { use$ } from "@legendapp/state/react";
-import { Image, Text, View } from "react-native";
+import { Text, View } from "react-native";
 
+import { AlbumArt } from "@/components/AlbumArt";
 import { Button } from "@/components/Button";
 import { CustomSlider } from "@/components/CustomSlider";
 import { localAudioControls, localPlayerState$ } from "@/components/LocalAudioPlayer";
@@ -69,16 +70,12 @@ export function PlaybackArea() {
         <View className="mx-3 mt-3">
             <View className="flex-row items-center">
                 {/* Album Art */}
-                <View className="size-12 items-center justify-center mr-4">
-                    {currentTrack?.thumbnail ? (
-                        <Image
-                            source={{ uri: currentTrack.thumbnail }}
-                            className="w-full h-full rounded-lg"
-                            resizeMode="cover"
-                        />
-                    ) : (
-                        <Text className="text-white text-lg">♪</Text>
-                    )}
+                <View className="mr-4">
+                    <AlbumArt
+                        uri={currentTrack?.thumbnail}
+                        size="large"
+                        fallbackIcon="♪"
+                    />
                 </View>
 
                 {/* Song Info */}

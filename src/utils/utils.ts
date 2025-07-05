@@ -69,7 +69,7 @@ export function decodeTextEntities(text: string): string {
     try {
         // Decode unicode escape sequences like \u0026
         decoded = decoded.replace(/\\u([0-9a-fA-F]{4})/g, (match, code) => {
-            return String.fromCharCode(parseInt(code, 16));
+            return String.fromCharCode(Number.parseInt(code, 16));
         });
 
         // Decode common HTML entities
@@ -91,11 +91,11 @@ export function decodeTextEntities(text: string): string {
 
         // Decode numeric HTML entities like &#38; or &#x26;
         decoded = decoded.replace(/&#(\d+);/g, (match, code) => {
-            return String.fromCharCode(parseInt(code, 10));
+            return String.fromCharCode(Number.parseInt(code, 10));
         });
 
         decoded = decoded.replace(/&#x([0-9a-fA-F]+);/g, (match, code) => {
-            return String.fromCharCode(parseInt(code, 16));
+            return String.fromCharCode(Number.parseInt(code, 16));
         });
 
     } catch (error) {

@@ -34,6 +34,9 @@ LegendMusic is a React Native macOS application for managing GitHub issues. The 
 - Uses msgpack for efficient data storage via `ExpoFSPersistPlugin`
 - Authentication managed through Keel backend (`src/keel/`)
 
+### Library preferences
+- Prefer `expo-file-system/next` (which is already installed) over `react-native-fs`
+
 ### Component Structure
 - Components in `src/components/` are primarily functional and use NativeWind/Tailwind
 - Prefer named exports over default exports

@@ -3,6 +3,7 @@ import { applyChanges, internal, isArray } from "@legendapp/state";
 import type { ObservablePersistPlugin, ObservablePersistPluginOptions, PersistMetadata } from "@legendapp/state/sync";
 import * as FileSystemNext from "expo-file-system/next";
 import { Packr } from "msgpackr";
+import { ensureCacheDirectory, getCacheDirectory } from "@/utils/cacheDirectories";
 import { timeoutOnce } from "@/utils/timeoutOnce";
 
 const MetadataSuffix = "__m";
@@ -37,10 +38,7 @@ class ObservablePersistExpoFS implements ObservablePersistPlugin {
 
     constructor(configuration: ExpoFSPersistPluginOptions) {
         this.configuration = configuration;
-        this.directory = new FileSystemNext.Directory(
-            configuration.basePath === "Cache" ? FileSystemNext.Paths.cache : FileSystemNext.Paths.cache,
-            "LegendMusic",
-        );
+        this.directory = getCacheDirectory("data");
         this.extension = configuration.format === "json" ? "json" : configuration.format === "m3u" ? "m3u" : "lgh";
         console.log("directory", this.directory);
     }
@@ -51,7 +49,7 @@ class ObservablePersistExpoFS implements ObservablePersistPlugin {
 
         try {
             // Ensure base directory exists
-            this.ensureDirectoryExists(this.directory);
+            ensureCacheDirectory(this.directory);
 
             if (isArray(storageConfig.preload)) {
                 // If preloadKeys, preload the tables on startup
@@ -153,7 +151,7 @@ class ObservablePersistExpoFS implements ObservablePersistPlugin {
         const v = this.data[table];
         const file = new FileSystemNext.File(this.directory, `${table}.${this.extension}`);
 
-        this.ensureDirectoryExists(file.parentDirectory);
+        ensureCacheDirectory(file.parentDirectory);
 
         if (v !== undefined && v !== null) {
             let out: string | Uint8Array;
@@ -173,22 +171,6 @@ class ObservablePersistExpoFS implements ObservablePersistPlugin {
         }
 
         return Promise.resolve();
-    }
-
-    private ensureDirectoryExists(directory: FileSystemNext.Directory) {
-        // Extract the directory path from the file path
-        let current = directory;
-
-        const dirsToCreate: FileSystemNext.Directory[] = [];
-
-        while (!current.exists) {
-            dirsToCreate.unshift(current);
-            current = current.parentDirectory;
-        }
-
-        for (const dir of dirsToCreate) {
-            dir.create();
-        }
     }
 }
 
