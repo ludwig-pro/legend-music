@@ -29,6 +29,12 @@ export function Button({
     ...props
 }: PropsWithChildren<ButtonProps>) {
     const handlePress = (e: any) => {
+        // Only handle left mouse button clicks (button 0)
+        // For React Native on macOS, check if the native event has button info
+        if (e?.nativeEvent?.button !== undefined && e.nativeEvent.button !== 0) {
+            return;
+        }
+
         // Start measuring navigation time
         startNavMeasurement();
 

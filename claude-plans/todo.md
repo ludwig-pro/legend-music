@@ -1,5 +1,11 @@
+## Instructions
+
+- Follow all of the steps in order, one by one
+- After each step is completed and before moving to the next step, check off the completed step in this file. Then do a git commit with a brief description of the changes in all chaged files, including the updated plan file.
+
 ## Steps
 
+[] Something is asynchronous in the initial playlist loading. Find what it is and ask for confirmation before fixing it.
 [] Click handling on a playlist should only work for left mouse button
 [] A song with a - in the title is initially displaying as only the first part. I think it might be splitting on - incorrectly. The file I'm seeing handled incorrectly is in the m3u as "FleryCz - Mos Def - Do It Now"
 
