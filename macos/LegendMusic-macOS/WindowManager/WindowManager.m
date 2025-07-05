@@ -197,8 +197,7 @@ RCT_EXPORT_METHOD(setMainWindowFrame:(NSDictionary *)frameDict
     @"height": @(frame.size.height)
   };
   
-  // Save to NSUserDefaults for persistence
-  [self saveWindowFrame:frameDict];
+  // No need to manually save - setFrameAutosaveName handles persistence
   
   [self sendEventWithName:@"onMainWindowMoved" body:frameDict];
 }
@@ -214,18 +213,11 @@ RCT_EXPORT_METHOD(setMainWindowFrame:(NSDictionary *)frameDict
     @"height": @(frame.size.height)
   };
   
-  // Save to NSUserDefaults for persistence
-  [self saveWindowFrame:frameDict];
+  // No need to manually save - setFrameAutosaveName handles persistence
   
   [self sendEventWithName:@"onMainWindowResized" body:frameDict];
 }
 
-- (void)saveWindowFrame:(NSDictionary *)frameDict {
-  NSLog(@"Saving window frame: %@", frameDict);
-  NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-  [defaults setObject:frameDict forKey:@"mainWindowFrame"];
-  [defaults synchronize];
-}
 
 - (void)dealloc {
   [[NSNotificationCenter defaultCenter] removeObserver:self];
