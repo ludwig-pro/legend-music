@@ -11,8 +11,6 @@
         "build": "bun scripts/build.ts"
     },
     "dependencies": {
-        "@aptabase/react-native": "^0.3.10",
-        "@craftzdog/react-native-buffer": "^6.0.5",
         "@fluentui-react-native/callout": "^0.27.3",
         "@fluentui-react-native/vibrancy-view": "^0.3.0",
         "@gorhom/portal": "^1.0.14",
@@ -21,16 +19,12 @@
         "@legendapp/state": "^3.0.0-beta.30",
         "clsx": "^2.1.1",
         "expo": "~53.0.9",
-        "firebase": "^11.7.1",
         "id3js": "^2.1.1",
-        "ksuid": "^3.0.0",
         "msgpackr": "^1.11.3",
         "nativewind": "^4.1.23",
         "react": "19.0.0",
         "react-native": "0.78.2",
-        "react-native-get-random-values": "^1.11.0",
         "react-native-macos": "^0.78.3",
-        "react-native-markdown-display": "^7.0.2",
         "react-native-reanimated": "^3.18.0",
         "react-native-webview": "^13.13.5",
         "tailwind-merge": "^3.0.2",
@@ -62,9 +56,6 @@
     },
     "patchedDependencies": {
         "@fluentui-react-native/vibrancy-view@0.3.0": "patches/@fluentui-react-native%2Fvibrancy-view@0.3.0.patch",
-        "@aptabase/react-native@0.3.10": "patches/@aptabase%2Freact-native@0.3.10.patch",
-        "ksuid@3.0.0": "patches/ksuid@3.0.0.patch",
-        "react-native-markdown-display@7.0.2": "patches/react-native-markdown-display@7.0.2.patch",
         "id3js@2.1.1": "patches/id3js@2.1.1.patch"
     },
     "expo": {
