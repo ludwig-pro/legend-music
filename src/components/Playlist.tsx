@@ -330,13 +330,13 @@ export function Playlist() {
             ) : (
                 <LegendList
                     data={playlist}
-                    keyExtractor={(item, index) => `track-${index}`}
+                    keyExtractor={(item, index) => `track-${item.id ?? index}`}
                     contentContainerStyle={styles.container}
                     waitForInitialLayout={false}
                     estimatedItemSize={playlistStyle === "compact" ? 30 : 50}
                     recycleItems
                     renderItem={({ item: track, index }) => (
-                        <TrackItem key={index} track={track} index={index} onTrackClick={handleTrackClick} />
+                        <TrackItem track={track} index={index} onTrackClick={handleTrackClick} />
                     )}
                 />
             )}
