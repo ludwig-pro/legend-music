@@ -52,9 +52,15 @@ LegendMusic is a React Native macOS application for managing GitHub issues. The 
 - Utilities in `src/utils/` for shared helper functions
 
 ## Development Guidelines
-
 - This is a macOS-only app - no need for iOS/Android/web fallbacks
 - Use Motion components only when animating styles
 - Follow Biome formatting rules (4 spaces, single quotes, 120 line width)
 - Patched dependencies are managed in `patches/` directory
 - Do not modify keelClient.ts
+- Do not try to build or run the app. I will do that separately.
+
+## Following a plan
+
+- This applies when asked to follow a plan in an .md file
+- Follow all of the steps in order, one by one
+- After each step is completed and before moving to the next step, check off the completed step in the plan file. Then do a git commit with a brief description of the change of all files changed, including the plan file.
