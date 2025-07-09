@@ -5,7 +5,7 @@ import { Pressable, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 
 interface CustomSliderProps {
-    value: number | undefined;
+    value?: number | undefined;
     $value: Observable<number>;
     minimumValue: number;
     $maximumValue: Observable<number>;

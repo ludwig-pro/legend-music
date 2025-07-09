@@ -8,11 +8,28 @@ import { localAudioControls, localPlayerState$ } from "@/components/LocalAudioPl
 import { controls, playbackState$ } from "@/components/YouTubeMusicPlayer";
 import { localMusicState$ } from "@/systems/LocalMusicState";
 
-// Format time for local playback
+// Format time for local playback with caching to reduce computation
+const formatTimeCache = new Map<number, string>();
+
 function formatTime(seconds: number): string {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
+    // Round to nearest second for caching efficiency
+    const roundedSeconds = Math.floor(seconds);
+
+    if (formatTimeCache.has(roundedSeconds)) {
+        return formatTimeCache.get(roundedSeconds)!;
+    }
+
+    const mins = Math.floor(roundedSeconds / 60);
+    const secs = roundedSeconds % 60;
+    const formatted = `${mins}:${secs.toString().padStart(2, "0")}`;
+
+    // Cache the result (limit cache size to prevent memory leaks)
+    if (formatTimeCache.size > 1000) {
+        formatTimeCache.clear();
+    }
+    formatTimeCache.set(roundedSeconds, formatted);
+
+    return formatted;
 }
 
 // Parse time string like "0:25 / 1:23" to get seconds from first time

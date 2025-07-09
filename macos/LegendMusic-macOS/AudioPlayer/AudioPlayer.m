@@ -327,16 +327,28 @@ RCT_EXPORT_METHOD(getCurrentState:(RCTPromiseResolveBlock)resolve
     [self removeTimeObserver];
 
     __weak typeof(self) weakSelf = self;
-    self.timeObserver = [self.player addPeriodicTimeObserverForInterval:CMTimeMake(1, 2) // 0.5 seconds
-                                                                   queue:dispatch_get_main_queue()
+    // Reduced frequency: Update once per second instead of twice per second
+    // Use background queue to avoid blocking main thread
+    dispatch_queue_t backgroundQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0);
+    self.timeObserver = [self.player addPeriodicTimeObserverForInterval:CMTimeMake(1, 1) // 1.0 seconds
+                                                                   queue:backgroundQueue
                                                               usingBlock:^(CMTime time) {
         __strong typeof(weakSelf) strongSelf = weakSelf;
         if (strongSelf && CMTIME_IS_VALID(time)) {
-            strongSelf.currentTime = CMTimeGetSeconds(time);
-            [strongSelf sendEventWithName:@"onProgress" body:@{
-                @"currentTime": @(strongSelf.currentTime),
-                @"duration": @(strongSelf.duration)
-            }];
+            NSTimeInterval newTime = CMTimeGetSeconds(time);
+
+            // Only send updates if time has changed significantly (avoid redundant events)
+            if (fabs(newTime - strongSelf.currentTime) >= 0.5) {
+                strongSelf.currentTime = newTime;
+
+                // Dispatch event sending back to main queue
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    [strongSelf sendEventWithName:@"onProgress" body:@{
+                        @"currentTime": @(strongSelf.currentTime),
+                        @"duration": @(strongSelf.duration)
+                    }];
+                });
+            }
         }
     }];
 }
