@@ -6,6 +6,7 @@ import { createJSONManager } from "@/utils/JSONManager";
 // Default hotkey settings
 const DEFAULT_HOTKEYS = {
     Search: KeyCodes.KEY_J,
+    ToggleLibrary: `${KeyCodes.MODIFIER_COMMAND}+${KeyCodes.KEY_L}`,
 } as const;
 
 export type HotkeyName = keyof typeof DEFAULT_HOTKEYS;
@@ -13,6 +14,9 @@ export type HotkeyName = keyof typeof DEFAULT_HOTKEYS;
 export const HotkeyMetadata: Record<HotkeyName, { description: string; repeat?: boolean }> = {
     Search: {
         description: "Search files",
+    },
+    ToggleLibrary: {
+        description: "Toggle media library",
     },
 };
 
