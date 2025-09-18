@@ -1,10 +1,11 @@
+import { LegendList } from "@legendapp/list";
 import { use$ } from "@legendapp/state/react";
 import { useCallback, useMemo } from "react";
-import type { ListRenderItemInfo } from "react-native";
-import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { Button } from "@/components/Button";
 import { localAudioControls } from "@/components/LocalAudioPlayer";
 import { Panel, PanelGroup, ResizeHandle } from "@/components/ResizablePanels";
+import { TrackItem, type TrackData } from "@/components/TrackItem";
 import type { LibraryTrack } from "@/systems/LibraryState";
 import { library$, libraryUI$ } from "@/systems/LibraryState";
 import { perfCount, perfLog } from "@/utils/perfLogger";
@@ -156,7 +157,7 @@ function TrackList() {
     const selectedItem = use$(libraryUI$.selectedItem);
     const allTracks = use$(library$.tracks);
 
-    const tracks = useMemo(() => {
+    const tracks = useMemo((): TrackData[] => {
         perfLog("MediaLibrary.TrackList.useMemo", {
             selectedItem,
             allTracks: allTracks.length,
@@ -165,57 +166,55 @@ function TrackList() {
             return [];
         }
 
+        let filteredTracks: LibraryTrack[];
         if (selectedItem.type === "artist") {
-            return allTracks.filter((track) => track.artist === selectedItem.name);
-        }
-
-        if (selectedItem.type === "playlist") {
+            filteredTracks = allTracks.filter((track) => track.artist === selectedItem.name);
+        } else if (selectedItem.type === "playlist") {
             // For now, show all tracks for playlist items
-            return allTracks;
+            filteredTracks = allTracks;
+        } else {
+            filteredTracks = allTracks;
         }
 
-        return allTracks;
+        return filteredTracks.map((track) => ({
+            id: track.id,
+            title: track.title,
+            artist: track.artist,
+            album: track.album,
+            duration: formatDuration(track.duration),
+            thumbnail: track.thumbnail,
+        }));
     }, [allTracks, selectedItem]);
 
-    const keyExtractor = useCallback((item: LibraryTrack) => item.id, []);
+    const keyExtractor = useCallback((item: TrackData) => item.id, []);
 
     const handleTrackPress = useCallback(
         (index: number) => {
-            localAudioControls.loadPlaylist(tracks, index);
+            // Convert TrackData back to LibraryTrack format for loadPlaylist
+            const originalTracks = allTracks.filter((track) => {
+                if (!selectedItem) return false;
+                if (selectedItem.type === "artist") {
+                    return track.artist === selectedItem.name;
+                }
+                if (selectedItem.type === "playlist") {
+                    return true;
+                }
+                return true;
+            });
+            localAudioControls.loadPlaylist(originalTracks, index);
         },
-        [tracks],
+        [allTracks, selectedItem],
     );
 
     const renderTrack = useCallback(
-        ({ item, index }: ListRenderItemInfo<LibraryTrack>) => (
-            <Pressable
-                onLayout={() => {
-                    perfCount("MediaLibrary.TrackList.trackLayout");
-                }}
-                className="flex-row items-center rounded-lg bg-white/5 px-2 py-2 hover:bg-white/10"
-                onPress={() => handleTrackPress(index)}
-            >
-                <View className="flex-1">
-                    <Text className="text-white/80 text-sm font-medium" numberOfLines={1}>
-                        {item.title}
-                    </Text>
-                    <Text className="text-white/50 text-xs" numberOfLines={1}>
-                        {item.album ? `${item.artist} • ${item.album}` : item.artist}
-                    </Text>
-                </View>
-                <Text style={styles.trackDuration}>{formatDuration(item.duration)}</Text>
-                <Button
-                    icon="plus"
-                    iconSize={12}
-                    variant="icon"
-                    size="small"
-                    onPress={() => {
-                        console.log("Add track to queue:", item.title);
-                        // TODO: Add to actual queue
-                    }}
-                    className="hover:bg-white/15 active:bg-white/25 rounded p-1"
-                />
-            </Pressable>
+        ({ item, index }: { item: TrackData; index: number }) => (
+            <TrackItem
+                track={item}
+                index={index}
+                onTrackClick={handleTrackPress}
+                showIndex={false}
+                showAlbumArt={false}
+            />
         ),
         [handleTrackPress],
     );
@@ -234,14 +233,15 @@ function TrackList() {
                 {selectedItem.name} ({tracks.length} track{tracks.length !== 1 ? "s" : ""})
             </Text>
 
-            <FlatList
+            <LegendList
                 data={tracks}
                 keyExtractor={keyExtractor}
                 renderItem={renderTrack}
-                ItemSeparatorComponent={Separator}
                 style={styles.trackList}
                 contentContainerStyle={tracks.length ? styles.trackListContent : styles.trackListEmpty}
-                keyboardShouldPersistTaps="handled"
+                waitForInitialLayout={false}
+                estimatedItemSize={64}
+                recycleItems
                 ListEmptyComponent={
                     <View style={styles.emptyState}>
                         <Text style={styles.placeholderText}>No tracks found</Text>
@@ -250,10 +250,6 @@ function TrackList() {
             />
         </View>
     );
-}
-
-function Separator() {
-    return <View style={styles.separator} />;
 }
 
 function formatDuration(value: string): string {
@@ -345,15 +341,6 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "center",
         paddingVertical: 24,
-    },
-    trackDuration: {
-        color: "rgba(255,255,255,0.4)",
-        fontSize: 12,
-        marginRight: 8,
-        fontVariant: ["tabular-nums"],
-    },
-    separator: {
-        height: 8,
     },
     trackListPlaceholder: {
         justifyContent: "center",

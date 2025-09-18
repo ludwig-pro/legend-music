@@ -1,2 +1,1 @@
-1. MediaLibrary should use the same TrackItem as in Playlist. Extract TrackItem to its own file to import from both.
-2. MediaLibrary should have less padding and be left aligned. Items in LibraryTree should be the same height as TrackItem.
+1. MediaLibrary should have less padding and be left aligned. Items in LibraryTree should be the same height as TrackItem.
