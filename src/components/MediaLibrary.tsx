@@ -4,6 +4,7 @@ import type { ListRenderItemInfo } from "react-native";
 import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Button } from "@/components/Button";
 import { localAudioControls } from "@/components/LocalAudioPlayer";
+import { SplitView } from "@/native-modules/SplitView";
 import type { LibraryTrack } from "@/systems/LibraryState";
 import { library$, libraryUI$ } from "@/systems/LibraryState";
 
@@ -26,7 +27,14 @@ export function MediaLibraryView() {
                 />
             </View>
 
-            <View className="flex-row flex-1" style={styles.contentRow}>
+            <SplitView
+                isVertical={true}
+                dividerThickness={1}
+                style={styles.contentRow}
+                onSplitViewDidResize={(event) => {
+                    console.log("Split view resized:", event.sizes);
+                }}
+            >
                 <View className="border-r border-white/10 bg-black/10" style={styles.treeColumn}>
                     <LibraryTree />
                 </View>
@@ -34,7 +42,7 @@ export function MediaLibraryView() {
                 <View className="bg-black/5" style={styles.trackColumn}>
                     <TrackList />
                 </View>
-            </View>
+            </SplitView>
         </View>
     );
 }
@@ -277,6 +285,8 @@ const styles = StyleSheet.create({
         minHeight: 0,
     },
     contentRow: {
+        display: "flex",
+        flexDirection: "row",
         flex: 1,
         minHeight: 0,
     },
