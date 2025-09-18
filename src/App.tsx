@@ -5,6 +5,7 @@ import type React from "react";
 import { LogBox, StyleSheet, View } from "react-native";
 import { MainContainer } from "@/components/MainContainer";
 import { TitleBar } from "@/components/TitleBar";
+import { MediaLibraryWindowManager } from "@/media-library/MediaLibraryWindowManager";
 import { SettingsWindowManager } from "@/settings/SettingsWindowManager";
 import { HookKeyboard } from "@/systems/keyboard/HookKeyboard";
 import { initializeLocalMusic } from "@/systems/LocalMusicState";
@@ -28,6 +29,7 @@ function App(): React.JSX.Element | null {
                 </View>
             </VibrancyView>
             <TitleBar />
+            <MediaLibraryWindowManager />
             <SettingsWindowManager />
         </ThemeProvider>
     );

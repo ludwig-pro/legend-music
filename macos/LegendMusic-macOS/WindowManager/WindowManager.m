@@ -4,13 +4,22 @@
 #import <AppKit/AppKit.h>
 
 @interface WindowManager() <NSWindowDelegate>
-@property (nonatomic, strong) NSWindow *secondWindow;
-@property (nonatomic, strong) RCTRootView *rootView;
+@property (nonatomic, strong) NSMutableDictionary<NSString *, NSWindow *> *windows;
+@property (nonatomic, strong) NSMutableDictionary<NSString *, RCTRootView *> *rootViews;
 @end
 
 @implementation WindowManager
 
 RCT_EXPORT_MODULE();
+
+- (instancetype)init {
+  self = [super init];
+  if (self) {
+    _windows = [NSMutableDictionary new];
+    _rootViews = [NSMutableDictionary new];
+  }
+  return self;
+}
 
 - (NSArray<NSString *> *)supportedEvents {
   return @[@"onWindowClosed", @"onMainWindowMoved", @"onMainWindowResized"];
@@ -23,89 +32,138 @@ RCT_EXPORT_MODULE();
 RCT_EXPORT_METHOD(openWindow:(NSDictionary *)options
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject) {
-  if (self.secondWindow) {
-    [self.secondWindow makeKeyAndOrderFront:nil];
+  NSString *identifier = options[@"identifier"];
+  if (![identifier isKindOfClass:[NSString class]] || identifier.length == 0) {
+    identifier = @"default";
+  }
+
+  NSString *title = options[@"title"] ?: @"New Window";
+  NSString *moduleName = options[@"moduleName"] ?: @"SettingsWindow";
+  CGFloat width = options[@"width"] ? [options[@"width"] floatValue] : 400;
+  CGFloat height = options[@"height"] ? [options[@"height"] floatValue] : 300;
+  NSNumber *originX = options[@"x"];
+  NSNumber *originY = options[@"y"];
+
+  NSWindow *existingWindow = self.windows[identifier];
+  if (existingWindow) {
+    NSRect frame = [existingWindow frame];
+    CGFloat newWidth = frame.size.width;
+    CGFloat newHeight = frame.size.height;
+
+    if (options[@"width"]) {
+      newWidth = width;
+    }
+
+    if (options[@"height"]) {
+      newHeight = height;
+    }
+
+    NSPoint origin = frame.origin;
+    if (originX) {
+      origin.x = [originX doubleValue];
+    }
+
+    if (originY) {
+      origin.y = [originY doubleValue];
+    }
+
+    NSRect newFrame = NSMakeRect(origin.x, origin.y, newWidth, newHeight);
+    [existingWindow setFrame:newFrame display:YES animate:NO];
+    [existingWindow makeKeyAndOrderFront:nil];
     resolve(@{@"success": @YES});
     return;
   }
 
-  // Get options with defaults
-  NSString *title = options[@"title"] ?: @"New Window";
-  CGFloat width = options[@"width"] ? [options[@"width"] floatValue] : 400;
-  CGFloat height = options[@"height"] ? [options[@"height"] floatValue] : 300;
-
-  // Create a window with specified dimensions
   NSRect frame = NSMakeRect(0, 0, width, height);
   NSUInteger styleMask = NSWindowStyleMaskTitled |
                         NSWindowStyleMaskClosable |
                         NSWindowStyleMaskResizable |
                         NSWindowStyleMaskMiniaturizable;
 
-  self.secondWindow = [[NSWindow alloc] initWithContentRect:frame
+  NSWindow *window = [[NSWindow alloc] initWithContentRect:frame
                                                styleMask:styleMask
                                                  backing:NSBackingStoreBuffered
                                                    defer:NO];
 
-  // Set this property to prevent application exit when the window closes
-  [self.secondWindow setReleasedWhenClosed:NO];
+  [window setReleasedWhenClosed:NO];
+  [window setTitle:title];
 
-  [self.secondWindow setTitle:title];
-  [self.secondWindow center];
+  if (originX || originY) {
+    NSRect currentFrame = [window frame];
+    NSPoint origin = currentFrame.origin;
+    if (originX) {
+      origin.x = [originX doubleValue];
+    }
+    if (originY) {
+      origin.y = [originY doubleValue];
+    }
+    [window setFrameOrigin:origin];
+  } else {
+    [window center];
+  }
 
-
-  // Create a RCTRootView with the name of the component to render
   RCTBridge *bridge = self.bridge;
   if (!bridge) {
     reject(@"no_bridge", @"RCTBridge not available", nil);
     return;
   }
 
-  self.rootView = [[RCTRootView alloc] initWithBridge:bridge
-                                          moduleName:@"SettingsWindow"
-                                   initialProperties:nil];
+  NSDictionary *initialProps = nil;
+  id initialPropsCandidate = options[@"initialProperties"];
+  if ([initialPropsCandidate isKindOfClass:[NSDictionary class]]) {
+    initialProps = initialPropsCandidate;
+  }
 
-  [self.secondWindow setContentView:self.rootView];
+  RCTRootView *rootView = [[RCTRootView alloc] initWithBridge:bridge
+                                                   moduleName:moduleName
+                                            initialProperties:initialProps];
 
-  // Set window delegate to track close events
-  [self.secondWindow setDelegate:self];
+  [window setContentView:rootView];
+  [window setDelegate:self];
 
-  // Show the window
-  [self.secondWindow makeKeyAndOrderFront:nil];
+  self.windows[identifier] = window;
+  self.rootViews[identifier] = rootView;
+
+  [window makeKeyAndOrderFront:nil];
 
   resolve(@{@"success": @YES});
 }
 
-RCT_EXPORT_METHOD(closeWindow:(RCTPromiseResolveBlock)resolve
-                   rejecter:(RCTPromiseRejectBlock)reject) {
-  if (self.secondWindow) {
-    [self.secondWindow orderOut:nil]; // Hide the window
-
-    // Don't call [self.secondWindow close] directly, as it might trigger app exit
-    // Just hide it and mark as closed via the event
-    [self sendEventWithName:@"onWindowClosed" body:@{}];
-
-    self.rootView = nil;
-    self.secondWindow = nil;
-
-    resolve(@{@"success": @YES});
-  } else {
-    resolve(@{@"success": @NO, @"message": @"No window to close"});
+RCT_EXPORT_METHOD(closeWindow:(NSString *)identifier
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject) {
+  NSString *targetIdentifier = identifier;
+  if (![targetIdentifier isKindOfClass:[NSString class]] || targetIdentifier.length == 0) {
+    targetIdentifier = @"default";
   }
+
+  NSWindow *window = self.windows[targetIdentifier];
+  if (!window) {
+    resolve(@{@"success": @NO, @"message": @"No window to close"});
+    return;
+  }
+
+  [window orderOut:nil];
+  [self handleWindowClosedForIdentifier:targetIdentifier];
+
+  resolve(@{@"success": @YES});
 }
 
 // Window delegate method to detect when window is closed by the system close button
 - (void)windowWillClose:(NSNotification *)notification {
-  if (notification.object == self.secondWindow) {
-    // This will be called when the user clicks the window's close button
-    [self sendEventWithName:@"onWindowClosed" body:@{}];
-    self.rootView = nil;
-    self.secondWindow = nil;
+  NSWindow *closingWindow = notification.object;
+  NSString *identifier = [self identifierForWindow:closingWindow];
+  if (!identifier) {
+    return;
   }
+
+  [self handleWindowClosedForIdentifier:identifier];
 }
 
 // Explicitly tell the system not to terminate the app when this window closes
 - (BOOL)windowShouldClose:(NSWindow *)window {
-  if (window == self.secondWindow) {
+  NSString *identifier = [self identifierForWindow:window];
+  if (identifier) {
     return YES; // Allow window to close
   }
   return NO; // Don't close other windows
@@ -216,6 +274,28 @@ RCT_EXPORT_METHOD(setMainWindowFrame:(NSDictionary *)frameDict
   // No need to manually save - setFrameAutosaveName handles persistence
   
   [self sendEventWithName:@"onMainWindowResized" body:frameDict];
+}
+
+
+#pragma mark - Helpers
+
+- (nullable NSString *)identifierForWindow:(NSWindow *)window {
+  __block NSString *foundIdentifier = nil;
+  [self.windows enumerateKeysAndObjectsUsingBlock:^(NSString * _Nonnull key, NSWindow * _Nonnull obj, BOOL * _Nonnull stop) {
+    if (obj == window) {
+      foundIdentifier = key;
+      *stop = YES;
+    }
+  }];
+
+  return foundIdentifier;
+}
+
+- (void)handleWindowClosedForIdentifier:(NSString *)identifier {
+  [self.windows removeObjectForKey:identifier];
+  [self.rootViews removeObjectForKey:identifier];
+
+  [self sendEventWithName:@"onWindowClosed" body:@{ @"identifier": identifier ?: @"" }];
 }
 
 

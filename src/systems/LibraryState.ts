@@ -26,7 +26,7 @@ export interface LibraryTrack {
 export const libraryUI$ = createJSONManager({
     filename: "libraryUI",
     initialValue: {
-        isOpen: false,
+        isOpen: true,
         selectedItem: null as LibraryItem | null,
         searchQuery: "",
         expandedNodes: [] as string[],

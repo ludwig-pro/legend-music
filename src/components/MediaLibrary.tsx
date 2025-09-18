@@ -1,89 +1,39 @@
 import { use$ } from "@legendapp/state/react";
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import type { ListRenderItemInfo } from "react-native";
 import { FlatList, ScrollView, StyleSheet, Text, View } from "react-native";
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { Button } from "@/components/Button";
-import { useOnHotkeys } from "@/systems/keyboard/Keyboard";
 import type { LibraryTrack } from "@/systems/LibraryState";
 import { library$, libraryUI$ } from "@/systems/LibraryState";
 
-const LIBRARY_HEIGHT = 320;
-
-export function MediaLibrary() {
-    const isOpen = use$(libraryUI$.isOpen);
-    const libraryHeight = useSharedValue(isOpen ? LIBRARY_HEIGHT : 0);
-
-    const animatedStyle = useAnimatedStyle(() => ({
-        height: libraryHeight.value,
-        overflow: "hidden",
-    }));
-
-    const toggleLibrary = () => {
-        const newIsOpen = !isOpen;
-        libraryUI$.isOpen.set(newIsOpen);
-        libraryHeight.value = withTiming(newIsOpen ? LIBRARY_HEIGHT : 0, { duration: 250 });
-    };
-
-    // Keyboard shortcut support
-    useOnHotkeys({
-        ToggleLibrary: toggleLibrary,
-    });
-
-    // Sync animation with state on mount
-    useEffect(() => {
-        libraryHeight.value = isOpen ? LIBRARY_HEIGHT : 0;
-    }, [isOpen, libraryHeight]);
+export function MediaLibraryView() {
+    const closeLibrary = useCallback(() => {
+        libraryUI$.isOpen.set(false);
+    }, []);
 
     return (
-        <View>
-            {/* Library Toggle Button */}
-            <View className="px-3 py-2 border-t border-white/10">
+        <View className="flex-1 bg-black/5 border-l border-white/10" style={styles.window}>
+            <View className="flex-row items-center justify-between px-3 py-2 bg-white/5 border-b border-white/10">
+                <Text className="text-white text-sm font-medium">Library</Text>
                 <Button
-                    icon={isOpen ? "chevron.down" : "chevron.up"}
-                    iconSize={14}
-                    variant="icon-text"
+                    icon="xmark"
+                    iconSize={12}
+                    variant="icon"
                     size="small"
-                    onPress={toggleLibrary}
-                    className="flex-row items-center justify-center hover:bg-white/10 active:bg-white/15 rounded py-2"
-                >
-                    <Text className="text-white/80 text-sm ml-1">{isOpen ? "Hide Library" : "Show Library"}</Text>
-                </Button>
+                    onPress={closeLibrary}
+                    className="hover:bg-white/15 active:bg-white/25 rounded p-1"
+                />
             </View>
 
-            {/* Library Content */}
-            <Animated.View style={animatedStyle}>
-                <View className="border-t border-white/10 bg-black/10" style={styles.panel}>
-                    {/* Library Header */}
-                    <View className="flex-row items-center justify-between px-3 py-2 bg-white/5">
-                        <Text className="text-white text-sm font-medium">Library</Text>
-                        <Button
-                            icon="xmark"
-                            iconSize={12}
-                            variant="icon"
-                            size="small"
-                            onPress={() => {
-                                libraryUI$.isOpen.set(false);
-                                libraryHeight.value = withTiming(0, { duration: 250 });
-                            }}
-                            className="hover:bg-white/15 active:bg-white/25 rounded p-1"
-                        />
-                    </View>
-
-                    {/* Library Content - Horizontal Split */}
-                    <View className="flex-row flex-1" style={styles.contentRow}>
-                        {/* Library Tree (Left) */}
-                        <View className="border-r border-white/10 bg-black/5" style={styles.treeColumn}>
-                            <LibraryTree />
-                        </View>
-
-                        {/* Track List (Right) */}
-                        <View className="bg-black/5" style={styles.trackColumn}>
-                            <TrackList />
-                        </View>
-                    </View>
+            <View className="flex-row flex-1" style={styles.contentRow}>
+                <View className="border-r border-white/10 bg-black/10" style={styles.treeColumn}>
+                    <LibraryTree />
                 </View>
-            </Animated.View>
+
+                <View className="bg-black/5" style={styles.trackColumn}>
+                    <TrackList />
+                </View>
+            </View>
         </View>
     );
 }
@@ -310,8 +260,10 @@ function formatDuration(value: string): string {
 }
 
 const styles = StyleSheet.create({
-    panel: {
+    window: {
         flex: 1,
+        minWidth: 360,
+        minHeight: 0,
     },
     contentRow: {
         flex: 1,

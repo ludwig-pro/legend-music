@@ -1,5 +1,5 @@
 import { use$, useObservable } from "@legendapp/state/react";
-import { useRef } from "react";
+import { useCallback, useRef } from "react";
 import { Text, View } from "react-native";
 import { Button } from "@/components/Button";
 import { DropdownMenu, type DropdownMenuRootRef } from "@/components/DropdownMenu";
@@ -7,6 +7,7 @@ import { localAudioControls } from "@/components/LocalAudioPlayer";
 import { SelectLegendList } from "@/components/SelectLegendList";
 import { StyledInput } from "@/components/StyledInput";
 import { useOnHotkeys } from "@/systems/keyboard/Keyboard";
+import { libraryUI$ } from "@/systems/LibraryState";
 import { type LocalTrack, localMusicState$, setCurrentPlaylist } from "@/systems/LocalMusicState";
 import { stateSaved$ } from "@/systems/State";
 
@@ -41,6 +42,12 @@ export function PlaylistSelector() {
 
     // Dropdown menu ref
     const dropdownMenuRef = useRef<DropdownMenuRootRef>(null);
+
+    const isLibraryOpen = use$(libraryUI$.isOpen);
+
+    const toggleLibraryWindow = useCallback(() => {
+        libraryUI$.isOpen.set(!libraryUI$.isOpen.get());
+    }, []);
 
     const handlePlaylistSelect = (playlistId: string) => {
         console.log("Navigating to playlist:", playlistId);
@@ -162,6 +169,14 @@ export function PlaylistSelector() {
                             </View> */}
                     </DropdownMenu.Content>
                 </DropdownMenu.Root>
+                <Button
+                    icon={isLibraryOpen ? "sidebar.right" : "sidebar.right"}
+                    variant="icon"
+                    size="small"
+                    iconSize={14}
+                    onPress={toggleLibraryWindow}
+                    className={`ml-2 hover:bg-white/10 ${isLibraryOpen ? "bg-white/15" : ""}`}
+                />
             </View>
         </View>
     );

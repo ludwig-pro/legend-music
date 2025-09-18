@@ -7,9 +7,14 @@ if (!WindowManager) {
 }
 
 export type WindowOptions = {
+    identifier?: string;
+    moduleName?: string;
     title?: string;
     width?: number;
     height?: number;
+    x?: number;
+    y?: number;
+    initialProperties?: Record<string, unknown>;
 };
 
 export type WindowFrame = {
@@ -19,9 +24,13 @@ export type WindowFrame = {
     height: number;
 };
 
+export type WindowClosedEvent = {
+    identifier: string;
+};
+
 type WindowManagerType = {
     openWindow: (options?: WindowOptions) => Promise<{ success: boolean }>;
-    closeWindow: () => Promise<{ success: boolean; message?: string }>;
+    closeWindow: (identifier?: string) => Promise<{ success: boolean; message?: string }>;
     getMainWindowFrame: () => Promise<WindowFrame>;
     setMainWindowFrame: (frame: WindowFrame) => Promise<{ success: boolean }>;
 };
@@ -29,14 +38,14 @@ type WindowManagerType = {
 const windowManagerEmitter = new NativeEventEmitter(WindowManager);
 
 export const useWindowManager = (): WindowManagerType & {
-    onWindowClosed: (callback: () => void) => { remove: () => void };
+    onWindowClosed: (callback: (event: WindowClosedEvent) => void) => { remove: () => void };
 } => {
     return {
         openWindow: (options = {}) => WindowManager.openWindow(options),
-        closeWindow: WindowManager.closeWindow,
-        getMainWindowFrame: WindowManager.getMainWindowFrame,
+        closeWindow: (identifier?: string) => WindowManager.closeWindow(identifier),
+        getMainWindowFrame: () => WindowManager.getMainWindowFrame(),
         setMainWindowFrame: (frame: WindowFrame) => WindowManager.setMainWindowFrame(frame),
-        onWindowClosed: (callback: () => void) => {
+        onWindowClosed: (callback: (event: WindowClosedEvent) => void) => {
             const subscription = windowManagerEmitter.addListener("onWindowClosed", callback);
             return {
                 remove: () => subscription.remove(),

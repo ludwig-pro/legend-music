@@ -1,7 +1,6 @@
 import "@/../global.css";
 import { View } from "react-native";
 import { LocalAudioPlayer, localAudioControls } from "@/components/LocalAudioPlayer";
-import { MediaLibrary } from "@/components/MediaLibrary";
 import { PlaybackArea } from "@/components/PlaybackArea";
 import { Playlist } from "@/components/Playlist";
 import { PlaylistSelector } from "@/components/PlaylistSelector";
@@ -21,7 +20,6 @@ export function MainContainer() {
                 <PlaybackArea />
                 <PlaylistSelector />
                 <Playlist />
-                <MediaLibrary />
                 <Unregistered />
             </View>
             <LocalAudioPlayer />
