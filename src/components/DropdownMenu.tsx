@@ -60,16 +60,17 @@ export interface DropdownMenuRootRef {
 // Root component
 interface RootProps {
     children: ReactNode;
+    isOpen$?: Observable<boolean>;
     onSelect?: (value: string) => void;
     closeOnSelect?: boolean;
     onOpenChange?: (open: boolean) => void;
 }
 
 const Root = forwardRef<DropdownMenuRootRef, RootProps>(function Root(
-    { children, onSelect, closeOnSelect = true, onOpenChange },
+    { children, isOpen$: isOpen$Prop, onSelect, closeOnSelect = true, onOpenChange },
     ref,
 ) {
-    const isOpen$ = useObservable(false);
+    const isOpen$ = isOpen$Prop ?? useObservable(false);
     const openedWithMouseDown$ = useObservable(false);
     const triggerRef = useRef<View>(null);
 
@@ -203,6 +204,7 @@ interface ContentProps {
         | "topCenter"
         | "topRightEdge";
     setInitialFocus?: boolean;
+    variant?: "default" | "unstyled";
 }
 
 function Content({
@@ -211,6 +213,7 @@ function Content({
     maxHeightClassName,
     scrolls = true,
     directionalHint = "bottonLeftEdge",
+    variant = "default",
     setInitialFocus = false,
 }: ContentProps) {
     const contextValue = useDropdownContext();
@@ -242,7 +245,7 @@ function Content({
                     {scrolls ? (
                         <ScrollView
                             className={cn("rounded border border-border-popup", maxHeightClassName, className)}
-                            contentContainerClassName="p-1"
+                            contentContainerClassName={variant === "default" ? "p-1" : ""}
                             scrollEnabled={!!maxHeightClassName}
                         >
                             {children}
@@ -275,9 +278,10 @@ interface ItemProps {
     value?: string;
     className?: string;
     disabled?: boolean;
+    variant?: "default" | "unstyled";
 }
 
-function Item({ children, onSelect, value, className = "", disabled = false }: ItemProps) {
+function Item({ children, onSelect, value, className = "", disabled = false, variant = "default" }: ItemProps) {
     const { close, onSelect: contextOnSelect, closeOnSelect } = useDropdownContext();
 
     const handlePress = useCallback(
@@ -300,7 +304,7 @@ function Item({ children, onSelect, value, className = "", disabled = false }: I
     return (
         <Button
             className={cn(
-                "px-3 rounded-md hover:bg-white/10 flex-row items-center",
+                variant === "default" ? "px-3 rounded-md hover:bg-white/10 flex-row items-center" : "",
                 disabled && "opacity-50",
                 className,
             )}

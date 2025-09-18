@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/Button";
 import { DropdownMenu, type DropdownMenuRootRef } from "@/components/DropdownMenu";
 import { StyledInput } from "@/components/StyledInput";
+import { TrackItem } from "@/components/TrackItem";
 import KeyboardManager, { KeyCodes } from "@/systems/keyboard/KeyboardManager";
 import type { LocalTrack } from "@/systems/LocalMusicState";
 import { cn } from "@/utils/cn";
@@ -26,7 +27,8 @@ export const PlaylistSelectorSearchDropdown = forwardRef<DropdownMenuRootRef, Pl
         const searchQuery$ = useObservable("");
         const searchQuery = use$(searchQuery$);
         const searchInputRef = useRef<TextInputNative>(null);
-        const [isOpen, setIsOpen] = useState(false);
+        const isOpen$ = useObservable(false);
+        const isOpen = use$(isOpen$);
         const [highlightedIndex, setHighlightedIndex] = useState(-1);
 
         const trimmedQuery = searchQuery.trim();
@@ -106,6 +108,7 @@ export const PlaylistSelectorSearchDropdown = forwardRef<DropdownMenuRootRef, Pl
                     highlightedIndex < searchResults.length
                 ) {
                     handleTrackSelect(searchResults[highlightedIndex]);
+                    handleOpenChange(false);
                     return true;
                 }
 
@@ -117,7 +120,7 @@ export const PlaylistSelectorSearchDropdown = forwardRef<DropdownMenuRootRef, Pl
 
         const handleOpenChange = useCallback(
             (open: boolean) => {
-                setIsOpen(open);
+                isOpen$.set(open);
                 if (!open) {
                     searchQuery$.set("");
                 }
@@ -131,11 +134,16 @@ export const PlaylistSelectorSearchDropdown = forwardRef<DropdownMenuRootRef, Pl
         }, []);
 
         return (
-            <DropdownMenu.Root ref={ref} closeOnSelect={false} onOpenChange={handleOpenChange}>
+            <DropdownMenu.Root ref={ref} isOpen$={isOpen$} onOpenChange={handleOpenChange}>
                 <DropdownMenu.Trigger asChild>
                     <Button icon="magnifyingglass" variant="icon" size="small" className="ml-2 hover:bg-white/10" />
                 </DropdownMenu.Trigger>
-                <DropdownMenu.Content directionalHint="topCenter" setInitialFocus>
+                <DropdownMenu.Content
+                    directionalHint="topCenter"
+                    setInitialFocus
+                    variant="unstyled"
+                    className="max-w-5xl"
+                >
                     <StyledInput
                         ref={searchInputRef}
                         value$={searchQuery$}
@@ -145,24 +153,24 @@ export const PlaylistSelectorSearchDropdown = forwardRef<DropdownMenuRootRef, Pl
                         onKeyPress={handleKeyPress}
                     />
                     {trimmedQuery && (
-                        <View className="p-2">
+                        <View>
                             {searchResults.length > 0 && (
                                 <View className="max-h-64">
                                     {searchResults.map((track, index) => (
                                         <DropdownMenu.Item
                                             key={track.id}
                                             onSelect={() => handleTrackSelect(track)}
+                                            variant="unstyled"
                                             className={cn(
-                                                "p-2 hover:bg-white/10 rounded-md",
+                                                "hover:bg-white/10 rounded-md",
                                                 highlightedIndex === index && "bg-white/20",
                                             )}
                                         >
-                                            <View className="flex-1">
-                                                <Text className="text-white font-medium text-sm">{track.title}</Text>
-                                                <Text className="text-white/60 text-xs">
-                                                    {track.artist} • {track.duration}
-                                                </Text>
-                                            </View>
+                                            <TrackItem
+                                                track={track}
+                                                index={index}
+                                                onTrackClick={() => handleTrackSelect(track)}
+                                            />
                                         </DropdownMenu.Item>
                                     ))}
                                 </View>
