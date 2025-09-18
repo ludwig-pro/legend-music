@@ -60,11 +60,18 @@ RCT_EXPORT_MODULE();
 
 - (void)startObserving
 {
-    // Set up progress timer when listeners are added
+    self.hasListeners = YES;
+
+    // Resume progress updates if playback is active and we do not yet observe time
+    if (self.isPlaying && self.player && !self.timeObserver) {
+        [self addTimeObserver];
+    }
 }
 
 - (void)stopObserving
 {
+    self.hasListeners = NO;
+
     // Clean up progress timer when no more listeners
     [self removeTimeObserver];
 }
@@ -219,7 +226,9 @@ RCT_EXPORT_METHOD(play:(RCTPromiseResolveBlock)resolve
         [self.player play];
         self.isPlaying = YES;
 
-        [self addTimeObserver];
+        if (self.hasListeners) {
+            [self addTimeObserver];
+        }
         [self sendEventWithName:@"onPlaybackStateChanged" body:@{@"isPlaying": @YES}];
         resolve(@{@"success": @YES});
     });
@@ -327,18 +336,18 @@ RCT_EXPORT_METHOD(getCurrentState:(RCTPromiseResolveBlock)resolve
     [self removeTimeObserver];
 
     __weak typeof(self) weakSelf = self;
-    // Reduced frequency: Update once per second instead of twice per second
-    // Use background queue to avoid blocking main thread
-    dispatch_queue_t backgroundQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0);
-    self.timeObserver = [self.player addPeriodicTimeObserverForInterval:CMTimeMake(1, 1) // 1.0 seconds
+    // Throttle updates: emit every 2s on a background queue to minimize CPU impact
+    dispatch_queue_t backgroundQueue = dispatch_get_global_queue(QOS_CLASS_BACKGROUND, 0);
+    CMTime interval = CMTimeMakeWithSeconds(2.0, NSEC_PER_SEC);
+    self.timeObserver = [self.player addPeriodicTimeObserverForInterval:interval
                                                                    queue:backgroundQueue
                                                               usingBlock:^(CMTime time) {
         __strong typeof(weakSelf) strongSelf = weakSelf;
-        if (strongSelf && CMTIME_IS_VALID(time)) {
+        if (strongSelf && strongSelf.hasListeners && strongSelf.isPlaying && CMTIME_IS_VALID(time)) {
             NSTimeInterval newTime = CMTimeGetSeconds(time);
 
             // Only send updates if time has changed significantly (avoid redundant events)
-            if (fabs(newTime - strongSelf.currentTime) >= 0.5) {
+            if (fabs(newTime - strongSelf.currentTime) >= 1.0) {
                 strongSelf.currentTime = newTime;
 
                 // Dispatch event sending back to main queue

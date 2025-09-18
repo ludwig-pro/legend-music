@@ -10,6 +10,7 @@
 @property (nonatomic, assign) BOOL isPlaying;
 @property (nonatomic, assign) NSTimeInterval duration;
 @property (nonatomic, assign) NSTimeInterval currentTime;
+@property (nonatomic, assign) BOOL hasListeners;
 @property (nonatomic, copy) RCTPromiseResolveBlock loadResolve;
 @property (nonatomic, copy) RCTPromiseRejectBlock loadReject;
 
