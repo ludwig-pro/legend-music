@@ -202,6 +202,7 @@ interface ContentProps {
         | "topLeftEdge"
         | "topCenter"
         | "topRightEdge";
+    setInitialFocus?: boolean;
 }
 
 function Content({
@@ -210,6 +211,7 @@ function Content({
     maxHeightClassName,
     scrolls = true,
     directionalHint = "bottonLeftEdge",
+    setInitialFocus = false,
 }: ContentProps) {
     const contextValue = useDropdownContext();
     const { isOpen$, triggerRef, close } = contextValue;
@@ -228,6 +230,7 @@ function Content({
             minWidth={400}
             dismissBehaviors={["preventDismissOnKeyDown"]}
             allowsVibrancy
+            setInitialFocus={setInitialFocus}
         >
             <DropdownContext.Provider value={contextValue}>
                 <SubmenuContext.Provider
