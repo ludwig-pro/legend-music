@@ -1,8 +1,9 @@
 import { use$ } from "@legendapp/state/react";
 import { useCallback, useMemo } from "react";
 import type { ListRenderItemInfo } from "react-native";
-import { FlatList, ScrollView, StyleSheet, Text, View } from "react-native";
+import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Button } from "@/components/Button";
+import { localAudioControls } from "@/components/LocalAudioPlayer";
 import type { LibraryTrack } from "@/systems/LibraryState";
 import { library$, libraryUI$ } from "@/systems/LibraryState";
 
@@ -176,9 +177,19 @@ function TrackList() {
 
     const keyExtractor = useCallback((item: LibraryTrack) => item.id, []);
 
+    const handleTrackPress = useCallback(
+        (index: number) => {
+            localAudioControls.loadPlaylist(tracks, index);
+        },
+        [tracks],
+    );
+
     const renderTrack = useCallback(
-        ({ item }: ListRenderItemInfo<LibraryTrack>) => (
-            <View className="flex-row items-center rounded-lg bg-white/5 px-2 py-2 hover:bg-white/10">
+        ({ item, index }: ListRenderItemInfo<LibraryTrack>) => (
+            <Pressable
+                className="flex-row items-center rounded-lg bg-white/5 px-2 py-2 hover:bg-white/10"
+                onPress={() => handleTrackPress(index)}
+            >
                 <View className="flex-1">
                     <Text className="text-white/80 text-sm font-medium" numberOfLines={1}>
                         {item.title}
@@ -199,9 +210,9 @@ function TrackList() {
                     }}
                     className="hover:bg-white/15 active:bg-white/25 rounded p-1"
                 />
-            </View>
+            </Pressable>
         ),
-        [],
+        [handleTrackPress],
     );
 
     if (!selectedItem) {

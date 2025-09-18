@@ -11,15 +11,8 @@ export interface LibraryItem {
     duration?: number;
 }
 
-export interface LibraryTrack {
-    id: string;
-    title: string;
-    artist: string;
-    duration: string;
-    filePath: string;
-    fileName: string;
+export interface LibraryTrack extends LocalTrack {
     album?: string;
-    thumbnail?: string;
 }
 
 // Library UI state (persistent)
@@ -48,15 +41,7 @@ export const library$ = observable({
 });
 
 function normalizeTracks(localTracks: LocalTrack[]): LibraryTrack[] {
-    return localTracks.map((track) => ({
-        id: track.id,
-        title: track.title,
-        artist: track.artist,
-        duration: track.duration,
-        filePath: track.filePath,
-        fileName: track.fileName,
-        thumbnail: track.thumbnail,
-    }));
+    return localTracks.map((track) => ({ ...track }));
 }
 
 function buildArtistItems(tracks: LibraryTrack[]): LibraryItem[] {
