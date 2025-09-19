@@ -1,6 +1,7 @@
 import { observable } from "@legendapp/state";
 import { Directory, File } from "expo-file-system/next";
 import * as ID3 from "id3js";
+import AudioPlayer from "@/native-modules/AudioPlayer";
 import { stateSaved$ } from "@/systems/State";
 import { createJSONManager } from "@/utils/JSONManager";
 import { perfCount, perfDelta, perfLog, perfTime } from "@/utils/perfLogger";
@@ -56,23 +57,45 @@ async function extractId3Metadata(
     fileName: string,
 ): Promise<{ title: string; artist: string; duration?: string }> {
     perfCount("LocalMusic.extractId3Metadata");
+
+    const fallback = parseFilenameOnly(fileName);
+    let title = fallback.title;
+    let artist = fallback.artist;
+    let duration: string | undefined;
+
     try {
         // First try to extract ID3 tags
         const tags = await perfTime("LocalMusic.ID3.fromPath", () => ID3.fromPath(filePath));
 
-        if (tags && (tags.title || tags.artist)) {
-            return {
-                title: tags.title || parseFilenameOnly(fileName).title,
-                artist: tags.artist || parseFilenameOnly(fileName).artist,
-                duration: tags.duration ? formatDuration(tags.duration) : undefined,
-            };
+        if (tags) {
+            title = tags.title || title;
+            artist = tags.artist || artist;
+
+            const tagDurationSeconds = parseDurationFromTags(tags);
+            if (tagDurationSeconds !== null) {
+                duration = formatDuration(tagDurationSeconds);
+            }
         }
     } catch (error) {
         console.warn(`Failed to read ID3 tags from ${fileName}:`, error);
     }
 
-    // Fallback to filename parsing if ID3 tags are unavailable or incomplete
-    return parseFilenameOnly(fileName);
+    if (!duration) {
+        try {
+            const info = await AudioPlayer.getTrackInfo(filePath);
+            if (info && typeof info.durationSeconds === "number" && info.durationSeconds > 0) {
+                duration = formatDuration(info.durationSeconds);
+            }
+        } catch (error) {
+            console.warn(`Failed to read native metadata from ${fileName}:`, error);
+        }
+    }
+
+    return {
+        title,
+        artist,
+        duration,
+    };
 }
 
 // Fallback: Extract metadata from filename (original logic)
@@ -114,6 +137,32 @@ function formatDuration(seconds: number): string {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = Math.floor(seconds % 60);
     return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+}
+
+function parseDurationFromTags(tags: unknown): number | null {
+    if (!tags || typeof tags !== "object") {
+        return null;
+    }
+
+    const durationValue = (tags as { duration?: unknown }).duration;
+    if (typeof durationValue === "number" && durationValue > 0) {
+        return durationValue;
+    }
+
+    const lengthValue = (tags as { length?: unknown }).length;
+    if (typeof lengthValue === "number" && lengthValue > 0) {
+        return lengthValue / 1000;
+    }
+
+    if (typeof lengthValue === "string") {
+        const numeric = Number.parseFloat(lengthValue);
+        if (!Number.isNaN(numeric) && numeric > 0) {
+            // TLEN is defined in milliseconds, but we guard in case the value is already seconds
+            return numeric > 3600 ? numeric / 1000 : numeric;
+        }
+    }
+
+    return null;
 }
 
 // Scan directory for MP3 files

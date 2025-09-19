@@ -162,6 +162,51 @@ RCT_EXPORT_METHOD(loadTrack:(NSString *)filePath
     });
 }
 
+RCT_EXPORT_METHOD(getTrackInfo:(NSString *)filePath
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+{
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        @autoreleasepool {
+            NSURL *fileURL;
+            if ([filePath hasPrefix:@"file://"]) {
+                fileURL = [NSURL URLWithString:filePath];
+            } else {
+                fileURL = [NSURL fileURLWithPath:filePath];
+            }
+
+            if (!fileURL) {
+                reject(@"INVALID_URL", @"Invalid file path", nil);
+                return;
+            }
+
+            if (![[NSFileManager defaultManager] fileExistsAtPath:fileURL.path]) {
+                reject(@"FILE_NOT_FOUND", @"Audio file not found", nil);
+                return;
+            }
+
+            NSError *error = nil;
+            AVAudioFile *audioFile = [[AVAudioFile alloc] initForReading:fileURL error:&error];
+            if (error || audioFile == nil) {
+                reject(@"FILE_READ_ERROR", error.localizedDescription ?: @"Failed to read audio file", error);
+                return;
+            }
+
+            double sampleRate = audioFile.processingFormat.sampleRate;
+            double durationSeconds = 0;
+            if (sampleRate > 0) {
+                durationSeconds = (double)audioFile.length / sampleRate;
+            }
+
+            resolve(@{
+                @"durationSeconds": @(durationSeconds),
+                @"sampleRate": @(sampleRate),
+                @"frameCount": @(audioFile.length)
+            });
+        }
+    });
+}
+
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey,id> *)change context:(void *)context
 {
     if ([keyPath isEqualToString:@"status"]) {

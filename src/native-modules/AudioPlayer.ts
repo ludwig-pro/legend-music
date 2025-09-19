@@ -29,6 +29,9 @@ type AudioPlayerType = {
     seek: (seconds: number) => Promise<{ success: boolean; error?: string }>;
     setVolume: (volume: number) => Promise<{ success: boolean; error?: string }>;
     getCurrentState: () => Promise<AudioPlayerState>;
+    getTrackInfo: (
+        filePath: string,
+    ) => Promise<{ durationSeconds: number; sampleRate: number; frameCount: number }>;
 };
 
 const audioPlayerEmitter = new NativeEventEmitter(AudioPlayer);
@@ -47,6 +50,7 @@ export const useAudioPlayer = (): AudioPlayerType & {
         seek: (seconds: number) => AudioPlayer.seek(seconds),
         setVolume: (volume: number) => AudioPlayer.setVolume(volume),
         getCurrentState: () => AudioPlayer.getCurrentState(),
+        getTrackInfo: (filePath: string) => AudioPlayer.getTrackInfo(filePath),
         addListener: <T extends keyof AudioPlayerEvents>(eventType: T, listener: AudioPlayerEvents[T]) => {
             const subscription = audioPlayerEmitter.addListener(eventType, listener);
             return {
