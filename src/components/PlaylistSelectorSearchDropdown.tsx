@@ -1,16 +1,10 @@
 import { use$, useObservable } from "@legendapp/state/react";
 import { forwardRef, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-    type NativeSyntheticEvent,
-    Text,
-    type TextInputKeyPressEventData,
-    type TextInput as TextInputNative,
-    View,
-} from "react-native";
+import { Text, View } from "react-native";
 
 import { Button } from "@/components/Button";
 import { DropdownMenu, type DropdownMenuRootRef } from "@/components/DropdownMenu";
-import { StyledInput } from "@/components/StyledInput";
+import { TextInputSearch, type TextInputSearchRef } from "@/components/TextInputSearch";
 import { TrackItem } from "@/components/TrackItem";
 import KeyboardManager, { KeyCodes } from "@/systems/keyboard/KeyboardManager";
 import type { LocalTrack } from "@/systems/LocalMusicState";
@@ -26,10 +20,10 @@ export const PlaylistSelectorSearchDropdown = forwardRef<DropdownMenuRootRef, Pl
     function PlaylistSelectorSearchDropdown({ tracks, onSelectTrack, onOpenChange }, ref) {
         const searchQuery$ = useObservable("");
         const searchQuery = use$(searchQuery$);
-        const searchInputRef = useRef<TextInputNative>(null);
         const isOpen$ = useObservable(false);
         const isOpen = use$(isOpen$);
         const [highlightedIndex, setHighlightedIndex] = useState(-1);
+        const textInputRef = useRef<TextInputSearchRef>(null);
 
         const trimmedQuery = searchQuery.trim();
 
@@ -129,9 +123,13 @@ export const PlaylistSelectorSearchDropdown = forwardRef<DropdownMenuRootRef, Pl
             [onOpenChange, searchQuery$],
         );
 
-        const handleKeyPress = useCallback((event: NativeSyntheticEvent<TextInputKeyPressEventData>) => {
-            event.preventDefault();
-        }, []);
+        useEffect(() => {
+            if (isOpen) {
+                setTimeout(() => {
+                    textInputRef.current?.focus();
+                }, 0);
+            }
+        }, [isOpen]);
 
         return (
             <DropdownMenu.Root ref={ref} isOpen$={isOpen$} onOpenChange={handleOpenChange}>
@@ -144,14 +142,14 @@ export const PlaylistSelectorSearchDropdown = forwardRef<DropdownMenuRootRef, Pl
                     variant="unstyled"
                     className="max-w-5xl"
                 >
-                    <StyledInput
-                        ref={searchInputRef}
-                        value$={searchQuery$}
-                        placeholder="Search tracks..."
-                        ignoreDropdownState={true}
-                        autoFocus
-                        onKeyPress={handleKeyPress}
-                    />
+                    <View className="bg-background-tertiary border border-border-primary rounded-md px-3 py-1.5">
+                        <TextInputSearch
+                            ref={textInputRef}
+                            value$={searchQuery$}
+                            placeholder="Search tracks..."
+                            className="text-sm text-text-primary"
+                        />
+                    </View>
                     {trimmedQuery && (
                         <View>
                             {searchResults.length > 0 && (

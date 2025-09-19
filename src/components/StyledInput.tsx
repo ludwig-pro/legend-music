@@ -25,7 +25,7 @@ export const StyledInput = memo(
                     ref={ref}
                     value$={value$}
                     ignoreDropdownState={ignoreDropdownState}
-                    className="text-sm text-text-primary"
+                    className="text-sm text-text-primary h-11"
                     // style={styles.input}
                     {...rest}
                 />

@@ -70,6 +70,7 @@ const Root = forwardRef<DropdownMenuRootRef, RootProps>(function Root(
     { children, isOpen$: isOpen$Prop, onSelect, closeOnSelect = true, onOpenChange },
     ref,
 ) {
+    // biome-ignore lint/correctness/useHookAtTopLevel: <explanation>
     const isOpen$ = isOpen$Prop ?? useObservable(false);
     const openedWithMouseDown$ = useObservable(false);
     const triggerRef = useRef<View>(null);
@@ -250,10 +251,12 @@ function Content({
                         >
                             {children}
                         </ScrollView>
-                    ) : (
+                    ) : variant === "default" ? (
                         <View className={cn("rounded border border-border-popup", maxHeightClassName, className)}>
                             <View className="p-1">{children}</View>
                         </View>
+                    ) : (
+                        children
                     )}
                 </SubmenuContext.Provider>
             </DropdownContext.Provider>
