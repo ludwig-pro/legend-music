@@ -43,7 +43,7 @@ export const localAudioControls = {
             filePath,
             title,
             artist,
-            duration: "0:00",
+            duration: " ",
 
             fileName: title,
         };

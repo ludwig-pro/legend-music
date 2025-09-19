@@ -4,7 +4,7 @@ import { useEffect, useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 import { localAudioControls, localPlayerState$ } from "@/components/LocalAudioPlayer";
-import { TrackItem, type TrackData } from "@/components/TrackItem";
+import { type TrackData, TrackItem } from "@/components/TrackItem";
 import { localMusicState$ } from "@/systems/LocalMusicState";
 import { settings$ } from "@/systems/Settings";
 import { perfCount, perfLog } from "@/utils/perfLogger";
@@ -100,6 +100,6 @@ export function Playlist() {
 
 const styles = StyleSheet.create({
     container: {
-        paddingVertical: 4,
+        paddingVertical: 2,
     },
 });

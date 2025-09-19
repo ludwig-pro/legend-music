@@ -65,7 +65,7 @@ export const TrackItem = ({ track, index, onTrackClick, showIndex = true, showAl
             <Button className={rowClassName} onPress={() => onTrackClick(index)}>
                 {showIndex && (
                     <View className="min-w-7">
-                        <Text className={cn("tabular-nums text-sm", indexTone)}>
+                        <Text className={cn("tabular-nums text-xs", indexTone)}>
                             {(track.index ?? index) >= 0 ? `${(track.index ?? index) + 1}.  ` : ""}
                         </Text>
                     </View>

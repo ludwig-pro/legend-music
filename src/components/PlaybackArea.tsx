@@ -1,14 +1,22 @@
+import type { Observable } from "@legendapp/state";
 import { Memo, use$ } from "@legendapp/state/react";
-import { useEffect } from "react";
+import { memo } from "react";
 import { Text, View } from "react-native";
 import { AlbumArt } from "@/components/AlbumArt";
 import { Button } from "@/components/Button";
 import { CustomSlider } from "@/components/CustomSlider";
 import { localAudioControls, localPlayerState$ } from "@/components/LocalAudioPlayer";
+import { cn } from "@/utils/cn";
 import { perfCount, perfLog } from "@/utils/perfLogger";
 
 // Format time for local playback with caching to reduce computation
 const formatTimeCache = new Map<number, string>();
+
+const CurrentTime = memo(function CurrentTime({ currentLocalTime$ }: { currentLocalTime$: Observable<number> }) {
+    const time = use$(currentLocalTime$);
+    console.log("CurrentTime", time);
+    return formatTime(time);
+});
 
 function formatTime(seconds: number): string {
     // Round to nearest second for caching efficiency
@@ -37,77 +45,49 @@ export function PlaybackArea() {
     const isLoading = use$(localPlayerState$.isLoading);
     const isPlaying = use$(localPlayerState$.isPlaying);
     const currentLocalTime$ = localPlayerState$.currentTime;
-    const duration$ = localPlayerState$.duration;
+    const duration = use$(localPlayerState$.duration);
 
     perfLog("PlaybackArea.state", {
         track: currentTrack?.title,
         isLoading,
         isPlaying,
-        currentTime: currentLocalTime$.peek?.() ?? currentLocalTime$.get?.(),
-        duration: duration$.peek?.() ?? duration$.get?.(),
+        currentTime: currentLocalTime$.peek?.(),
+        duration,
     });
 
     return (
-        <View className="mx-3 mt-3">
+        <View className="px-3 pt-3">
             <View className="flex-row items-center">
                 {/* Album Art */}
-                <View className="mr-4">
+                <View className="mr-3">
                     <AlbumArt uri={currentTrack?.thumbnail} size="large" fallbackIcon="♪" />
                 </View>
 
                 {/* Song Info */}
                 <View className="flex-1 flex-col">
                     <Text className="text-white text-sm font-semibold" numberOfLines={1}>
-                        {currentTrack?.title || (isLoading ? "Loading..." : " ")}
+                        {currentTrack?.title || " "}
                     </Text>
                     <Text className="text-white/70 text-sm" numberOfLines={1}>
                         {currentTrack?.artist || " "}
                     </Text>
-                    <Text className="text-white/50 text-xs" style={{ fontVariant: ["tabular-nums"] }}>
-                        <Memo>{() => formatTime(currentLocalTime$.get())}</Memo>
-                        <Memo>{() => ` / ${formatTime(duration$.get())}`}</Memo>
-                    </Text>
-                </View>
-
-                {/* Playback Controls */}
-                <View className="flex-row items-center gap-x-2 ml-4">
-                    <Button
-                        icon="backward.fill"
-                        variant="icon-bg"
-                        iconSize={16}
-                        size="medium"
-                        onPress={localAudioControls.playPrevious}
-                        disabled={isLoading}
-                        className="bg-white/15 hover:bg-white/25 active:bg-white/35 border-white/10 rounded-full"
-                    />
-
-                    <Button
-                        icon={isLoading ? "ellipsis" : isPlaying ? "pause.fill" : "play.fill"}
-                        variant="icon-bg"
-                        iconSize={18}
-                        size="medium"
-                        onPress={localAudioControls.togglePlayPause}
-                        disabled={isLoading}
-                        className="bg-white/15 hover:bg-white/25 active:bg-white/35 border-white/15 rounded-full"
-                    />
-
-                    <Button
-                        icon="forward.fill"
-                        variant="icon-bg"
-                        iconSize={16}
-                        size="medium"
-                        onPress={localAudioControls.playNext}
-                        disabled={isLoading}
-                        className="bg-white/15 hover:bg-white/25 active:bg-white/35 border-white/10 rounded-full"
-                    />
                 </View>
             </View>
-
-            <View className="pb-1">
+            <View className={cn("flex-row items-center pb-2 pt-1", !currentTrack && "opacity-0")}>
+                <Text className="text-white/50 text-xs pr-2" style={{ fontVariant: ["tabular-nums"] }}>
+                    {duration ? (
+                        <>
+                            <CurrentTime currentLocalTime$={currentLocalTime$} />
+                            {duration ? ` / ${formatTime(duration)}` : " "}
+                        </>
+                    ) : (
+                        " "
+                    )}
+                </Text>
                 <CustomSlider
-                    style={{ height: 32 }}
+                    style={{ height: 24, flex: 1 }}
                     minimumValue={0}
-                    $maximumValue={duration$}
+                    $maximumValue={localPlayerState$.duration}
                     $value={currentLocalTime$}
                     onSlidingComplete={(value) => {
                         localAudioControls.seek(value);
@@ -116,6 +96,37 @@ export function PlaybackArea() {
                     maximumTrackTintColor="#ffffff40"
                     disabled={!currentTrack}
                 />
+                {/* Playback Controls */}
+                <View className="flex-row items-center ml-1 -mr-1">
+                    {/* <Button
+                            icon="backward.fill"
+                            variant="icon-bg"
+                            iconSize={14}
+                            size="medium"
+                            onPress={localAudioControls.playPrevious}
+                            className="bg-transparent"
+                            // className="bg-white/15 hover:bg-white/25 active:bg-white/35 border-white/10 rounded-full"
+                        /> */}
+
+                    <Button
+                        icon={isPlaying ? "pause.fill" : "play.fill"}
+                        variant="icon"
+                        iconSize={16}
+                        size="small"
+                        onPress={localAudioControls.togglePlayPause}
+                        // className="bg-white/15 hover:bg-white/25 active:bg-white/35 border-white/15 rounded-full"
+                    />
+
+                    <Button
+                        icon="forward.end.fill"
+                        variant="icon"
+                        iconSize={16}
+                        size="small"
+                        onPress={localAudioControls.playNext}
+                        // className="bg-transparent"
+                        // className="bg-white/15 hover:bg-white/25 active:bg-white/35 border-white/10 rounded-full"
+                    />
+                </View>
             </View>
         </View>
     );

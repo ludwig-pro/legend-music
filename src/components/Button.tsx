@@ -54,7 +54,7 @@ export function Button({
                 size === "small" && isIcon && "size-7 pb-1.5",
                 size === "medium" && isIcon && "size-9 pb-1.5",
                 size === "large" && isIcon && "p-4",
-                variant === "icon" && "rounded-md",
+                variant === "icon" && "rounded-md hover:bg-white/10",
                 variant === "icon-bg" &&
                     "rounded-md bg-background-secondary border border-border-primary hover:bg-white/10",
                 size === "small" && !isIcon && "h-7 px-2 justify-center items-center",

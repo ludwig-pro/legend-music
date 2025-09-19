@@ -2,10 +2,10 @@ import { use$ } from "@legendapp/state/react";
 import { useCallback, useRef } from "react";
 import { Text, View } from "react-native";
 import { Button } from "@/components/Button";
-import { localAudioControls } from "@/components/LocalAudioPlayer";
-import { SelectLegendList } from "@/components/SelectLegendList";
 import type { DropdownMenuRootRef } from "@/components/DropdownMenu";
+import { localAudioControls } from "@/components/LocalAudioPlayer";
 import { PlaylistSelectorSearchDropdown } from "@/components/PlaylistSelectorSearchDropdown";
+import { SelectLegendList } from "@/components/SelectLegendList";
 import { useOnHotkeys } from "@/systems/keyboard/Keyboard";
 import { libraryUI$ } from "@/systems/LibraryState";
 import type { LocalTrack } from "@/systems/LocalMusicState";
@@ -79,7 +79,7 @@ export function PlaylistSelector() {
     });
 
     return (
-        <View className="px-1 border-t border-b border-white/10">
+        <View className="px-1 border-b border-t border-white/10">
             <View className="flex-row items-center">
                 <View className="flex-1">
                     <SelectLegendList
@@ -99,7 +99,7 @@ export function PlaylistSelector() {
 
                             if (mode === "preview") {
                                 return (
-                                    <Text className="text-text-primary group-hover:text-white text-sm font-semibold">
+                                    <Text className="text-text-secondary group-hover:text-white text-sm">
                                         {playlist.name}
                                     </Text>
                                 );

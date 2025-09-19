@@ -284,7 +284,7 @@ function TrackList() {
 
 function formatDuration(value: string): string {
     if (!value) {
-        return "0:00";
+        return " ";
     }
 
     if (value.includes(":")) {

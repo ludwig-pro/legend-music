@@ -1,5 +1,1 @@
-1. Jump dropdown keeps jumping around as I type
-2. Jump dropdown should focus input immediately
-3. Jump selecting a song should close
-4. Can't press J in dropdown
-5. Native module for textinput which disables up/down and focus ring
+1. Get album art from id3 tag?

@@ -132,7 +132,7 @@ export function onHotkeys(hotkeyCallbacks: HotkeyCallbacks) {
             const keys =
                 typeof configuredKey === "number" ? [configuredKey.toString()] : configuredKey.toLowerCase().split("+");
 
-            keysToPreventDefault.add(Number(keys[keys.length - 1]));
+            // keysToPreventDefault.add(Number(keys[keys.length - 1]));
             hotkeyMap.set(keys, action);
 
             // Get metadata for this hotkey
