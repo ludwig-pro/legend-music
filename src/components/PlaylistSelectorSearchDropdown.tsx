@@ -8,17 +8,20 @@ import { DropdownMenu, type DropdownMenuRootRef } from "@/components/DropdownMen
 import { TextInputSearch, type TextInputSearchRef } from "@/components/TextInputSearch";
 import { TrackItem } from "@/components/TrackItem";
 import KeyboardManager, { KeyCodes } from "@/systems/keyboard/KeyboardManager";
+import { library$ } from "@/systems/LibraryState";
+import type { LibraryItem } from "@/systems/LibraryState";
 import type { LocalTrack } from "@/systems/LocalMusicState";
 import { cn } from "@/utils/cn";
 
 interface PlaylistSelectorSearchDropdownProps {
     tracks: LocalTrack[];
     onSelectTrack: (track: LocalTrack, action: "enqueue" | "play-next") => void;
+    onSelectLibraryItem?: (item: LibraryItem, action: "enqueue" | "play-next") => void;
     onOpenChange?: (open: boolean) => void;
 }
 
 export const PlaylistSelectorSearchDropdown = forwardRef<DropdownMenuRootRef, PlaylistSelectorSearchDropdownProps>(
-    function PlaylistSelectorSearchDropdown({ tracks, onSelectTrack, onOpenChange }, ref) {
+    function PlaylistSelectorSearchDropdown({ tracks, onSelectTrack, onSelectLibraryItem, onOpenChange }, ref) {
         const searchQuery$ = useObservable("");
         const searchQuery = use$(searchQuery$);
         const isOpen$ = useObservable(false);
@@ -27,23 +30,49 @@ export const PlaylistSelectorSearchDropdown = forwardRef<DropdownMenuRootRef, Pl
         const textInputRef = useRef<TextInputSearchRef>(null);
         const shiftPressedRef = useRef(false);
 
+        const library = use$(library$);
         const trimmedQuery = searchQuery.trim();
+
+        type SearchResult = { type: "track"; item: LocalTrack } | { type: "library"; item: LibraryItem };
 
         const searchResults = useMemo(() => {
             if (!trimmedQuery) {
-                return [] as LocalTrack[];
+                return [] as SearchResult[];
             }
 
             const lowerQuery = trimmedQuery.toLowerCase();
+            const results: SearchResult[] = [];
 
-            return tracks
+            // Search tracks
+            const matchingTracks = tracks
                 .filter(
                     (track) =>
                         track.title.toLowerCase().includes(lowerQuery) ||
-                        track.artist.toLowerCase().includes(lowerQuery),
+                        track.artist.toLowerCase().includes(lowerQuery) ||
+                        track.album?.toLowerCase().includes(lowerQuery),
                 )
-                .slice(0, 10);
-        }, [tracks, trimmedQuery]);
+                .slice(0, 6)
+                .map((track): SearchResult => ({ type: "track", item: track }));
+
+            // Search albums
+            const matchingAlbums = library.albums
+                .filter((album) => album.name.toLowerCase().includes(lowerQuery))
+                .slice(0, 3)
+                .map((album): SearchResult => ({ type: "library", item: album }));
+
+            // Search artists
+            const matchingArtists = library.artists
+                .filter((artist) => artist.name.toLowerCase().includes(lowerQuery))
+                .slice(0, 3)
+                .map((artist): SearchResult => ({ type: "library", item: artist }));
+
+            // Combine results: albums first, then artists, then tracks
+            results.push(...matchingAlbums);
+            results.push(...matchingArtists);
+            results.push(...matchingTracks);
+
+            return results.slice(0, 10);
+        }, [tracks, library.albums, library.artists, trimmedQuery]);
 
         useEffect(() => {
             if (!isOpen) {
@@ -96,12 +125,16 @@ export const PlaylistSelectorSearchDropdown = forwardRef<DropdownMenuRootRef, Pl
             return shiftPressedRef.current ? "play-next" : "enqueue";
         }, []);
 
-        const handleTrackAction = useCallback(
-            (track: LocalTrack, action: "enqueue" | "play-next") => {
-                onSelectTrack(track, action);
+        const handleSearchResultAction = useCallback(
+            (result: SearchResult, action: "enqueue" | "play-next") => {
+                if (result.type === "track") {
+                    onSelectTrack(result.item, action);
+                } else if (result.type === "library") {
+                    onSelectLibraryItem?.(result.item, action);
+                }
                 handleOpenChange(false);
             },
-            [handleOpenChange, onSelectTrack],
+            [handleOpenChange, onSelectTrack, onSelectLibraryItem],
         );
 
         useEffect(() => {
@@ -142,7 +175,7 @@ export const PlaylistSelectorSearchDropdown = forwardRef<DropdownMenuRootRef, Pl
                     const action = KeyboardManager.hasModifier(event, KeyCodes.MODIFIER_SHIFT)
                         ? "play-next"
                         : "enqueue";
-                    handleTrackAction(searchResults[highlightedIndex], action);
+                    handleSearchResultAction(searchResults[highlightedIndex], action);
                     return true;
                 }
 
@@ -160,7 +193,7 @@ export const PlaylistSelectorSearchDropdown = forwardRef<DropdownMenuRootRef, Pl
                 removeKeyDown();
                 removeKeyUp();
             };
-        }, [handleTrackAction, highlightedIndex, isOpen, searchResults]);
+        }, [handleSearchResultAction, highlightedIndex, isOpen, searchResults]);
 
         useEffect(() => {
             if (isOpen) {
@@ -195,36 +228,65 @@ export const PlaylistSelectorSearchDropdown = forwardRef<DropdownMenuRootRef, Pl
                                 <View style={{ maxHeight: 256 }}>
                                     <LegendList
                                         data={searchResults}
-                                        keyExtractor={(track) => track.id}
+                                        keyExtractor={(result) =>
+                                            result.type === "track" ? result.item.id : result.item.id
+                                        }
                                         style={{ maxHeight: 256 }}
-                                        renderItem={({ item: track, index }) => (
-                                            <DropdownMenu.Item
-                                                key={track.id}
-                                                onSelect={(event) => {
-                                                    const action = getActionFromEvent(event);
-                                                    handleTrackAction(track, action);
-                                                }}
-                                                variant="unstyled"
-                                                className={cn(
-                                                    "hover:bg-white/10 rounded-md",
-                                                    highlightedIndex === index && "bg-white/20",
-                                                )}
-                                            >
-                                                <TrackItem
-                                                    track={track}
-                                                    index={index}
-                                                    onTrackClick={(_, event) => {
+                                        extraData={{ highlightedIndex }}
+                                        renderItem={({ item: result, index }) => {
+                                            const key =
+                                                result.type === "track" ? result.item.id : result.item.id;
+                                            return (
+                                                <DropdownMenu.Item
+                                                    key={key}
+                                                    onSelect={(event) => {
                                                         const action = getActionFromEvent(event);
-                                                        handleTrackAction(track, action);
+                                                        handleSearchResultAction(result, action);
                                                     }}
-                                                />
-                                            </DropdownMenu.Item>
-                                        )}
+                                                    variant="unstyled"
+                                                    className={cn(
+                                                        "hover:bg-white/10 rounded-md",
+                                                        highlightedIndex === index && "bg-white/20",
+                                                    )}
+                                                >
+                                                    {result.type === "track" ? (
+                                                        <TrackItem
+                                                            track={result.item}
+                                                            index={index}
+                                                            onTrackClick={(_, event) => {
+                                                                const action = getActionFromEvent(event);
+                                                                handleSearchResultAction(result, action);
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <View className="flex-row items-center px-3 py-2">
+                                                            <View className="mr-3 w-8 h-8 bg-white/10 rounded flex-row items-center justify-center">
+                                                                <Text className="text-white/70 text-xs font-medium">
+                                                                    {result.item.type === "album"
+                                                                        ? "♪"
+                                                                        : "👤"}
+                                                                </Text>
+                                                            </View>
+                                                            <View className="flex-1">
+                                                                <Text className="text-white text-sm font-medium">
+                                                                    {result.item.name}
+                                                                </Text>
+                                                                <Text className="text-white/60 text-xs">
+                                                                    {result.item.type === "album"
+                                                                        ? `Album • ${result.item.trackCount} tracks`
+                                                                        : `Artist • ${result.item.trackCount} tracks`}
+                                                                </Text>
+                                                            </View>
+                                                        </View>
+                                                    )}
+                                                </DropdownMenu.Item>
+                                            );
+                                        }}
                                     />
                                 </View>
                             )}
                             {trimmedQuery && searchResults.length === 0 && (
-                                <Text className="text-white/60 text-sm p-2">No tracks found</Text>
+                                <Text className="text-white/60 text-sm p-2">No results found</Text>
                             )}
                         </View>
                     )}

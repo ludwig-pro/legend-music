@@ -7,7 +7,8 @@ import { localAudioControls } from "@/components/LocalAudioPlayer";
 import { PlaylistSelectorSearchDropdown } from "@/components/PlaylistSelectorSearchDropdown";
 import { SelectLegendList } from "@/components/SelectLegendList";
 import { useOnHotkeys } from "@/systems/keyboard/Keyboard";
-import { libraryUI$ } from "@/systems/LibraryState";
+import { library$, libraryUI$ } from "@/systems/LibraryState";
+import type { LibraryItem } from "@/systems/LibraryState";
 import type { LocalTrack } from "@/systems/LocalMusicState";
 import { localMusicState$, setCurrentPlaylist } from "@/systems/LocalMusicState";
 import { stateSaved$ } from "@/systems/State";
@@ -23,6 +24,7 @@ interface LocalPlaylist {
 export function PlaylistSelector() {
     perfCount("PlaylistSelector.render");
     const localMusicState = use$(localMusicState$);
+    const library = use$(library$);
 
     // Create local files playlist
     const localFilesPlaylist: LocalPlaylist = {
@@ -72,6 +74,31 @@ export function PlaylistSelector() {
         }
 
         localAudioControls.queue.append(track);
+    };
+
+    const handleLibraryItemSelect = (item: LibraryItem, action: "enqueue" | "play-next") => {
+        perfLog("PlaylistSelector.handleLibraryItemSelect", { itemId: item.id, type: item.type, action });
+        console.log("Selected library item:", item, "action:", action);
+
+        // Get tracks for the selected item
+        let tracksToAdd: LocalTrack[] = [];
+
+        if (item.type === "album") {
+            tracksToAdd = library.tracks.filter((track) => track.album === item.name);
+        } else if (item.type === "artist") {
+            tracksToAdd = library.tracks.filter((track) => track.artist === item.name);
+        }
+
+        if (tracksToAdd.length === 0) {
+            return;
+        }
+
+        if (action === "play-next") {
+            localAudioControls.queue.insertNext(tracksToAdd);
+            return;
+        }
+
+        localAudioControls.queue.append(tracksToAdd);
     };
 
     useOnHotkeys({
@@ -127,6 +154,7 @@ export function PlaylistSelector() {
                     ref={dropdownMenuRef}
                     tracks={localMusicState.tracks}
                     onSelectTrack={handleTrackSelect}
+                    onSelectLibraryItem={handleLibraryItemSelect}
                 />
                 <Button
                     icon={isLibraryOpen ? "sidebar.right" : "sidebar.right"}

@@ -15,7 +15,7 @@ export interface LibraryItem {
 }
 
 export interface LibraryTrack extends LocalTrack {
-    album?: string;
+    // LibraryTrack extends LocalTrack which already has album?: string
 }
 
 // Library UI state (persistent)

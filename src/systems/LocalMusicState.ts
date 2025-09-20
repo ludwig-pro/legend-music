@@ -13,6 +13,7 @@ export interface LocalTrack {
     id: string;
     title: string;
     artist: string;
+    album?: string;
     duration: string;
     filePath: string;
     fileName: string;
@@ -332,12 +333,13 @@ export async function ensureLocalTrackThumbnail(track: LocalTrack): Promise<stri
 async function extractId3Metadata(
     filePath: string,
     fileName: string,
-): Promise<{ title: string; artist: string; duration?: string }> {
+): Promise<{ title: string; artist: string; album?: string; duration?: string }> {
     perfCount("LocalMusic.extractId3Metadata");
 
     const fallback = parseFilenameOnly(fileName);
     let title = fallback.title;
     let artist = fallback.artist;
+    let album: string | undefined;
     let duration: string | undefined;
 
     try {
@@ -347,6 +349,7 @@ async function extractId3Metadata(
         if (tags) {
             title = tags.title || title;
             artist = tags.artist || artist;
+            album = tags.album || album;
 
             const tagDurationSeconds = parseDurationFromTags(tags);
             if (tagDurationSeconds !== null) {
@@ -371,6 +374,7 @@ async function extractId3Metadata(
     return {
         title,
         artist,
+        album,
         duration,
     };
 }
@@ -483,6 +487,7 @@ async function scanDirectory(directoryPath: string): Promise<LocalTrack[]> {
                         id: filePath,
                         title: metadata.title,
                         artist: metadata.artist,
+                        album: metadata.album,
                         duration: metadata.duration || "0:00",
                         filePath,
                         fileName: item.name,
