@@ -28,9 +28,10 @@ interface TrackItemProps {
     onTrackClick: (index: number, event?: GestureResponderEvent) => void;
     showIndex?: boolean;
     showAlbumArt?: boolean;
+    isSelected?: boolean;
 }
 
-export const TrackItem = ({ track, index, onTrackClick, showIndex = true, showAlbumArt = true }: TrackItemProps) => {
+export const TrackItem = ({ track, index, onTrackClick, showIndex = true, showAlbumArt = true, isSelected = false }: TrackItemProps) => {
     perfCount("TrackItem.render");
     const playlistStyle = use$(settings$.general.playlistStyle);
     const listItemStyles = useListItemStyles();
@@ -58,6 +59,7 @@ export const TrackItem = ({ track, index, onTrackClick, showIndex = true, showAl
         const rowClassName = cn(
             listItemStyles.getRowClassName({ variant: "compact", isActive: isPlaying }),
             track.fromSuggestions ? "opacity-75" : "",
+            isSelected ? "ring-2 ring-white/30" : "",
         );
         const indexTone = track.fromSuggestions ? listItemStyles.text.muted : listItemStyles.text.secondary;
         const primaryTone = track.fromSuggestions ? listItemStyles.text.secondary : listItemStyles.text.primary;
@@ -90,6 +92,7 @@ export const TrackItem = ({ track, index, onTrackClick, showIndex = true, showAl
     const rowClassName = cn(
         listItemStyles.getRowClassName({ isActive: isPlaying }),
         track.fromSuggestions ? "opacity-75" : "",
+        isSelected ? "ring-2 ring-white/30" : "",
     );
     const indexTone = track.fromSuggestions ? listItemStyles.text.muted : listItemStyles.text.secondary;
     const titleTone = track.fromSuggestions ? listItemStyles.text.secondary : listItemStyles.text.primary;

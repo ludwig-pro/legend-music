@@ -5,6 +5,7 @@ import { StyleSheet, Text, View } from "react-native";
 
 import { localAudioControls, localPlayerState$, queue$ } from "@/components/LocalAudioPlayer";
 import { type TrackData, TrackItem } from "@/components/TrackItem";
+import KeyboardManager, { KeyCodes } from "@/systems/keyboard/KeyboardManager";
 import type { LocalTrack } from "@/systems/LocalMusicState";
 import { localMusicState$ } from "@/systems/LocalMusicState";
 import { settings$ } from "@/systems/Settings";
@@ -24,6 +25,7 @@ export function Playlist() {
     const isPlayerActive = use$(localPlayerState$.isPlaying);
     const playlistStyle = use$(settings$.general.playlistStyle);
     const [isDragOver, setIsDragOver] = useState(false);
+    const [selectedIndex, setSelectedIndex] = useState<number>(-1);
 
     // Render the active playback queue
     const playlist: PlaylistTrackWithSuggestions[] = useMemo(
@@ -144,6 +146,59 @@ export function Playlist() {
         [handleFileDrop],
     );
 
+    // Keyboard navigation
+    useEffect(() => {
+        const handleKeyDown = (event: { keyCode: number; modifiers: number }) => {
+            // Only handle keyboard events when there are tracks in the queue
+            if (playlist.length === 0) {
+                return false;
+            }
+
+            switch (event.keyCode) {
+                case KeyCodes.KEY_UP:
+                    setSelectedIndex((prev) => {
+                        const newIndex = prev <= 0 ? playlist.length - 1 : prev - 1;
+                        return newIndex;
+                    });
+                    return true;
+
+                case KeyCodes.KEY_DOWN:
+                    setSelectedIndex((prev) => {
+                        const newIndex = prev >= playlist.length - 1 ? 0 : prev + 1;
+                        return newIndex;
+                    });
+                    return true;
+
+                case KeyCodes.KEY_RETURN:
+                case KeyCodes.KEY_SPACE:
+                    if (selectedIndex >= 0 && selectedIndex < playlist.length) {
+                        handleTrackClick(selectedIndex);
+                    }
+                    return true;
+
+                default:
+                    return false;
+            }
+        };
+
+        const removeListener = KeyboardManager.addKeyDownListener(handleKeyDown);
+
+        return () => {
+            removeListener();
+        };
+    }, [playlist.length, selectedIndex, handleTrackClick]);
+
+    // Initialize selected index when playlist changes
+    useEffect(() => {
+        if (playlist.length > 0 && selectedIndex === -1) {
+            setSelectedIndex(0);
+        } else if (playlist.length === 0) {
+            setSelectedIndex(-1);
+        } else if (selectedIndex >= playlist.length) {
+            setSelectedIndex(playlist.length - 1);
+        }
+    }, [playlist.length, selectedIndex]);
+
     const msg =
         playlist.length === 0
             ? localMusicState.isScanning
@@ -184,7 +239,12 @@ export function Playlist() {
                         estimatedItemSize={playlistStyle === "compact" ? 30 : 50}
                         recycleItems
                         renderItem={({ item: track, index }) => (
-                            <TrackItem track={track} index={index} onTrackClick={handleTrackClick} />
+                            <TrackItem
+                                track={track}
+                                index={index}
+                                onTrackClick={handleTrackClick}
+                                isSelected={index === selectedIndex}
+                            />
                         )}
                     />
                 </>
