@@ -1,9 +1,10 @@
 import { use$ } from "@legendapp/state/react";
 import { useCallback, useRef } from "react";
 import { Text, View } from "react-native";
+import { File } from "expo-file-system/next";
 import { Button } from "@/components/Button";
 import type { DropdownMenuRootRef } from "@/components/DropdownMenu";
-import { localAudioControls } from "@/components/LocalAudioPlayer";
+import { localAudioControls, queue$ } from "@/components/LocalAudioPlayer";
 import { PlaylistSelectorSearchDropdown } from "@/components/PlaylistSelectorSearchDropdown";
 import { SelectLegendList } from "@/components/SelectLegendList";
 import { useOnHotkeys } from "@/systems/keyboard/Keyboard";
@@ -13,6 +14,31 @@ import type { LocalTrack } from "@/systems/LocalMusicState";
 import { localMusicState$, setCurrentPlaylist } from "@/systems/LocalMusicState";
 import { stateSaved$ } from "@/systems/State";
 import { perfCount, perfLog } from "@/utils/perfLogger";
+
+function generateM3UPlaylist(tracks: { title: string; artist: string; filePath: string; duration?: string }[]): string {
+    const lines = ["#EXTM3U", ""];
+
+    for (const track of tracks) {
+        // Parse duration to seconds for M3U format
+        let durationSeconds = -1;
+        if (track.duration) {
+            const parts = track.duration.split(":");
+            if (parts.length === 2) {
+                const minutes = Number.parseInt(parts[0], 10) || 0;
+                const seconds = Number.parseInt(parts[1], 10) || 0;
+                durationSeconds = minutes * 60 + seconds;
+            }
+        }
+
+        // Add extended info line
+        lines.push(`#EXTINF:${durationSeconds},${track.artist} - ${track.title}`);
+        // Add file path
+        lines.push(track.filePath);
+        lines.push("");
+    }
+
+    return lines.join("\n");
+}
 
 interface LocalPlaylist {
     id: string;
@@ -25,6 +51,7 @@ export function PlaylistSelector() {
     perfCount("PlaylistSelector.render");
     const localMusicState = use$(localMusicState$);
     const library = use$(library$);
+    const queue = use$(queue$);
 
     // Create local files playlist
     const localFilesPlaylist: LocalPlaylist = {
@@ -101,6 +128,37 @@ export function PlaylistSelector() {
         localAudioControls.queue.append(tracksToAdd);
     };
 
+    const handleSaveQueue = useCallback(async () => {
+        perfLog("PlaylistSelector.handleSaveQueue");
+
+        if (queue.tracks.length === 0) {
+            console.log("No tracks in queue to save");
+            return;
+        }
+
+        try {
+            // Generate M3U playlist content
+            const m3uContent = generateM3UPlaylist(queue.tracks);
+
+            // Create a filename with timestamp
+            const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+            const filename = `Queue-${timestamp}.m3u`;
+
+            // Use Downloads directory
+            const downloadsPath = "/Users/jay/Downloads";
+            const file = new File(downloadsPath, filename);
+
+            // Write the playlist file
+            file.create({ overwrite: true });
+            file.write(m3uContent);
+
+            console.log(`Playlist saved to: ${file.uri}`);
+            console.log(`Saved ${queue.tracks.length} tracks to playlist`);
+        } catch (error) {
+            console.error("Failed to save queue as playlist:", error);
+        }
+    }, [queue.tracks]);
+
     useOnHotkeys({
         Search: () => {
             console.log("Opening search menu");
@@ -155,6 +213,15 @@ export function PlaylistSelector() {
                     tracks={localMusicState.tracks}
                     onSelectTrack={handleTrackSelect}
                     onSelectLibraryItem={handleLibraryItemSelect}
+                />
+                <Button
+                    icon="square.and.arrow.down"
+                    variant="icon"
+                    size="small"
+                    iconSize={14}
+                    onPress={handleSaveQueue}
+                    className="ml-2 hover:bg-white/10"
+                    disabled={queue.tracks.length === 0}
                 />
                 <Button
                     icon={isLibraryOpen ? "sidebar.right" : "sidebar.right"}
