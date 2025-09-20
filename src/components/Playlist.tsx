@@ -3,13 +3,14 @@ import { use$ } from "@legendapp/state/react";
 import { useEffect, useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
-import { localAudioControls, localPlayerState$ } from "@/components/LocalAudioPlayer";
+import { localAudioControls, localPlayerState$, queue$ } from "@/components/LocalAudioPlayer";
 import { type TrackData, TrackItem } from "@/components/TrackItem";
 import { localMusicState$ } from "@/systems/LocalMusicState";
 import { settings$ } from "@/systems/Settings";
 import { perfCount, perfLog } from "@/utils/perfLogger";
 
 type PlaylistTrackWithSuggestions = TrackData & {
+    queueEntryId: string;
     fromSuggestions?: true;
     isSeparator?: boolean;
 };
@@ -17,14 +18,15 @@ type PlaylistTrackWithSuggestions = TrackData & {
 export function Playlist() {
     perfCount("Playlist.render");
     const localMusicState = use$(localMusicState$);
+    const queueTracks = use$(queue$.tracks);
     const currentTrackIndex = use$(localPlayerState$.currentIndex);
     const isPlayerActive = use$(localPlayerState$.isPlaying);
     const playlistStyle = use$(settings$.general.playlistStyle);
 
-    // Only show local files playlist
+    // Render the active playback queue
     const playlist: PlaylistTrackWithSuggestions[] = useMemo(
         () =>
-            localMusicState.tracks.map((track, index) => ({
+            queueTracks.map((track, index) => ({
                 id: track.id,
                 title: track.title,
                 artist: track.artist,
@@ -32,8 +34,9 @@ export function Playlist() {
                 thumbnail: track.thumbnail || "",
                 index,
                 isPlaying: index === currentTrackIndex && isPlayerActive,
+                queueEntryId: track.queueEntryId,
             })),
-        [localMusicState.tracks, currentTrackIndex, isPlayerActive],
+        [queueTracks, currentTrackIndex, isPlayerActive],
     );
 
     useEffect(() => {
@@ -52,39 +55,31 @@ export function Playlist() {
             return;
         }
 
-        // Handle local file playback
         if (__DEV__) {
-            console.log("Playing local file at index:", index);
+            console.log("Queue -> play index", index);
         }
-        const tracks = localMusicState.tracks;
-        const localTrack = tracks[index];
-
-        if (localTrack) {
-            if (__DEV__) {
-                console.log("Playing:", localTrack.title, "by", localTrack.artist);
-            }
-            // Load the entire playlist and start playing at the selected index
-            localAudioControls.loadPlaylist(tracks, index);
-        }
+        localAudioControls.playTrackAtIndex(index);
     };
+
+    const msg =
+        playlist.length === 0
+            ? localMusicState.isScanning
+                ? `Scanning... ${localMusicState.scanProgress}/${localMusicState.scanTotal}`
+                : localMusicState.error
+                  ? "Error scanning local files"
+                  : "Queue is empty"
+            : null;
 
     return (
         <View className="flex-1">
-            {playlist.length === 0 ? (
+            {msg ? (
                 <View className="flex-1 items-center justify-center">
-                    <Text className="text-white/60 text-base">
-                        {localMusicState.isScanning
-                            ? `Scanning... ${localMusicState.scanProgress}/${localMusicState.scanTotal}`
-                            : localMusicState.error
-                              ? "Error scanning local files"
-                              : "No local MP3 files found"}
-                    </Text>
-                    <Text className="text-white/40 text-sm mt-2">Add MP3 files to /Users/jay/Downloads/mp3</Text>
+                    <Text className="text-white/60 text-sm">{msg}</Text>
                 </View>
             ) : (
                 <LegendList
                     data={playlist}
-                    keyExtractor={(item, index) => `track-${item.id ?? index}`}
+                    keyExtractor={(item, index) => `queue-${item.queueEntryId ?? item.id ?? index}`}
                     contentContainerStyle={styles.container}
                     waitForInitialLayout={false}
                     estimatedItemSize={playlistStyle === "compact" ? 30 : 50}

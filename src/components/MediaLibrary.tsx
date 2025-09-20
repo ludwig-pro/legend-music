@@ -3,6 +3,7 @@ import { use$ } from "@legendapp/state/react";
 import { useCallback, useEffect, useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Button } from "@/components/Button";
+import { DropdownMenu } from "@/components/DropdownMenu";
 import { localAudioControls } from "@/components/LocalAudioPlayer";
 import { Panel, PanelGroup, ResizeHandle } from "@/components/ResizablePanels";
 import { type TrackData, TrackItem } from "@/components/TrackItem";
@@ -188,13 +189,13 @@ function TrackList() {
     const selectedItem = use$(libraryUI$.selectedItem);
     const allTracks = use$(library$.tracks);
 
-    const tracks = useMemo((): TrackData[] => {
+    const { trackItems, sourceTracks } = useMemo(() => {
         perfLog("MediaLibrary.TrackList.useMemo", {
             selectedItem,
             allTracks: allTracks.length,
         });
         if (!selectedItem) {
-            return [];
+            return { trackItems: [] as TrackData[], sourceTracks: [] as LibraryTrack[] };
         }
 
         let filteredTracks: LibraryTrack[];
@@ -204,53 +205,76 @@ function TrackList() {
             const albumName = selectedItem.album ?? selectedItem.name;
             filteredTracks = allTracks.filter((track) => (track.album ?? "Unknown Album") === albumName);
         } else if (selectedItem.type === "playlist") {
-            // For now, show all tracks for playlist items
             filteredTracks = allTracks;
         } else {
             filteredTracks = allTracks;
         }
 
-        return filteredTracks.map((track) => ({
-            id: track.id,
-            title: track.title,
-            artist: track.artist,
-            album: track.album,
-            duration: formatDuration(track.duration),
-            thumbnail: track.thumbnail,
-        }));
+        return {
+            sourceTracks: filteredTracks,
+            trackItems: filteredTracks.map((track) => ({
+                id: track.id,
+                title: track.title,
+                artist: track.artist,
+                album: track.album,
+                duration: formatDuration(track.duration),
+                thumbnail: track.thumbnail,
+            })),
+        };
     }, [allTracks, selectedItem]);
+
+    const tracks = trackItems;
 
     const keyExtractor = useCallback((item: TrackData) => item.id, []);
 
-    const handleTrackPress = useCallback(
-        (index: number) => {
-            // Convert TrackData back to LibraryTrack format for loadPlaylist
-            const originalTracks = allTracks.filter((track) => {
-                if (!selectedItem) return false;
-                if (selectedItem.type === "artist") {
-                    return track.artist === selectedItem.name;
-                }
-                if (selectedItem.type === "playlist") {
-                    return true;
-                }
-                return true;
-            });
-            localAudioControls.loadPlaylist(originalTracks, index);
+    const handleTrackAction = useCallback(
+        (index: number, action: "enqueue" | "play-next") => {
+            const track = sourceTracks[index];
+            if (!track) {
+                return;
+            }
+
+            perfLog("MediaLibrary.handleTrackAction", { trackId: track.id, action });
+            if (action === "play-next") {
+                localAudioControls.queue.insertNext(track);
+            } else {
+                localAudioControls.queue.append(track);
+            }
         },
-        [allTracks, selectedItem],
+        [sourceTracks],
     );
 
     const renderTrack = useCallback(
         ({ item, index }: { item: TrackData; index: number }) => (
-            <TrackItem
-                track={item}
-                index={index}
-                onTrackClick={handleTrackPress}
-                showIndex={false}
-                showAlbumArt={false}
-            />
+            <View className="flex-row items-center">
+                <View className="flex-1">
+                    <TrackItem
+                        track={item}
+                        index={index}
+                        onTrackClick={() => handleTrackAction(index, "enqueue")}
+                        showIndex={false}
+                        showAlbumArt={false}
+                    />
+                </View>
+                <DropdownMenu.Root>
+                    <DropdownMenu.Trigger asChild>
+                        <Button icon="ellipsis" variant="icon" size="small" className="ml-1 hover:bg-white/10" />
+                    </DropdownMenu.Trigger>
+                    <DropdownMenu.Content
+                        scrolls={false}
+                        className="bg-background-tertiary border border-border-primary rounded-md min-w-[160px]"
+                    >
+                        <DropdownMenu.Item onSelect={() => handleTrackAction(index, "enqueue")}>
+                            <DropdownMenu.ItemTitle>Enqueue</DropdownMenu.ItemTitle>
+                        </DropdownMenu.Item>
+                        <DropdownMenu.Item onSelect={() => handleTrackAction(index, "play-next")}>
+                            <DropdownMenu.ItemTitle>Play Next</DropdownMenu.ItemTitle>
+                        </DropdownMenu.Item>
+                    </DropdownMenu.Content>
+                </DropdownMenu.Root>
+            </View>
         ),
-        [handleTrackPress],
+        [handleTrackAction],
     );
 
     if (!selectedItem) {

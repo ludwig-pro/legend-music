@@ -277,7 +277,7 @@ function Label({ children, className = "" }: LabelProps) {
 // Item component
 interface ItemProps {
     children: ReactNode;
-    onSelect?: () => void;
+    onSelect?: (e: GestureResponderEvent) => void;
     value?: string;
     className?: string;
     disabled?: boolean;
@@ -292,7 +292,7 @@ function Item({ children, onSelect, value, className = "", disabled = false, var
             if (disabled) return;
 
             if (onSelect) {
-                onSelect();
+                onSelect(e);
             } else if (value && contextOnSelect) {
                 contextOnSelect(value);
             }

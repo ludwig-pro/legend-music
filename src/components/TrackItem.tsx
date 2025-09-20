@@ -1,5 +1,5 @@
 import { use$, useSelector } from "@legendapp/state/react";
-import { Text, View } from "react-native";
+import { type GestureResponderEvent, Text, View } from "react-native";
 
 import { AlbumArt } from "@/components/AlbumArt";
 import { Button } from "@/components/Button";
@@ -25,7 +25,7 @@ export interface TrackData {
 interface TrackItemProps {
     track: TrackData;
     index: number;
-    onTrackClick: (index: number) => void;
+    onTrackClick: (index: number, event?: GestureResponderEvent) => void;
     showIndex?: boolean;
     showAlbumArt?: boolean;
 }
@@ -62,7 +62,7 @@ export const TrackItem = ({ track, index, onTrackClick, showIndex = true, showAl
         const indexTone = track.fromSuggestions ? listItemStyles.text.muted : listItemStyles.text.secondary;
         const primaryTone = track.fromSuggestions ? listItemStyles.text.secondary : listItemStyles.text.primary;
         return (
-            <Button className={rowClassName} onPress={() => onTrackClick(index)}>
+            <Button className={rowClassName} onPress={(event) => onTrackClick(index, event)}>
                 {showIndex && (
                     <View className="min-w-7">
                         <Text className={cn("tabular-nums text-xs", indexTone)}>
@@ -95,7 +95,7 @@ export const TrackItem = ({ track, index, onTrackClick, showIndex = true, showAl
     const titleTone = track.fromSuggestions ? listItemStyles.text.secondary : listItemStyles.text.primary;
     const subtitleTone = track.fromSuggestions ? listItemStyles.text.muted : listItemStyles.text.secondary;
     return (
-        <Button className={rowClassName} onPress={() => onTrackClick(index)}>
+        <Button className={rowClassName} onPress={(event) => onTrackClick(index, event)}>
             {showIndex && (
                 <Text className={cn("text-base w-8", indexTone)}>
                     {(track.index ?? index) >= 0 ? (track.index ?? index) + 1 : ""}

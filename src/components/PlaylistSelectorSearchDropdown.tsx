@@ -1,6 +1,6 @@
 import { use$, useObservable } from "@legendapp/state/react";
 import { forwardRef, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Text, View } from "react-native";
+import { type GestureResponderEvent, Text, View } from "react-native";
 
 import { Button } from "@/components/Button";
 import { DropdownMenu, type DropdownMenuRootRef } from "@/components/DropdownMenu";
@@ -12,7 +12,7 @@ import { cn } from "@/utils/cn";
 
 interface PlaylistSelectorSearchDropdownProps {
     tracks: LocalTrack[];
-    onSelectTrack: (track: LocalTrack) => void;
+    onSelectTrack: (track: LocalTrack, action: "enqueue" | "play-next") => void;
     onOpenChange?: (open: boolean) => void;
 }
 
@@ -24,6 +24,7 @@ export const PlaylistSelectorSearchDropdown = forwardRef<DropdownMenuRootRef, Pl
         const isOpen = use$(isOpen$);
         const [highlightedIndex, setHighlightedIndex] = useState(-1);
         const textInputRef = useRef<TextInputSearchRef>(null);
+        const shiftPressedRef = useRef(false);
 
         const trimmedQuery = searchQuery.trim();
 
@@ -62,16 +63,52 @@ export const PlaylistSelectorSearchDropdown = forwardRef<DropdownMenuRootRef, Pl
             });
         }, [isOpen, searchResults]);
 
-        const handleTrackSelect = useCallback(
-            (track: LocalTrack) => {
-                onSelectTrack(track);
-                searchQuery$.set("");
+        const handleOpenChange = useCallback(
+            (open: boolean) => {
+                isOpen$.set(open);
+                if (!open) {
+                    searchQuery$.set("");
+                    shiftPressedRef.current = false;
+                }
+                onOpenChange?.(open);
             },
-            [onSelectTrack, searchQuery$],
+            [onOpenChange, searchQuery$],
+        );
+
+        const getActionFromEvent = useCallback((event?: GestureResponderEvent): "enqueue" | "play-next" => {
+            const nativeEvent = event?.nativeEvent as
+                | (GestureResponderEvent["nativeEvent"] & { shiftKey?: boolean; modifierFlags?: number })
+                | undefined;
+
+            if (nativeEvent) {
+                if (nativeEvent.shiftKey) {
+                    return "play-next";
+                }
+                if (
+                    typeof nativeEvent.modifierFlags === "number" &&
+                    (nativeEvent.modifierFlags & KeyCodes.MODIFIER_SHIFT) === KeyCodes.MODIFIER_SHIFT
+                ) {
+                    return "play-next";
+                }
+            }
+
+            return shiftPressedRef.current ? "play-next" : "enqueue";
+        }, []);
+
+        const handleTrackAction = useCallback(
+            (track: LocalTrack, action: "enqueue" | "play-next") => {
+                onSelectTrack(track, action);
+                handleOpenChange(false);
+            },
+            [handleOpenChange, onSelectTrack],
         );
 
         useEffect(() => {
             const removeKeyDown = KeyboardManager.addKeyDownListener((event) => {
+                if (KeyboardManager.hasModifier(event, KeyCodes.MODIFIER_SHIFT)) {
+                    shiftPressedRef.current = true;
+                }
+
                 if (!isOpen || searchResults.length === 0) {
                     return false;
                 }
@@ -101,27 +138,28 @@ export const PlaylistSelectorSearchDropdown = forwardRef<DropdownMenuRootRef, Pl
                     highlightedIndex >= 0 &&
                     highlightedIndex < searchResults.length
                 ) {
-                    handleTrackSelect(searchResults[highlightedIndex]);
-                    handleOpenChange(false);
+                    const action = KeyboardManager.hasModifier(event, KeyCodes.MODIFIER_SHIFT)
+                        ? "play-next"
+                        : "enqueue";
+                    handleTrackAction(searchResults[highlightedIndex], action);
                     return true;
                 }
 
                 return false;
             });
 
-            return removeKeyDown;
-        }, [handleTrackSelect, highlightedIndex, isOpen, searchResults]);
-
-        const handleOpenChange = useCallback(
-            (open: boolean) => {
-                isOpen$.set(open);
-                if (!open) {
-                    searchQuery$.set("");
+            const removeKeyUp = KeyboardManager.addKeyUpListener((event) => {
+                if (!KeyboardManager.hasModifier(event, KeyCodes.MODIFIER_SHIFT)) {
+                    shiftPressedRef.current = false;
                 }
-                onOpenChange?.(open);
-            },
-            [onOpenChange, searchQuery$],
-        );
+                return false;
+            });
+
+            return () => {
+                removeKeyDown();
+                removeKeyUp();
+            };
+        }, [handleTrackAction, highlightedIndex, isOpen, searchResults]);
 
         useEffect(() => {
             if (isOpen) {
@@ -157,7 +195,10 @@ export const PlaylistSelectorSearchDropdown = forwardRef<DropdownMenuRootRef, Pl
                                     {searchResults.map((track, index) => (
                                         <DropdownMenu.Item
                                             key={track.id}
-                                            onSelect={() => handleTrackSelect(track)}
+                                            onSelect={(event) => {
+                                                const action = getActionFromEvent(event);
+                                                handleTrackAction(track, action);
+                                            }}
                                             variant="unstyled"
                                             className={cn(
                                                 "hover:bg-white/10 rounded-md",
@@ -167,7 +208,10 @@ export const PlaylistSelectorSearchDropdown = forwardRef<DropdownMenuRootRef, Pl
                                             <TrackItem
                                                 track={track}
                                                 index={index}
-                                                onTrackClick={() => handleTrackSelect(track)}
+                                                onTrackClick={(_, event) => {
+                                                    const action = getActionFromEvent(event);
+                                                    handleTrackAction(track, action);
+                                                }}
                                             />
                                         </DropdownMenu.Item>
                                     ))}

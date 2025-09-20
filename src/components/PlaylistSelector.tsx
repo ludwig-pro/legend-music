@@ -51,24 +51,27 @@ export function PlaylistSelector() {
         console.log("Navigating to playlist:", playlistId);
         setCurrentPlaylist(playlistId, "file");
         console.log("Selected local files playlist");
+
+        if (playlistId === "LOCAL_FILES") {
+            const tracks = localMusicState.tracks;
+            if (tracks.length > 0) {
+                localAudioControls.queue.replace(tracks, { startIndex: 0, playImmediately: true });
+            } else {
+                localAudioControls.queue.clear();
+            }
+        }
     };
 
-    const handleTrackSelect = (track: LocalTrack) => {
-        perfLog("PlaylistSelector.handleTrackSelect", { trackId: track.id });
-        console.log("Selected track:", track);
+    const handleTrackSelect = (track: LocalTrack, action: "enqueue" | "play-next") => {
+        perfLog("PlaylistSelector.handleTrackSelect", { trackId: track.id, action });
+        console.log("Selected track:", track, "action:", action);
 
-        // Find the index of the selected track in the full tracks list
-        const trackIndex = localMusicState.tracks.findIndex((t) => t.id === track.id);
-
-        if (trackIndex !== -1) {
-            // Load the entire local music library as playlist, starting with the selected track
-            localAudioControls.loadPlaylist(localMusicState.tracks, trackIndex);
-            console.log(`Started playing "${track.title}" by ${track.artist}`);
-        } else {
-            // If track not found in main list, play it as a single track
-            localAudioControls.loadTrack(track.filePath, track.title, track.artist);
-            console.log(`Started playing single track: "${track.title}" by ${track.artist}`);
+        if (action === "play-next") {
+            localAudioControls.queue.insertNext(track);
+            return;
         }
+
+        localAudioControls.queue.append(track);
     };
 
     useOnHotkeys({
