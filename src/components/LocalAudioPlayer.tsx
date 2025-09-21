@@ -5,6 +5,7 @@ import { useAudioPlayer } from "@/native-modules/AudioPlayer";
 import type { LocalTrack } from "@/systems/LocalMusicState";
 import { ensureLocalTrackThumbnail } from "@/systems/LocalMusicState";
 import { perfCount, perfDelta, perfLog } from "@/utils/perfLogger";
+import { saveQueueToM3U, loadQueueFromM3U, clearQueueM3U } from "@/utils/m3uManager";
 
 export interface LocalPlayerState {
     isPlaying: boolean;
@@ -40,6 +41,9 @@ export interface PlaybackQueueState {
 export const queue$ = observable<PlaybackQueueState>({
     tracks: [],
 });
+
+// Flag to track if queue has been loaded from cache
+let queueInitialized = false;
 
 interface QueueUpdateOptions {
     playImmediately?: boolean;
@@ -96,6 +100,11 @@ function getQueueSnapshot(): QueuedTrack[] {
 
 function setQueueTracks(tracks: QueuedTrack[]): void {
     queue$.tracks.set(tracks);
+
+    // Save to M3U file when queue changes (but not during initial load)
+    if (queueInitialized) {
+        void saveQueueToM3U(tracks);
+    }
 }
 
 function resetPlayerForEmptyQueue(): void {
@@ -273,6 +282,33 @@ function queueClear(): void {
     perfLog("Queue.clear");
     setQueueTracks([]);
     resetPlayerForEmptyQueue();
+
+    // Clear the M3U file as well
+    if (queueInitialized) {
+        void clearQueueM3U();
+    }
+}
+
+async function initializeQueueFromCache(): Promise<void> {
+    if (queueInitialized) {
+        return;
+    }
+
+    try {
+        perfLog("Queue.initializeFromCache");
+        const savedTracks = await loadQueueFromM3U();
+
+        if (savedTracks.length > 0) {
+            // Convert to queued tracks without triggering save
+            const queuedTracks = savedTracks.map(createQueuedTrack);
+            queue$.tracks.set(queuedTracks);
+            console.log(`Restored queue with ${queuedTracks.length} tracks from cache`);
+        }
+    } catch (error) {
+        console.error('Failed to initialize queue from cache:', error);
+    } finally {
+        queueInitialized = true;
+    }
 }
 
 export const queueControls = {
@@ -280,6 +316,7 @@ export const queueControls = {
     append: queueAppend,
     insertNext: queueInsertNext,
     clear: queueClear,
+    initializeFromCache: initializeQueueFromCache,
 };
 
 async function loadTrack(track: LocalTrack, options?: QueueUpdateOptions): Promise<void>;
@@ -407,6 +444,11 @@ export const localAudioControls = {
 export function LocalAudioPlayer() {
     const player = useAudioPlayer();
     perfCount("LocalAudioPlayer.render");
+
+    // Initialize queue from cache on first mount
+    useEffect(() => {
+        void initializeQueueFromCache();
+    }, []);
 
     // Set global reference
     useEffect(() => {
