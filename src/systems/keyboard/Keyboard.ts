@@ -159,8 +159,8 @@ export function onHotkeys(hotkeyCallbacks: HotkeyCallbacks) {
     }
 
     const checkHotkeys = () => {
-        if (state$.showSettings.get()) {
-            // Disable hotkeys when settings is open
+        if (state$.showSettings.get() || state$.isDropdownOpen.get()) {
+            // Disable hotkeys when settings or dropdowns are open
             return;
         }
         for (const [keys, callback] of hotkeyMap) {
@@ -173,8 +173,8 @@ export function onHotkeys(hotkeyCallbacks: HotkeyCallbacks) {
     };
 
     const checkRepeatHotkeys = () => {
-        if (state$.showSettings.get()) {
-            // Disable hotkeys when settings is open
+        if (state$.showSettings.get() || state$.isDropdownOpen.get()) {
+            // Disable hotkeys when settings or dropdowns are open
             return;
         }
         for (const keys of repeatActions) {
