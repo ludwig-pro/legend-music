@@ -1,17 +1,17 @@
 import { LegendList } from "@legendapp/list";
 import { use$, useObservable } from "@legendapp/state/react";
 import { forwardRef, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { type GestureResponderEvent, Text, View } from "react-native";
+import { type GestureResponderEvent, Text, useWindowDimensions, View } from "react-native";
 
 import { Button } from "@/components/Button";
 import { DropdownMenu, type DropdownMenuRootRef } from "@/components/DropdownMenu";
+import { playlistNavigationState$ } from "@/components/Playlist";
 import { TextInputSearch, type TextInputSearchRef } from "@/components/TextInputSearch";
 import { TrackItem } from "@/components/TrackItem";
 import KeyboardManager, { KeyCodes } from "@/systems/keyboard/KeyboardManager";
-import { library$ } from "@/systems/LibraryState";
 import type { LibraryItem } from "@/systems/LibraryState";
+import { library$ } from "@/systems/LibraryState";
 import type { LocalTrack } from "@/systems/LocalMusicState";
-import { playlistNavigationState$ } from "@/components/Playlist";
 import { cn } from "@/utils/cn";
 
 interface PlaylistSelectorSearchDropdownProps {
@@ -30,9 +30,23 @@ export const PlaylistSelectorSearchDropdown = forwardRef<DropdownMenuRootRef, Pl
         const [highlightedIndex, setHighlightedIndex] = useState(-1);
         const textInputRef = useRef<TextInputSearchRef>(null);
         const shiftPressedRef = useRef(false);
+        const { width: windowWidth } = useWindowDimensions();
 
         const library = use$(library$);
         const trimmedQuery = searchQuery.trim();
+        const effectiveWindowWidth = Math.max(windowWidth, 1);
+
+        const anchorRect = useMemo(() => {
+            const offsetTop = 16;
+            const width = Math.max(effectiveWindowWidth, 1) - 16;
+
+            return {
+                screenX: 8,
+                screenY: offsetTop,
+                width,
+                height: 0,
+            };
+        }, [effectiveWindowWidth]);
 
         type SearchResult = { type: "track"; item: LocalTrack } | { type: "library"; item: LibraryItem };
 
@@ -213,86 +227,87 @@ export const PlaylistSelectorSearchDropdown = forwardRef<DropdownMenuRootRef, Pl
                 </DropdownMenu.Trigger>
                 <DropdownMenu.Content
                     directionalHint="topCenter"
+                    anchorRect={anchorRect}
+                    minWidth={anchorRect.width}
+                    maxWidth={anchorRect.width}
                     setInitialFocus
                     variant="unstyled"
-                    className="max-w-5xl"
                 >
-                    <View className="bg-background-tertiary border border-border-primary rounded-md px-3 py-1.5">
-                        <TextInputSearch
-                            ref={textInputRef}
-                            value$={searchQuery$}
-                            placeholder="Search tracks..."
-                            className="text-sm text-text-primary"
-                        />
-                    </View>
-                    {trimmedQuery && (
-                        <View>
-                            {searchResults.length > 0 && (
-                                <View style={{ maxHeight: 256 }}>
-                                    <LegendList
-                                        data={searchResults}
-                                        keyExtractor={(result) =>
-                                            result.type === "track" ? result.item.id : result.item.id
-                                        }
-                                        style={{ maxHeight: 256 }}
-                                        extraData={{ highlightedIndex }}
-                                        renderItem={({ item: result, index }) => {
-                                            const key =
-                                                result.type === "track" ? result.item.id : result.item.id;
-                                            return (
-                                                <DropdownMenu.Item
-                                                    key={key}
-                                                    onSelect={(event) => {
-                                                        const action = getActionFromEvent(event);
-                                                        handleSearchResultAction(result, action);
-                                                    }}
-                                                    variant="unstyled"
-                                                    className={cn(
-                                                        "hover:bg-white/10 rounded-md",
-                                                        highlightedIndex === index && "bg-white/20",
-                                                    )}
-                                                >
-                                                    {result.type === "track" ? (
-                                                        <TrackItem
-                                                            track={result.item}
-                                                            index={index}
-                                                            onTrackClick={(_, event) => {
-                                                                const action = getActionFromEvent(event);
-                                                                handleSearchResultAction(result, action);
-                                                            }}
-                                                        />
-                                                    ) : (
-                                                        <View className="flex-row items-center px-3 py-2">
-                                                            <View className="mr-3 w-8 h-8 bg-white/10 rounded flex-row items-center justify-center">
-                                                                <Text className="text-white/70 text-xs font-medium">
-                                                                    {result.item.type === "album"
-                                                                        ? "♪"
-                                                                        : "👤"}
-                                                                </Text>
-                                                            </View>
-                                                            <View className="flex-1">
-                                                                <Text className="text-white text-sm font-medium">
-                                                                    {result.item.name}
-                                                                </Text>
-                                                                <Text className="text-white/60 text-xs">
-                                                                    {result.item.type === "album"
-                                                                        ? `Album • ${result.item.trackCount} tracks`
-                                                                        : `Artist • ${result.item.trackCount} tracks`}
-                                                                </Text>
-                                                            </View>
-                                                        </View>
-                                                    )}
-                                                </DropdownMenu.Item>
-                                            );
-                                        }}
-                                    />
-                                </View>
-                            )}
-                            {trimmedQuery && searchResults.length === 0 && (
-                                <Text className="text-white/60 text-sm p-2">No results found</Text>
-                            )}
+                    <View style={{ width: effectiveWindowWidth }}>
+                        <View className="bg-background-tertiary border border-border-primary rounded-md px-3 py-1.5">
+                            <TextInputSearch
+                                ref={textInputRef}
+                                value$={searchQuery$}
+                                placeholder="Search tracks..."
+                                className="text-sm text-text-primary"
+                            />
                         </View>
-                    )}
+                        {trimmedQuery && (
+                            <View>
+                                {searchResults.length > 0 && (
+                                    <View style={{ maxHeight: 256 }}>
+                                        <LegendList
+                                            data={searchResults}
+                                            keyExtractor={(result) =>
+                                                result.type === "track" ? result.item.id : result.item.id
+                                            }
+                                            style={{ maxHeight: 256 }}
+                                            extraData={{ highlightedIndex }}
+                                            renderItem={({ item: result, index }) => {
+                                                const key = result.type === "track" ? result.item.id : result.item.id;
+                                                return (
+                                                    <DropdownMenu.Item
+                                                        key={key}
+                                                        onSelect={(event) => {
+                                                            const action = getActionFromEvent(event);
+                                                            handleSearchResultAction(result, action);
+                                                        }}
+                                                        variant="unstyled"
+                                                        className={cn(
+                                                            "hover:bg-white/10 rounded-md",
+                                                            highlightedIndex === index && "bg-white/20",
+                                                        )}
+                                                    >
+                                                        {result.type === "track" ? (
+                                                            <TrackItem
+                                                                track={result.item}
+                                                                index={index}
+                                                                onTrackClick={(_, event) => {
+                                                                    const action = getActionFromEvent(event);
+                                                                    handleSearchResultAction(result, action);
+                                                                }}
+                                                            />
+                                                        ) : (
+                                                            <View className="flex-row items-center px-3 py-2">
+                                                                <View className="mr-3 w-8 h-8 bg-white/10 rounded flex-row items-center justify-center">
+                                                                    <Text className="text-white/70 text-xs font-medium">
+                                                                        {result.item.type === "album" ? "♪" : "👤"}
+                                                                    </Text>
+                                                                </View>
+                                                                <View className="flex-1">
+                                                                    <Text className="text-white text-sm font-medium">
+                                                                        {result.item.name}
+                                                                    </Text>
+                                                                    <Text className="text-white/60 text-xs">
+                                                                        {result.item.type === "album"
+                                                                            ? `Album • ${result.item.trackCount} tracks`
+                                                                            : `Artist • ${result.item.trackCount} tracks`}
+                                                                    </Text>
+                                                                </View>
+                                                            </View>
+                                                        )}
+                                                    </DropdownMenu.Item>
+                                                );
+                                            }}
+                                        />
+                                    </View>
+                                )}
+                                {trimmedQuery && searchResults.length === 0 && (
+                                    <Text className="text-white/60 text-sm p-2">No results found</Text>
+                                )}
+                            </View>
+                        )}
+                    </View>
                 </DropdownMenu.Content>
             </DropdownMenu.Root>
         );

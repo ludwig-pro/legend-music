@@ -206,6 +206,14 @@ interface ContentProps {
         | "topRightEdge";
     setInitialFocus?: boolean;
     variant?: "default" | "unstyled";
+    anchorRect?: {
+        screenX: number;
+        screenY: number;
+        width: number;
+        height: number;
+    };
+    minWidth?: number;
+    maxWidth?: number;
 }
 
 function Content({
@@ -216,10 +224,15 @@ function Content({
     directionalHint = "bottonLeftEdge",
     variant = "default",
     setInitialFocus = false,
+    anchorRect,
+    minWidth = 400,
+    maxWidth,
 }: ContentProps) {
     const contextValue = useDropdownContext();
     const { isOpen$, triggerRef, close } = contextValue;
     const isOpen = use$(isOpen$);
+
+    const calloutTarget = anchorRect ? undefined : (triggerRef as React.RefObject<Component>);
 
     if (!isOpen) {
         return null;
@@ -227,11 +240,13 @@ function Content({
 
     return (
         <Callout
-            target={triggerRef as React.RefObject<Component>}
+            target={calloutTarget}
+            anchorRect={anchorRect}
             onDismiss={close}
             directionalHint={directionalHint}
             gapSpace={4}
-            minWidth={400}
+            minWidth={minWidth}
+            maxWidth={maxWidth}
             dismissBehaviors={["preventDismissOnKeyDown"]}
             allowsVibrancy
             setInitialFocus={setInitialFocus}
