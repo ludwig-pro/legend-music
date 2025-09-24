@@ -126,7 +126,13 @@ function LibraryTree({ searchQuery }: LibraryTreeProps) {
             return items;
         }
 
-        return items.filter((item) => item.name.toLowerCase().includes(normalizedQuery));
+        return items.filter((item) => {
+            if (item.id === allSongsItem.id) {
+                return true;
+            }
+
+            return item.name.toLowerCase().includes(normalizedQuery);
+        });
     }, [albums, allSongsItem, artists, normalizedQuery, playlists, selectedCollection]);
 
     useEffect(() => {
