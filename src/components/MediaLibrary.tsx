@@ -1,7 +1,7 @@
 import { LegendList } from "@legendapp/list";
 import { use$ } from "@legendapp/state/react";
 import { useCallback, useEffect, useMemo } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View, type GestureResponderEvent } from "react-native";
 import { Button } from "@/components/Button";
 import { DropdownMenu } from "@/components/DropdownMenu";
 import { localAudioControls } from "@/components/LocalAudioPlayer";
@@ -244,6 +244,18 @@ function TrackList() {
         [sourceTracks],
     );
 
+    const getActionFromEvent = useCallback((event?: GestureResponderEvent): "enqueue" | "play-next" => {
+        return event?.nativeEvent?.shiftKey ? "play-next" : "enqueue";
+    }, []);
+
+    const handleTrackClick = useCallback(
+        (index: number, event?: GestureResponderEvent) => {
+            const action = getActionFromEvent(event);
+            handleTrackAction(index, action);
+        },
+        [getActionFromEvent, handleTrackAction],
+    );
+
     const renderTrack = useCallback(
         ({ item, index }: { item: TrackData; index: number }) => (
             <View className="flex-row items-center">
@@ -251,7 +263,7 @@ function TrackList() {
                     <TrackItem
                         track={item}
                         index={index}
-                        onTrackClick={() => handleTrackAction(index, "enqueue")}
+                        onTrackClick={handleTrackClick}
                         showIndex={false}
                         showAlbumArt={false}
                     />
