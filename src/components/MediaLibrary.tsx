@@ -27,16 +27,18 @@ export function MediaLibraryView() {
 
     return (
         <View className="flex-1 bg-black/5 border-l border-white/10" style={styles.window}>
-            <View style={styles.searchContainer}>
-                <View style={styles.searchInputWrapper}>
-                    <TextInputSearch
-                        ref={searchInputRef}
-                        value$={libraryUI$.searchQuery}
-                        placeholder="Search library"
-                        style={styles.searchInput}
-                    />
+            <View style={styles.searchContainer} className="px-3 pt-3 pb-2">
+                <View className="relative">
+                    <View className="bg-background-tertiary border border-border-primary rounded-md px-3 py-1.5 pr-10">
+                        <TextInputSearch
+                            ref={searchInputRef}
+                            value$={libraryUI$.searchQuery}
+                            placeholder="Search library"
+                            className="text-sm text-text-primary"
+                        />
+                    </View>
                     {searchQuery ? (
-                        <View style={styles.searchClearButtonContainer}>
+                        <View className="absolute inset-y-0 right-2 flex-row items-center">
                             <Button
                                 icon="xmark.circle.fill"
                                 variant="icon"
@@ -469,24 +471,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         paddingTop: 12,
         paddingBottom: 8,
-    },
-    searchInputWrapper: {
-        position: "relative",
-        justifyContent: "center",
-    },
-    searchInput: {
-        borderRadius: 8,
-        backgroundColor: "rgba(255,255,255,0.1)",
-        paddingVertical: 8,
-        paddingHorizontal: 12,
-        paddingRight: 40,
-    },
-    searchClearButtonContainer: {
-        position: "absolute",
-        right: 8,
-        top: 0,
-        bottom: 0,
-        justifyContent: "center",
     },
     statusBar: {
         borderTopWidth: StyleSheet.hairlineWidth,
