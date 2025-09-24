@@ -1,6 +1,7 @@
 #import <React/RCTBridgeModule.h>
 #import <React/RCTEventEmitter.h>
 #import <AVFoundation/AVFoundation.h>
+#import <MediaPlayer/MediaPlayer.h>
 
 @interface AudioPlayer : RCTEventEmitter <RCTBridgeModule>
 
@@ -13,5 +14,7 @@
 @property (nonatomic, assign) BOOL hasListeners;
 @property (nonatomic, copy) RCTPromiseResolveBlock loadResolve;
 @property (nonatomic, copy) RCTPromiseRejectBlock loadReject;
+@property (nonatomic, strong) NSMutableDictionary<NSString *, id> *nowPlayingInfo;
+@property (nonatomic, strong) NSArray<MPRemoteCommand *> *remoteCommandTargets;
 
 @end

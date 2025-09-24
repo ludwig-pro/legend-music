@@ -1,7 +1,7 @@
 import { observable } from "@legendapp/state";
 import { useEffect } from "react";
 import { View } from "react-native";
-import { useAudioPlayer } from "@/native-modules/AudioPlayer";
+import { useAudioPlayer, type NowPlayingInfoPayload } from "@/native-modules/AudioPlayer";
 import type { LocalTrack } from "@/systems/LocalMusicState";
 import { ensureLocalTrackThumbnail } from "@/systems/LocalMusicState";
 import { clearQueueM3U, loadQueueFromM3U, saveQueueToM3U } from "@/utils/m3uManager";
@@ -114,7 +114,10 @@ function resetPlayerForEmptyQueue(): void {
     localPlayerState$.duration.set(0);
     localPlayerState$.isPlaying.set(false);
     if (audioPlayer) {
-        audioPlayer.stop().catch((error) => console.error("Error stopping playback:", error));
+        audioPlayer
+            .stop()
+            .catch((error) => console.error("Error stopping playback:", error));
+        audioPlayer.clearNowPlayingInfo();
     }
 }
 
@@ -155,6 +158,21 @@ async function loadTrackInternal(track: LocalTrack, autoPlay: boolean): Promise<
     localPlayerState$.isLoading.set(true);
     localPlayerState$.error.set(null);
 
+    if (audioPlayer) {
+        const nowPlayingUpdate: NowPlayingInfoPayload = {
+            title: track.title,
+            artist: track.artist,
+            album: track.album,
+            elapsedTime: 0,
+        };
+
+        if (track.thumbnail) {
+            nowPlayingUpdate.artwork = track.thumbnail;
+        }
+
+        audioPlayer.updateNowPlayingInfo(nowPlayingUpdate);
+    }
+
     const queueEntryId = isQueuedTrack(track) ? track.queueEntryId : undefined;
     void ensureLocalTrackThumbnail(track).then((thumbnail) => {
         if (!thumbnail) {
@@ -168,6 +186,10 @@ async function loadTrackInternal(track: LocalTrack, autoPlay: boolean): Promise<
         const current = localPlayerState$.currentTrack.peek();
         if (current && current.id === track.id && current.thumbnail !== thumbnail) {
             localPlayerState$.currentTrack.set({ ...current, thumbnail });
+        }
+
+        if (audioPlayer) {
+            audioPlayer.updateNowPlayingInfo({ artwork: thumbnail });
         }
     });
 
@@ -456,6 +478,7 @@ export function LocalAudioPlayer() {
         audioPlayer = player;
         return () => {
             perfLog("LocalAudioPlayer.cleanup[player]");
+            player.clearNowPlayingInfo();
             audioPlayer = null;
         };
     }, [player]);
@@ -473,6 +496,7 @@ export function LocalAudioPlayer() {
                 localPlayerState$.duration.set(data.duration);
                 localPlayerState$.isLoading.set(false);
                 localPlayerState$.error.set(null);
+                player.updateNowPlayingInfo({ duration: data.duration });
             }),
 
             player.addListener("onLoadError", (data) => {
@@ -514,6 +538,30 @@ export function LocalAudioPlayer() {
                 }
                 localPlayerState$.isPlaying.set(false);
                 localAudioControls.playNext();
+            }),
+
+            player.addListener("onRemoteCommand", ({ command }) => {
+                perfCount("LocalAudioPlayer.onRemoteCommand");
+                perfLog("LocalAudioPlayer.onRemoteCommand", { command });
+                switch (command) {
+                    case "play":
+                        void play();
+                        break;
+                    case "pause":
+                        void pause();
+                        break;
+                    case "toggle":
+                        void togglePlayPause();
+                        break;
+                    case "next":
+                        void playNext();
+                        break;
+                    case "previous":
+                        void playPrevious();
+                        break;
+                    default:
+                        break;
+                }
             }),
         ];
 

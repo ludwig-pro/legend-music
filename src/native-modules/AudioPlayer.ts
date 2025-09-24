@@ -13,12 +13,26 @@ export interface AudioPlayerState {
     volume: number;
 }
 
+export type RemoteCommand = "play" | "pause" | "toggle" | "next" | "previous";
+
+export interface NowPlayingInfoPayload {
+    title?: string;
+    artist?: string;
+    album?: string;
+    duration?: number;
+    elapsedTime?: number;
+    playbackRate?: number;
+    artwork?: string;
+    isPlaying?: boolean;
+}
+
 export interface AudioPlayerEvents {
     onLoadSuccess: (data: { duration: number }) => void;
     onLoadError: (data: { error: string }) => void;
     onPlaybackStateChanged: (data: { isPlaying: boolean }) => void;
     onProgress: (data: { currentTime: number; duration: number }) => void;
     onCompletion: () => void;
+    onRemoteCommand: (data: { command: RemoteCommand }) => void;
 }
 
 type AudioPlayerType = {
@@ -32,6 +46,8 @@ type AudioPlayerType = {
     getTrackInfo: (
         filePath: string,
     ) => Promise<{ durationSeconds: number; sampleRate: number; frameCount: number }>;
+    updateNowPlayingInfo: (payload: NowPlayingInfoPayload) => void;
+    clearNowPlayingInfo: () => void;
 };
 
 const audioPlayerEmitter = new NativeEventEmitter(AudioPlayer);
@@ -51,6 +67,8 @@ export const useAudioPlayer = (): AudioPlayerType & {
         setVolume: (volume: number) => AudioPlayer.setVolume(volume),
         getCurrentState: () => AudioPlayer.getCurrentState(),
         getTrackInfo: (filePath: string) => AudioPlayer.getTrackInfo(filePath),
+        updateNowPlayingInfo: (payload: NowPlayingInfoPayload) => AudioPlayer.updateNowPlayingInfo(payload),
+        clearNowPlayingInfo: () => AudioPlayer.clearNowPlayingInfo(),
         addListener: <T extends keyof AudioPlayerEvents>(eventType: T, listener: AudioPlayerEvents[T]) => {
             const subscription = audioPlayerEmitter.addListener(eventType, listener);
             return {

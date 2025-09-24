@@ -13,13 +13,13 @@ export function MainContainer() {
     perfCount("MainContainer.render");
     const playlistNavigation = use$(playlistNavigationState$);
 
-    useOnHotkeys({
-        PlayPause: localAudioControls.togglePlayPause,
-        NextTrack: localAudioControls.playNext,
-        PreviousTrack: localAudioControls.playPrevious,
-        // Only handle space bar globally when no track is selected in the playlist
-        PlayPauseSpace: !playlistNavigation.hasSelection ? localAudioControls.togglePlayPause : undefined,
-    });
+    // useOnHotkeys({
+    //     PlayPause: localAudioControls.togglePlayPause,
+    //     NextTrack: localAudioControls.playNext,
+    //     PreviousTrack: localAudioControls.playPrevious,
+    //     // Only handle space bar globally when no track is selected in the playlist
+    //     PlayPauseSpace: !playlistNavigation.hasSelection ? localAudioControls.togglePlayPause : undefined,
+    // });
 
     perfLog("MainContainer.hotkeys", {
         activeTrack: localAudioControls.getCurrentState().currentTrack?.title,

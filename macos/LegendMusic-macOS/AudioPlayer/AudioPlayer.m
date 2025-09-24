@@ -1,5 +1,6 @@
 #import "AudioPlayer.h"
 #import <React/RCTLog.h>
+#import <AppKit/AppKit.h>
 
 @implementation AudioPlayer
 
@@ -12,7 +13,14 @@ RCT_EXPORT_MODULE();
 
 - (NSArray<NSString *> *)supportedEvents
 {
-    return @[@"onLoadSuccess", @"onLoadError", @"onPlaybackStateChanged", @"onProgress", @"onCompletion"];
+    return @[
+        @"onLoadSuccess",
+        @"onLoadError",
+        @"onPlaybackStateChanged",
+        @"onProgress",
+        @"onCompletion",
+        @"onRemoteCommand"
+    ];
 }
 
 - (instancetype)init
@@ -23,6 +31,8 @@ RCT_EXPORT_MODULE();
         _isPlaying = NO;
         _duration = 0;
         _currentTime = 0;
+        _nowPlayingInfo = [NSMutableDictionary dictionary];
+        [self setupRemoteCommands];
     }
     return self;
 }
@@ -58,6 +68,143 @@ RCT_EXPORT_MODULE();
                                                object:nil];
 }
 
+#pragma mark - Remote Commands & Now Playing
+
+- (void)setupRemoteCommands
+{
+    if (@available(macOS 10.12.2, *)) {
+        [self teardownRemoteCommands];
+
+        MPRemoteCommandCenter *commandCenter = [MPRemoteCommandCenter sharedCommandCenter];
+        NSMutableArray<MPRemoteCommand *> *commands = [NSMutableArray array];
+
+        MPRemoteCommand *playCommand = commandCenter.playCommand;
+        playCommand.enabled = YES;
+        [playCommand addTarget:self action:@selector(handlePlayCommand:)];
+        [commands addObject:playCommand];
+
+        MPRemoteCommand *pauseCommand = commandCenter.pauseCommand;
+        pauseCommand.enabled = YES;
+        [pauseCommand addTarget:self action:@selector(handlePauseCommand:)];
+        [commands addObject:pauseCommand];
+
+        MPRemoteCommand *toggleCommand = commandCenter.togglePlayPauseCommand;
+        toggleCommand.enabled = YES;
+        [toggleCommand addTarget:self action:@selector(handleTogglePlayPauseCommand:)];
+        [commands addObject:toggleCommand];
+
+        MPRemoteCommand *nextCommand = commandCenter.nextTrackCommand;
+        nextCommand.enabled = YES;
+        [nextCommand addTarget:self action:@selector(handleNextTrackCommand:)];
+        [commands addObject:nextCommand];
+
+        MPRemoteCommand *previousCommand = commandCenter.previousTrackCommand;
+        previousCommand.enabled = YES;
+        [previousCommand addTarget:self action:@selector(handlePreviousTrackCommand:)];
+        [commands addObject:previousCommand];
+
+        self.remoteCommandTargets = commands;
+    }
+}
+
+- (void)teardownRemoteCommands
+{
+    if (@available(macOS 10.12.2, *)) {
+        if (self.remoteCommandTargets.count == 0) {
+            return;
+        }
+
+        for (MPRemoteCommand *command in self.remoteCommandTargets) {
+            [command removeTarget:self];
+            command.enabled = NO;
+        }
+
+        self.remoteCommandTargets = nil;
+    }
+}
+
+- (void)sendRemoteCommandEvent:(NSString *)command
+{
+    if (!command) {
+        return;
+    }
+
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (self.hasListeners) {
+            [self sendEventWithName:@"onRemoteCommand" body:@{ @"command": command }];
+        }
+    });
+}
+
+- (MPRemoteCommandHandlerStatus)handlePlayCommand:(__unused MPRemoteCommandEvent *)event
+{
+    [self sendRemoteCommandEvent:@"play"];
+    return MPRemoteCommandHandlerStatusSuccess;
+}
+
+- (MPRemoteCommandHandlerStatus)handlePauseCommand:(__unused MPRemoteCommandEvent *)event
+{
+    [self sendRemoteCommandEvent:@"pause"];
+    return MPRemoteCommandHandlerStatusSuccess;
+}
+
+- (MPRemoteCommandHandlerStatus)handleTogglePlayPauseCommand:(__unused MPRemoteCommandEvent *)event
+{
+    [self sendRemoteCommandEvent:@"toggle"];
+    return MPRemoteCommandHandlerStatusSuccess;
+}
+
+- (MPRemoteCommandHandlerStatus)handleNextTrackCommand:(__unused MPRemoteCommandEvent *)event
+{
+    [self sendRemoteCommandEvent:@"next"];
+    return MPRemoteCommandHandlerStatusSuccess;
+}
+
+- (MPRemoteCommandHandlerStatus)handlePreviousTrackCommand:(__unused MPRemoteCommandEvent *)event
+{
+    [self sendRemoteCommandEvent:@"previous"];
+    return MPRemoteCommandHandlerStatusSuccess;
+}
+
+- (void)updateNowPlayingPlaybackState:(BOOL)isPlaying
+{
+    if (@available(macOS 10.12.2, *)) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            self.nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = @(isPlaying ? 1.0 : 0.0);
+            self.nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = @(self.currentTime);
+
+            MPNowPlayingInfoCenter *center = [MPNowPlayingInfoCenter defaultCenter];
+            center.nowPlayingInfo = [self.nowPlayingInfo copy];
+
+            if ([center respondsToSelector:@selector(setPlaybackState:)]) {
+                center.playbackState = isPlaying ? MPNowPlayingPlaybackStatePlaying : MPNowPlayingPlaybackStatePaused;
+            }
+        });
+    }
+}
+
+- (void)updateNowPlayingElapsedTime:(NSTimeInterval)elapsedTime
+{
+    if (@available(macOS 10.12.2, *)) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            self.nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = @(elapsedTime);
+            MPNowPlayingInfoCenter *center = [MPNowPlayingInfoCenter defaultCenter];
+            center.nowPlayingInfo = [self.nowPlayingInfo copy];
+        });
+    }
+}
+
+- (void)updateNowPlayingDuration:(NSTimeInterval)duration
+{
+    if (@available(macOS 10.12.2, *)) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            self.nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = @(duration);
+            MPNowPlayingInfoCenter *center = [MPNowPlayingInfoCenter defaultCenter];
+            center.nowPlayingInfo = [self.nowPlayingInfo copy];
+        });
+    }
+}
+
 - (void)startObserving
 {
     self.hasListeners = YES;
@@ -80,6 +227,7 @@ RCT_EXPORT_MODULE();
 {
     [self removeTimeObserver];
     [[NSNotificationCenter defaultCenter] removeObserver:self];
+    [self teardownRemoteCommands];
 }
 
 #pragma mark - Player Observers
@@ -89,6 +237,9 @@ RCT_EXPORT_MODULE();
     dispatch_async(dispatch_get_main_queue(), ^{
         self.isPlaying = NO;
         [self removeTimeObserver];
+        self.currentTime = self.duration;
+        [self updateNowPlayingElapsedTime:self.currentTime];
+        [self updateNowPlayingPlaybackState:NO];
         [self sendEventWithName:@"onPlaybackStateChanged" body:@{@"isPlaying": @NO}];
         [self sendEventWithName:@"onCompletion" body:@{}];
     });
@@ -99,6 +250,7 @@ RCT_EXPORT_MODULE();
     dispatch_async(dispatch_get_main_queue(), ^{
         self.isPlaying = NO;
         [self removeTimeObserver];
+        [self updateNowPlayingPlaybackState:NO];
         [self sendEventWithName:@"onPlaybackStateChanged" body:@{@"isPlaying": @NO}];
         [self sendEventWithName:@"onLoadError" body:@{@"error": @"Playback failed"}];
     });
@@ -207,6 +359,119 @@ RCT_EXPORT_METHOD(getTrackInfo:(NSString *)filePath
     });
 }
 
+RCT_EXPORT_METHOD(updateNowPlayingInfo:(NSDictionary *)info)
+{
+    if (!info) {
+        return;
+    }
+
+    if (@available(macOS 10.12.2, *)) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            id titleValue = info[@"title"];
+            if ([titleValue isKindOfClass:[NSString class]]) {
+                self.nowPlayingInfo[MPMediaItemPropertyTitle] = titleValue;
+            } else if (titleValue == (id)kCFNull) {
+                [self.nowPlayingInfo removeObjectForKey:MPMediaItemPropertyTitle];
+            }
+
+            id artistValue = info[@"artist"];
+            if ([artistValue isKindOfClass:[NSString class]]) {
+                self.nowPlayingInfo[MPMediaItemPropertyArtist] = artistValue;
+            } else if (artistValue == (id)kCFNull) {
+                [self.nowPlayingInfo removeObjectForKey:MPMediaItemPropertyArtist];
+            }
+
+            id albumValue = info[@"album"];
+            if ([albumValue isKindOfClass:[NSString class]]) {
+                self.nowPlayingInfo[MPMediaItemPropertyAlbumTitle] = albumValue;
+            } else if (albumValue == (id)kCFNull) {
+                [self.nowPlayingInfo removeObjectForKey:MPMediaItemPropertyAlbumTitle];
+            }
+
+            id durationValue = info[@"duration"];
+            if ([durationValue isKindOfClass:[NSNumber class]]) {
+                NSNumber *duration = (NSNumber *)durationValue;
+                self.duration = duration.doubleValue;
+                self.nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = duration;
+            } else if (durationValue == (id)kCFNull) {
+                [self.nowPlayingInfo removeObjectForKey:MPMediaItemPropertyPlaybackDuration];
+            }
+
+            id elapsedValue = info[@"elapsedTime"];
+            if ([elapsedValue isKindOfClass:[NSNumber class]]) {
+                NSNumber *elapsed = (NSNumber *)elapsedValue;
+                self.currentTime = elapsed.doubleValue;
+                self.nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = elapsed;
+            } else if (elapsedValue == (id)kCFNull) {
+                [self.nowPlayingInfo removeObjectForKey:MPNowPlayingInfoPropertyElapsedPlaybackTime];
+            }
+
+            id playbackRateValue = info[@"playbackRate"];
+            if ([playbackRateValue isKindOfClass:[NSNumber class]]) {
+                self.nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = playbackRateValue;
+            } else if (playbackRateValue == (id)kCFNull) {
+                [self.nowPlayingInfo removeObjectForKey:MPNowPlayingInfoPropertyPlaybackRate];
+            }
+
+            id artworkValue = info[@"artwork"];
+            if ([artworkValue isKindOfClass:[NSString class]] && [(NSString *)artworkValue length] > 0) {
+                NSString *artworkPath = (NSString *)artworkValue;
+                NSURL *artworkURL = nil;
+                if ([artworkPath hasPrefix:@"file://"]) {
+                    artworkURL = [NSURL URLWithString:artworkPath];
+                } else {
+                    artworkURL = [NSURL fileURLWithPath:artworkPath];
+                }
+
+                if (artworkURL) {
+                    NSImage *image = [[NSImage alloc] initWithContentsOfURL:artworkURL];
+                    if (image) {
+                        MPMediaItemArtwork *artwork = [[MPMediaItemArtwork alloc] initWithBoundsSize:image.size
+                                                                                     requestHandler:^NSImage * _Nonnull(CGSize size) {
+                            return image;
+                        }];
+                        self.nowPlayingInfo[MPMediaItemPropertyArtwork] = artwork;
+                    }
+                }
+            } else if (artworkValue == (id)kCFNull) {
+                [self.nowPlayingInfo removeObjectForKey:MPMediaItemPropertyArtwork];
+            }
+
+            id isPlayingValue = info[@"isPlaying"];
+            MPNowPlayingInfoCenter *center = [MPNowPlayingInfoCenter defaultCenter];
+
+            if ([isPlayingValue isKindOfClass:[NSNumber class]]) {
+                BOOL playing = ((NSNumber *)isPlayingValue).boolValue;
+                if ([center respondsToSelector:@selector(setPlaybackState:)]) {
+                    center.playbackState = playing ? MPNowPlayingPlaybackStatePlaying : MPNowPlayingPlaybackStatePaused;
+                }
+                self.nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = @(playing ? 1.0 : 0.0);
+            } else if (isPlayingValue == (id)kCFNull) {
+                [self.nowPlayingInfo removeObjectForKey:MPNowPlayingInfoPropertyPlaybackRate];
+            }
+
+            center.nowPlayingInfo = [self.nowPlayingInfo copy];
+        });
+    }
+}
+
+RCT_EXPORT_METHOD(clearNowPlayingInfo)
+{
+    if (@available(macOS 10.12.2, *)) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self.nowPlayingInfo removeAllObjects];
+            self.currentTime = 0;
+            self.duration = 0;
+
+            MPNowPlayingInfoCenter *center = [MPNowPlayingInfoCenter defaultCenter];
+            center.nowPlayingInfo = nil;
+            if ([center respondsToSelector:@selector(setPlaybackState:)]) {
+                center.playbackState = MPNowPlayingPlaybackStateStopped;
+            }
+        });
+    }
+}
+
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey,id> *)change context:(void *)context
 {
     if ([keyPath isEqualToString:@"status"]) {
@@ -218,6 +483,9 @@ RCT_EXPORT_METHOD(getTrackInfo:(NSString *)filePath
                 self.duration = CMTimeGetSeconds(duration);
             }
             self.currentTime = 0;
+
+            [self updateNowPlayingDuration:self.duration];
+            [self updateNowPlayingElapsedTime:self.currentTime];
 
             // Remove observers
             [item removeObserver:self forKeyPath:@"status"];
@@ -250,6 +518,7 @@ RCT_EXPORT_METHOD(getTrackInfo:(NSString *)filePath
         CMTime duration = item.duration;
         if (CMTIME_IS_VALID(duration)) {
             self.duration = CMTimeGetSeconds(duration);
+            [self updateNowPlayingDuration:self.duration];
         }
     }
 }
@@ -274,6 +543,7 @@ RCT_EXPORT_METHOD(play:(RCTPromiseResolveBlock)resolve
         if (self.hasListeners) {
             [self addTimeObserver];
         }
+        [self updateNowPlayingPlaybackState:YES];
         [self sendEventWithName:@"onPlaybackStateChanged" body:@{@"isPlaying": @YES}];
         resolve(@{@"success": @YES});
     });
@@ -291,6 +561,7 @@ RCT_EXPORT_METHOD(pause:(RCTPromiseResolveBlock)resolve
         [self.player pause];
         self.isPlaying = NO;
         [self removeTimeObserver];
+        [self updateNowPlayingPlaybackState:NO];
         [self sendEventWithName:@"onPlaybackStateChanged" body:@{@"isPlaying": @NO}];
         resolve(@{@"success": @YES});
     });
@@ -310,6 +581,8 @@ RCT_EXPORT_METHOD(stop:(RCTPromiseResolveBlock)resolve
         self.isPlaying = NO;
         self.currentTime = 0;
         [self removeTimeObserver];
+        [self updateNowPlayingElapsedTime:self.currentTime];
+        [self updateNowPlayingPlaybackState:NO];
         [self sendEventWithName:@"onPlaybackStateChanged" body:@{@"isPlaying": @NO}];
         resolve(@{@"success": @YES});
     });
@@ -332,6 +605,7 @@ RCT_EXPORT_METHOD(seek:(double)seconds
         [self.player seekToTime:seekTime completionHandler:^(BOOL finished) {
             if (finished) {
                 self.currentTime = clampedTime;
+                [self updateNowPlayingElapsedTime:self.currentTime];
                 resolve(@{@"success": @YES});
             } else {
                 reject(@"SEEK_FAILED", @"Seek operation failed", nil);
@@ -394,6 +668,7 @@ RCT_EXPORT_METHOD(getCurrentState:(RCTPromiseResolveBlock)resolve
             // Only send updates if time has changed significantly (avoid redundant events)
             if (fabs(newTime - strongSelf.currentTime) >= 1.0) {
                 strongSelf.currentTime = newTime;
+                [strongSelf updateNowPlayingElapsedTime:strongSelf.currentTime];
 
                 // Dispatch event sending back to main queue
                 dispatch_async(dispatch_get_main_queue(), ^{
