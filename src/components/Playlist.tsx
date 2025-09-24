@@ -5,13 +5,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { localAudioControls, localPlayerState$, queue$ } from "@/components/LocalAudioPlayer";
 import { type TrackData, TrackItem } from "@/components/TrackItem";
+import { DragDropView } from "@/native-modules/DragDropView";
 import KeyboardManager, { KeyCodes } from "@/systems/keyboard/KeyboardManager";
 import type { LocalTrack } from "@/systems/LocalMusicState";
 import { localMusicState$ } from "@/systems/LocalMusicState";
 import { settings$ } from "@/systems/Settings";
 import { state$ } from "@/systems/State";
 import { perfCount, perfLog } from "@/utils/perfLogger";
-import { DragDropView } from "@/native-modules/DragDropView";
 
 // Global state to track whether playlist is actively being navigated
 export const playlistNavigationState$ = observable({
@@ -134,7 +134,11 @@ export function Playlist() {
     useEffect(() => {
         const handleKeyDown = (event: { keyCode: number; modifiers: number }) => {
             // Only handle keyboard events when there are tracks in the queue and no dropdowns are open
-            if (playlist.length === 0 || playlistNavigationState$.isSearchDropdownOpen.get() || state$.isDropdownOpen.get()) {
+            if (
+                playlist.length === 0 ||
+                playlistNavigationState$.isSearchDropdownOpen.get() ||
+                state$.isDropdownOpen.get()
+            ) {
                 return false;
             }
 
@@ -226,7 +230,7 @@ export function Playlist() {
                         keyExtractor={(item, index) => `queue-${item.queueEntryId ?? item.id ?? index}`}
                         contentContainerStyle={styles.container}
                         waitForInitialLayout={false}
-                        estimatedItemSize={playlistStyle === "compact" ? 30 : 50}
+                        estimatedItemSize={playlistStyle === "compact" ? 32 : 50}
                         recycleItems
                         renderItem={({ item: track, index }) => (
                             <TrackItem

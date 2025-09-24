@@ -11,7 +11,7 @@ declare global {
 const lastMarks = (globalThis.__LEGEND_PERF_LAST_MARKS__ = globalThis.__LEGEND_PERF_LAST_MARKS__ || {});
 
 export const isPerfLoggingEnabled = (): boolean =>
-    typeof globalThis.__LEGEND_PERF_LOG__ === "boolean" ? Boolean(globalThis.__LEGEND_PERF_LOG__) : true;
+    typeof globalThis.__LEGEND_PERF_LOG__ === "boolean" ? Boolean(globalThis.__LEGEND_PERF_LOG__) : false;
 
 export function perfLog(label: string, ...args: unknown[]): void {
     if (!isPerfLoggingEnabled()) return;

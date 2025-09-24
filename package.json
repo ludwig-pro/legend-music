@@ -14,7 +14,7 @@
         "@fluentui-react-native/callout": "^0.27.3",
         "@fluentui-react-native/vibrancy-view": "^0.3.0",
         "@gorhom/portal": "^1.0.14",
-        "@legendapp/list": "^1.0.15",
+        "@legendapp/list": "^2.0.7",
         "@legendapp/motion": "^2.4.0",
         "@legendapp/state": "^3.0.0-beta.30",
         "clsx": "^2.1.1",
@@ -62,22 +62,21 @@
     "expo": {
         "autolinking": {
             "exclude": [
-"expo",
-"expo-asset",
-"expo-checkbox",
-"expo-constants",
-"expo-font",
-"expo-keep-awake",
-"expo-linking",
-"expo-modules-autolinking",
-"expo-navigation-bar",
-"expo-router",
-"expo-splash-screen",
-"expo-sqlite",
-"expo-status-bar",
-"expo-system-ui"
-]
-
+                "expo",
+                "expo-asset",
+                "expo-checkbox",
+                "expo-constants",
+                "expo-font",
+                "expo-keep-awake",
+                "expo-linking",
+                "expo-modules-autolinking",
+                "expo-navigation-bar",
+                "expo-router",
+                "expo-splash-screen",
+                "expo-sqlite",
+                "expo-status-bar",
+                "expo-system-ui"
+            ]
         }
     }
 }
