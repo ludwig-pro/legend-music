@@ -537,6 +537,9 @@ RCT_EXPORT_METHOD(play:(RCTPromiseResolveBlock)resolve
             return;
         }
 
+        // Ensure remote command handlers stay connected when starting playback
+        [self setupRemoteCommands];
+
         [self.player play];
         self.isPlaying = YES;
 
