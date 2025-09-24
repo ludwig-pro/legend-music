@@ -1,5 +1,6 @@
 import { use$ } from "@legendapp/state/react";
 import { useCallback, useEffect } from "react";
+import { Dimensions } from "react-native";
 
 import { useWindowManager } from "@/native-modules/WindowManager";
 import { useOnHotkeys } from "@/systems/keyboard/Keyboard";
@@ -48,8 +49,13 @@ export const MediaLibraryWindowManager = () => {
                     perfLog("MediaLibraryWindowManager.openWindow.start");
                     const mainFrame = await windowManager.getMainWindowFrame();
                     const width = MEDIA_LIBRARY_WIDTH;
-                    const height = mainFrame.height;
-                    const x = mainFrame.x + mainFrame.width + WINDOW_GAP;
+                    const height = Math.max(mainFrame.height, 600);
+                    const screen = Dimensions.get("screen");
+                    const fitsOnRight =
+                        mainFrame.x + mainFrame.width + WINDOW_GAP + width <= screen.width;
+                    const x = fitsOnRight
+                        ? mainFrame.x + mainFrame.width + WINDOW_GAP
+                        : Math.max(mainFrame.x - WINDOW_GAP - width, 0);
                     const y = mainFrame.y + (mainFrame.height - height);
 
                     await WindowsNavigator.open(MEDIA_LIBRARY_WINDOW_KEY, {
