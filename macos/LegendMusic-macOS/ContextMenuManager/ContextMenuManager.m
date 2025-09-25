@@ -7,6 +7,7 @@
 @property (nonatomic, copy) RCTPromiseResolveBlock pendingResolve;
 @property (nonatomic, copy) RCTPromiseRejectBlock pendingReject;
 @property (nonatomic, strong) NSMenu *activeMenu;
+@property (nonatomic, assign) BOOL didResolveSelection;
 @end
 
 @implementation ContextMenuManager
@@ -41,6 +42,7 @@ RCT_EXPORT_METHOD(showMenu:(NSArray<NSDictionary *> *)items
 
   self.pendingResolve = resolve;
   self.pendingReject = reject;
+  self.didResolveSelection = NO;
 
   NSMenu *menu = [[NSMenu alloc] initWithTitle:@"ContextMenu"];
   menu.autoenablesItems = NO;
@@ -139,6 +141,7 @@ RCT_EXPORT_METHOD(showMenu:(NSArray<NSDictionary *> *)items
     identifier = [[identifier description] copy];
   }
 
+  self.didResolveSelection = YES;
   self.pendingResolve(identifier ?: [NSNull null]);
   self.pendingResolve = nil;
   self.pendingReject = nil;
@@ -153,14 +156,23 @@ RCT_EXPORT_METHOD(showMenu:(NSArray<NSDictionary *> *)items
     return;
   }
 
-  if (self.pendingResolve) {
-    self.pendingResolve([NSNull null]);
-  }
+  __weak typeof(self) weakSelf = self;
+  dispatch_async(dispatch_get_main_queue(), ^{
+    __strong typeof(weakSelf) strongSelf = weakSelf;
+    if (!strongSelf) {
+      return;
+    }
 
-  self.pendingResolve = nil;
-  self.pendingReject = nil;
-  self.activeMenu.delegate = nil;
-  self.activeMenu = nil;
+    if (!strongSelf.didResolveSelection && strongSelf.pendingResolve) {
+      strongSelf.pendingResolve([NSNull null]);
+    }
+
+    strongSelf.pendingResolve = nil;
+    strongSelf.pendingReject = nil;
+    strongSelf.activeMenu.delegate = nil;
+    strongSelf.activeMenu = nil;
+    strongSelf.didResolveSelection = NO;
+  });
 }
 
 @end

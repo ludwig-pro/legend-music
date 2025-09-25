@@ -5,6 +5,7 @@
 #import <React/RCTBridge.h>
 #import <React/RCTLinkingManager.h>
 #import <React/RCTCxxBridgeDelegate.h>
+#import <React/RCTDevSettings.h>
 #import <objc/runtime.h>
 
 // Forward declaration for notification
@@ -32,7 +33,14 @@
 
   [self performSelector:@selector(setupMenuConnections) withObject:nil afterDelay:0.5];
 
-  return [super applicationDidFinishLaunching:notification];
+  [super applicationDidFinishLaunching:notification];
+
+#if RCT_DEV_MENU
+  RCTDevSettings *devSettings = self.bridge.devSettings;
+  if (devSettings) {
+    devSettings.isSecondaryClickToShowDevMenuEnabled = NO;
+  }
+#endif
 }
 
 - (void)loadReactNativeWindow:(NSDictionary *)launchOptions
