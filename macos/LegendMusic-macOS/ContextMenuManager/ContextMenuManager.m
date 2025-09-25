@@ -121,6 +121,9 @@ RCT_EXPORT_METHOD(showMenu:(NSArray<NSDictionary *> *)items
   }
 
   NSPoint point = NSMakePoint(x, y);
+  if (![targetView isFlipped]) {
+    point.y = NSHeight(targetView.bounds) - point.y;
+  }
 
   [menu popUpMenuPositioningItem:nil atLocation:point inView:targetView];
 }
