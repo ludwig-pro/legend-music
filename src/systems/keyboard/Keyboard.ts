@@ -20,6 +20,15 @@ const keyRepeat$ = event();
 
 const keysToPreventDefault = new Set<KeyboardEventCode>();
 
+const nativeHotkeyMap = {
+    Up: [KeyCodes.KEY_UP],
+    Down: [KeyCodes.KEY_DOWN],
+    Enter: [KeyCodes.KEY_RETURN],
+    Space: [KeyCodes.KEY_SPACE],
+    Delete: [KeyCodes.KEY_DELETE],
+    SelectAll: [KeyCodes.MODIFIER_COMMAND, KeyCodes.KEY_A],
+} as const;
+
 // Updated KeyInfo to only require the action function
 export interface KeyInfo {
     action: () => void;
@@ -112,7 +121,12 @@ export function useHookKeyboard() {
     });
 }
 
-type HotkeyBindingName = HotkeyName;
+type NativeHotkeyName = keyof typeof nativeHotkeyMap;
+type HotkeyBindingName = HotkeyName | NativeHotkeyName;
+
+function isNativeHotkey(name: string): name is NativeHotkeyName {
+    return name in nativeHotkeyMap;
+}
 
 // Updated HotkeyCallbacks to map hotkey names to simple action functions
 type HotkeyCallbacks = Partial<Record<HotkeyBindingName, () => void>>;
@@ -125,6 +139,13 @@ export function onHotkeys(hotkeyCallbacks: HotkeyCallbacks) {
     for (const name of Object.keys(hotkeyCallbacks) as HotkeyBindingName[]) {
         const action = hotkeyCallbacks[name];
         if (action) {
+            if (isNativeHotkey(name)) {
+                const mapping = nativeHotkeyMap[name];
+                const keys = mapping.map((code) => code.toString());
+                hotkeyMap.set(keys, action);
+                continue;
+            }
+
             // Get the configured key for this hotkey from hotkeys$
             const hotkeyName = name as HotkeyName;
             const configuredKey = getHotkey(hotkeyName);

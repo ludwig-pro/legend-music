@@ -2,7 +2,7 @@ import type { Observable } from "@legendapp/state";
 import { useObservable } from "@legendapp/state/react";
 import { useCallback } from "react";
 import type { NativeMouseEvent } from "react-native-macos";
-import { queue$ } from "@/components/LocalAudioPlayer";
+
 import { playlistNavigationState$ } from "@/state/playlistNavigationState";
 import { keysPressed$, useOnHotkeys } from "@/systems/keyboard/Keyboard";
 import { KeyCodes } from "@/systems/keyboard/KeyboardManager";
@@ -36,6 +36,7 @@ export function usePlaylistSelection<T extends { isSeparator?: boolean }>(
     const selectedIndices$ = useObservable<Set<number>>(new Set());
     const selectionAnchor$ = useObservable<number>(-1);
     const selectionFocus$ = useObservable<number>(-1);
+    const itemsLength = items.length;
 
     const updateSelectionState = useCallback(
         (nextSelection: Set<number>) => {
@@ -110,7 +111,7 @@ export function usePlaylistSelection<T extends { isSeparator?: boolean }>(
         return Boolean(keysPressed$.get()[modifier]);
     }, []);
 
-    const shouldHandleHotkeys = useCallback((itemsLength: number) => {
+    const shouldHandleHotkeys = useCallback(() => {
         if (itemsLength === 0) {
             return false;
         }
@@ -124,7 +125,7 @@ export function usePlaylistSelection<T extends { isSeparator?: boolean }>(
         }
 
         return true;
-    }, []);
+    }, [itemsLength]);
 
     const getPrimarySelectionIndex = useCallback(() => {
         const focusIndex = selectionFocus$.get();
@@ -138,66 +139,60 @@ export function usePlaylistSelection<T extends { isSeparator?: boolean }>(
         return Math.min(...currentSelection);
     }, [selectedIndices$, selectionFocus$]);
 
+    const moveSelection = useCallback(
+        (direction: "up" | "down") => {
+            if (!shouldHandleHotkeys()) {
+                return;
+            }
+
+            const hasShift = isModifierPressed(KeyCodes.MODIFIER_SHIFT);
+            const currentFocus = selectionFocus$.get();
+            const currentSelection = selectedIndices$.get();
+            const baseIndex =
+                currentFocus !== -1
+                    ? currentFocus
+                    : currentSelection.size > 0
+                      ? direction === "up"
+                          ? Math.min(...currentSelection)
+                          : Math.max(...currentSelection)
+                      : direction === "up"
+                        ? 0
+                        : -1;
+
+            const nextIndex =
+                direction === "up"
+                    ? baseIndex <= 0
+                        ? itemsLength - 1
+                        : baseIndex - 1
+                    : baseIndex >= itemsLength - 1 || baseIndex === -1
+                      ? 0
+                      : baseIndex + 1;
+
+            if (hasShift && selectionAnchor$.get() !== -1) {
+                applyRangeSelection(selectionAnchor$.get(), nextIndex);
+            } else {
+                applySingleSelection(nextIndex);
+            }
+        },
+        [
+            applyRangeSelection,
+            applySingleSelection,
+            isModifierPressed,
+            itemsLength,
+            selectedIndices$,
+            selectionAnchor$,
+            selectionFocus$,
+            shouldHandleHotkeys,
+        ],
+    );
+
     const moveSelectionUp = useCallback(() => {
-        console.log("up");
-        const itemsLength = queue$.tracks.length;
-        if (!shouldHandleHotkeys(itemsLength)) {
-            return;
-        }
-
-        const hasShift = isModifierPressed(KeyCodes.MODIFIER_SHIFT);
-        const currentFocus = selectionFocus$.get();
-        const currentSelection = selectedIndices$.get();
-        const currentIndex =
-            currentFocus !== -1 ? currentFocus : currentSelection.size > 0 ? Math.min(...currentSelection) : 0;
-        const nextIndex = currentIndex <= 0 ? itemsLength - 1 : currentIndex - 1;
-
-        if (hasShift && selectionAnchor$.get() !== -1) {
-            applyRangeSelection(selectionAnchor$.get(), nextIndex);
-        } else {
-            applySingleSelection(nextIndex);
-        }
-    }, [
-        applyRangeSelection,
-        applySingleSelection,
-        isModifierPressed,
-        selectedIndices$,
-        selectionAnchor$,
-        selectionFocus$,
-        shouldHandleHotkeys,
-    ]);
+        moveSelection("up");
+    }, [moveSelection]);
 
     const moveSelectionDown = useCallback(() => {
-        const itemsLength = queue$.tracks.length;
-        console.log("down", shouldHandleHotkeys(itemsLength));
-
-        if (!shouldHandleHotkeys(itemsLength)) {
-            return;
-        }
-
-        const hasShift = isModifierPressed(KeyCodes.MODIFIER_SHIFT);
-        const currentFocus = selectionFocus$.get();
-        const currentSelection = selectedIndices$.get();
-        const currentIndex =
-            currentFocus !== -1 ? currentFocus : currentSelection.size > 0 ? Math.max(...currentSelection) : -1;
-        const nextIndex = currentIndex >= queue$.tracks.length - 1 || currentIndex === -1 ? 0 : currentIndex + 1;
-
-        console.log("moveSelectionDown", currentIndex, nextIndex);
-
-        if (hasShift && selectionAnchor$.get() !== -1) {
-            applyRangeSelection(selectionAnchor$.get(), nextIndex);
-        } else {
-            applySingleSelection(nextIndex);
-        }
-    }, [
-        applyRangeSelection,
-        applySingleSelection,
-        isModifierPressed,
-        selectedIndices$,
-        selectionAnchor$,
-        selectionFocus$,
-        shouldHandleHotkeys,
-    ]);
+        moveSelection("down");
+    }, [moveSelection]);
 
     const handleTrackClick = useCallback(
         (index: number, event?: NativeMouseEvent) => {
@@ -237,8 +232,7 @@ export function usePlaylistSelection<T extends { isSeparator?: boolean }>(
     );
 
     const activateSelection = useCallback(() => {
-        const itemsLength = queue$.tracks.length;
-        if (!shouldHandleHotkeys(itemsLength)) {
+        if (!shouldHandleHotkeys()) {
             return;
         }
 
@@ -246,11 +240,10 @@ export function usePlaylistSelection<T extends { isSeparator?: boolean }>(
         if (currentIndex >= 0 && currentIndex < itemsLength) {
             handleTrackClick(currentIndex);
         }
-    }, [getPrimarySelectionIndex, handleTrackClick, shouldHandleHotkeys]);
+    }, [getPrimarySelectionIndex, handleTrackClick, itemsLength, shouldHandleHotkeys]);
 
     const handleDeleteHotkey = useCallback(() => {
-        const itemsLength = queue$.tracks.length;
-        if (!onDeleteSelection || !shouldHandleHotkeys(itemsLength)) {
+        if (!onDeleteSelection || !shouldHandleHotkeys()) {
             return;
         }
 
@@ -264,12 +257,39 @@ export function usePlaylistSelection<T extends { isSeparator?: boolean }>(
         clearSelection();
     }, [clearSelection, onDeleteSelection, selectedIndices$, shouldHandleHotkeys]);
 
+    const selectAllItems = useCallback(() => {
+        if (!shouldHandleHotkeys()) {
+            return;
+        }
+
+        if (items.length === 0) {
+            clearSelection();
+            return;
+        }
+
+        const selectableIndices: number[] = [];
+        for (let index = 0; index < items.length; index += 1) {
+            if (!items[index]?.isSeparator) {
+                selectableIndices.push(index);
+            }
+        }
+
+        if (selectableIndices.length === 0) {
+            clearSelection();
+            return;
+        }
+
+        updateSelectionState(new Set(selectableIndices));
+        setAnchorAndFocus(selectableIndices[0], selectableIndices[selectableIndices.length - 1]);
+    }, [clearSelection, items, setAnchorAndFocus, shouldHandleHotkeys, updateSelectionState]);
+
     useOnHotkeys({
         Up: moveSelectionUp,
         Down: moveSelectionDown,
         Enter: activateSelection,
         Space: activateSelection,
         Delete: onDeleteSelection ? handleDeleteHotkey : undefined,
+        SelectAll: selectAllItems,
     });
 
     return {
