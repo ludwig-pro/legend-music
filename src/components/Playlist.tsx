@@ -4,12 +4,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { localAudioControls, localPlayerState$, queue$ } from "@/components/LocalAudioPlayer";
 import { type TrackData, TrackItem } from "@/components/TrackItem";
+import { usePlaylistSelection } from "@/hooks/usePlaylistSelection";
 import { DragDropView } from "@/native-modules/DragDropView";
 import type { LocalTrack } from "@/systems/LocalMusicState";
 import { localMusicState$ } from "@/systems/LocalMusicState";
 import { settings$ } from "@/systems/Settings";
 import { perfCount, perfLog } from "@/utils/perfLogger";
-import { usePlaylistSelection } from "@/hooks/usePlaylistSelection";
 
 type PlaylistTrackWithSuggestions = TrackData & {
     queueEntryId: string;
@@ -50,8 +50,18 @@ export function Playlist() {
         });
     }, [playlist.length, currentTrackIndex, isPlayerActive, playlist]);
 
+    const handleDeleteSelection = useCallback((indices: number[]) => {
+        if (indices.length === 0) {
+            return;
+        }
+
+        perfLog("Playlist.handleDeleteSelection", { count: indices.length });
+        localAudioControls.queue.remove(indices);
+    }, []);
+
     const { selectedIndices$, handleTrackClick } = usePlaylistSelection({
         items: playlist,
+        onDeleteSelection: handleDeleteSelection,
     });
 
     const handleTrackDoubleClick = (index: number) => {

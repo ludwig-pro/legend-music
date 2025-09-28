@@ -10,6 +10,7 @@ import { state$ } from "@/systems/State";
 
 interface UsePlaylistSelectionOptions<T extends { isSeparator?: boolean }> {
     items: T[];
+    onDeleteSelection?: (indices: number[]) => void;
 }
 
 interface UsePlaylistSelectionResult {
@@ -31,7 +32,7 @@ function createRangeSelection(start: number, end: number): Set<number> {
 export function usePlaylistSelection<T extends { isSeparator?: boolean }>(
     options: UsePlaylistSelectionOptions<T>,
 ): UsePlaylistSelectionResult {
-    const { items } = options;
+    const { items, onDeleteSelection } = options;
     const selectedIndices$ = useObservable<Set<number>>(new Set());
     const selectionAnchor$ = useObservable<number>(-1);
     const selectionFocus$ = useObservable<number>(-1);
@@ -52,6 +53,11 @@ export function usePlaylistSelection<T extends { isSeparator?: boolean }>(
         },
         [selectionAnchor$, selectionFocus$],
     );
+
+    const clearSelection = useCallback(() => {
+        updateSelectionState(new Set());
+        setAnchorAndFocus(-1, -1);
+    }, [setAnchorAndFocus, updateSelectionState]);
 
     const applySingleSelection = useCallback(
         (index: number) => {
@@ -237,11 +243,27 @@ export function usePlaylistSelection<T extends { isSeparator?: boolean }>(
         }
     }, [getPrimarySelectionIndex, handleTrackClick, itemsLength, shouldHandleHotkeys]);
 
+    const handleDeleteHotkey = useCallback(() => {
+        if (!onDeleteSelection || !shouldHandleHotkeys()) {
+            return;
+        }
+
+        const currentSelection = selectedIndices$.get();
+        if (currentSelection.size === 0) {
+            return;
+        }
+
+        const indices = Array.from(currentSelection).sort((a, b) => a - b);
+        onDeleteSelection(indices);
+        clearSelection();
+    }, [clearSelection, onDeleteSelection, selectedIndices$, shouldHandleHotkeys]);
+
     useOnHotkeys({
         Up: moveSelectionUp,
         Down: moveSelectionDown,
         Enter: activateSelection,
         Space: activateSelection,
+        Delete: onDeleteSelection ? handleDeleteHotkey : undefined,
     });
 
     return {

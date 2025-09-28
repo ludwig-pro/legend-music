@@ -1,7 +1,7 @@
 import { observable } from "@legendapp/state";
 import { useEffect } from "react";
 import { View } from "react-native";
-import { useAudioPlayer, type NowPlayingInfoPayload } from "@/native-modules/AudioPlayer";
+import { type NowPlayingInfoPayload, useAudioPlayer } from "@/native-modules/AudioPlayer";
 import type { LocalTrack } from "@/systems/LocalMusicState";
 import { ensureLocalTrackThumbnail } from "@/systems/LocalMusicState";
 import { clearQueueM3U, loadQueueFromM3U, saveQueueToM3U } from "@/utils/m3uManager";
@@ -114,9 +114,7 @@ function resetPlayerForEmptyQueue(): void {
     localPlayerState$.duration.set(0);
     localPlayerState$.isPlaying.set(false);
     if (audioPlayer) {
-        audioPlayer
-            .stop()
-            .catch((error) => console.error("Error stopping playback:", error));
+        audioPlayer.stop().catch((error) => console.error("Error stopping playback:", error));
         audioPlayer.clearNowPlayingInfo();
     }
 }
@@ -300,6 +298,58 @@ function queueInsertNext(input: QueueInput, options: QueueUpdateOptions = {}): v
     }
 }
 
+function queueRemoveIndices(indices: number[]): void {
+    if (indices.length === 0) {
+        return;
+    }
+
+    const existing = getQueueSnapshot();
+    if (existing.length === 0) {
+        return;
+    }
+
+    const uniqueSorted = Array.from(new Set(indices))
+        .filter((index) => index >= 0 && index < existing.length)
+        .sort((a, b) => a - b);
+
+    if (uniqueSorted.length === 0) {
+        return;
+    }
+
+    const removalSet = new Set(uniqueSorted);
+    const nextQueue = existing.filter((_, index) => !removalSet.has(index));
+
+    perfLog("Queue.removeIndices", { count: uniqueSorted.length });
+    setQueueTracks(nextQueue);
+
+    if (nextQueue.length === 0) {
+        resetPlayerForEmptyQueue();
+        return;
+    }
+
+    const currentIndex = localPlayerState$.currentIndex.peek();
+    if (currentIndex === -1) {
+        return;
+    }
+
+    const removedBeforeCurrent = uniqueSorted.filter((index) => index < currentIndex).length;
+
+    if (removalSet.has(currentIndex)) {
+        const isPlaying = localPlayerState$.isPlaying.peek();
+        const nextIndex = Math.min(currentIndex - removedBeforeCurrent, nextQueue.length - 1);
+
+        if (nextIndex >= 0) {
+            playTrackFromQueue(nextIndex, { playImmediately: isPlaying, startIndex: nextIndex });
+        } else {
+            resetPlayerForEmptyQueue();
+        }
+        return;
+    }
+
+    const nextIndex = Math.max(0, currentIndex - removedBeforeCurrent);
+    localPlayerState$.currentIndex.set(nextIndex);
+}
+
 function queueClear(): void {
     perfLog("Queue.clear");
     setQueueTracks([]);
@@ -337,6 +387,7 @@ export const queueControls = {
     replace: queueReplace,
     append: queueAppend,
     insertNext: queueInsertNext,
+    remove: queueRemoveIndices,
     clear: queueClear,
     initializeFromCache: initializeQueueFromCache,
 };
