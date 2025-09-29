@@ -6,13 +6,12 @@ import { PlaybackArea } from "@/components/PlaybackArea";
 import { Playlist } from "@/components/Playlist";
 import { PlaylistSelector } from "@/components/PlaylistSelector";
 import { Unregistered } from "@/components/Unregistered";
-import { useOnHotkeys } from "@/systems/keyboard/Keyboard";
-import { perfCount, perfLog } from "@/utils/perfLogger";
 import { playlistNavigationState$ } from "@/state/playlistNavigationState";
+import { perfCount, perfLog } from "@/utils/perfLogger";
 
 export function MainContainer() {
     perfCount("MainContainer.render");
-    const playlistNavigation = use$(playlistNavigationState$);
+    const _playlistNavigation = use$(playlistNavigationState$);
 
     // useOnHotkeys({
     //     PlayPause: localAudioControls.togglePlayPause,

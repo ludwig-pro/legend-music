@@ -3,17 +3,16 @@ import { use$, useObservable } from "@legendapp/state/react";
 import { forwardRef, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type GestureResponderEvent, Text, useWindowDimensions, View } from "react-native";
 import type { NativeMouseEvent } from "react-native-macos";
-
 import { Button } from "@/components/Button";
 import { DropdownMenu, type DropdownMenuRootRef } from "@/components/DropdownMenu";
 import { TextInputSearch, type TextInputSearchRef } from "@/components/TextInputSearch";
 import { TrackItem } from "@/components/TrackItem";
+import { playlistNavigationState$ } from "@/state/playlistNavigationState";
 import KeyboardManager, { KeyCodes } from "@/systems/keyboard/KeyboardManager";
 import type { LibraryItem } from "@/systems/LibraryState";
 import { library$ } from "@/systems/LibraryState";
 import type { LocalTrack } from "@/systems/LocalMusicState";
 import { cn } from "@/utils/cn";
-import { playlistNavigationState$ } from "@/state/playlistNavigationState";
 
 interface PlaylistSelectorSearchDropdownProps {
     tracks: LocalTrack[];

@@ -33,6 +33,6 @@ export function getAllPlaylists(): Playlist[] {
 }
 
 // Get playlists by type
-export function getPlaylistsByType(type: "file"): Playlist[] {
+export function getPlaylistsByType(_type: "file"): Playlist[] {
     return Object.values(playlistsData$.playlistsLocal.get());
 }

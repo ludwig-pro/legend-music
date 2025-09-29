@@ -1,5 +1,5 @@
 import type { Observable } from "@legendapp/state";
-import { Memo, use$ } from "@legendapp/state/react";
+import { use$ } from "@legendapp/state/react";
 import { memo } from "react";
 import { Text, View } from "react-native";
 import { AlbumArt } from "@/components/AlbumArt";
@@ -14,7 +14,6 @@ const formatTimeCache = new Map<number, string>();
 
 const CurrentTime = memo(function CurrentTime({ currentLocalTime$ }: { currentLocalTime$: Observable<number> }) {
     const time = use$(currentLocalTime$);
-    console.log("CurrentTime", time);
     return formatTime(time);
 });
 

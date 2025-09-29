@@ -43,9 +43,7 @@ type AudioPlayerType = {
     seek: (seconds: number) => Promise<{ success: boolean; error?: string }>;
     setVolume: (volume: number) => Promise<{ success: boolean; error?: string }>;
     getCurrentState: () => Promise<AudioPlayerState>;
-    getTrackInfo: (
-        filePath: string,
-    ) => Promise<{ durationSeconds: number; sampleRate: number; frameCount: number }>;
+    getTrackInfo: (filePath: string) => Promise<{ durationSeconds: number; sampleRate: number; frameCount: number }>;
     updateNowPlayingInfo: (payload: NowPlayingInfoPayload) => void;
     clearNowPlayingInfo: () => void;
 };

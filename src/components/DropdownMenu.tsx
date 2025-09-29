@@ -15,7 +15,8 @@ import {
     useRef,
     useState,
 } from "react";
-import { type GestureResponderEvent, ScrollView, Text, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
+import type { NativeMouseEvent } from "react-native-macos";
 import { Icon } from "@/systems/Icon";
 import { state$ } from "@/systems/State";
 import { cn } from "@/utils/cn";
@@ -70,7 +71,7 @@ const Root = forwardRef<DropdownMenuRootRef, RootProps>(function Root(
     { children, isOpen$: isOpen$Prop, onSelect, closeOnSelect = true, onOpenChange },
     ref,
 ) {
-    // biome-ignore lint/correctness/useHookAtTopLevel: <explanation>
+    // biome-ignore lint/correctness/useHookAtTopLevel: useObservable must run during component initialization
     const isOpen$ = isOpen$Prop ?? useObservable(false);
     const openedWithMouseDown$ = useObservable(false);
     const triggerRef = useRef<View>(null);
@@ -127,7 +128,7 @@ interface TriggerProps {
     showCaret?: boolean;
     caretPosition?: "right" | "left";
     textClassName?: string;
-    caretClassName?: string;
+    disabled?: boolean;
 }
 
 function Trigger({
@@ -138,15 +139,18 @@ function Trigger({
     showCaret = false,
     caretPosition = "right",
     textClassName,
-    caretClassName,
+    disabled = false,
 }: TriggerProps) {
     const { isOpen$, triggerRef } = useDropdownContext();
 
     const onMouseDown = useCallback(() => {
+        if (disabled) {
+            return;
+        }
         if (!isOpen$.get()) {
             isOpen$.set(true);
         }
-    }, []);
+    }, [disabled, isOpen$]);
 
     if (asChild) {
         // Clone the child element and pass our props to it
@@ -155,6 +159,7 @@ function Trigger({
                 <View ref={triggerRef}>
                     {cloneElement(children, {
                         onMouseDown,
+                        ...(disabled ? { disabled: true } : {}),
                         ...(children.props as any),
                     })}
                 </View>
@@ -173,7 +178,11 @@ function Trigger({
         const caret = showCaret ? <Icon name="chevron.up.chevron.down" size={14} marginTop={-6} /> : null;
         return (
             <View ref={triggerRef}>
-                <Button className={cn("flex-row items-center group", className)} onMouseDown={onMouseDown}>
+                <Button
+                    className={cn("flex-row items-center group", className)}
+                    onMouseDown={onMouseDown}
+                    disabled={disabled}
+                >
                     {caretPosition === "left" && caret}
                     <View className={cn("flex-1", textClassName)}>{children}</View>
                     {caretPosition === "right" && caret}
@@ -184,7 +193,7 @@ function Trigger({
 
     return (
         <View ref={triggerRef}>
-            <Button className={className} onMouseDown={onMouseDown}>
+            <Button className={className} onMouseDown={onMouseDown} disabled={disabled}>
                 {children}
             </Button>
         </View>
@@ -292,7 +301,7 @@ function Label({ children, className = "" }: LabelProps) {
 // Item component
 interface ItemProps {
     children: ReactNode;
-    onSelect?: (e: GestureResponderEvent) => void;
+    onSelect?: (event: NativeMouseEvent) => void;
     value?: string;
     className?: string;
     disabled?: boolean;
@@ -303,11 +312,11 @@ function Item({ children, onSelect, value, className = "", disabled = false, var
     const { close, onSelect: contextOnSelect, closeOnSelect } = useDropdownContext();
 
     const handlePress = useCallback(
-        (e: GestureResponderEvent) => {
+        (event: NativeMouseEvent) => {
             if (disabled) return;
 
             if (onSelect) {
-                onSelect(e);
+                onSelect(event);
             } else if (value && contextOnSelect) {
                 contextOnSelect(value);
             }

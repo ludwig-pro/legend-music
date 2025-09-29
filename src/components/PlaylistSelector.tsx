@@ -1,15 +1,15 @@
 import { use$ } from "@legendapp/state/react";
+import { File } from "expo-file-system/next";
 import { useCallback, useRef } from "react";
 import { Text, View } from "react-native";
-import { File } from "expo-file-system/next";
 import { Button } from "@/components/Button";
 import type { DropdownMenuRootRef } from "@/components/DropdownMenu";
 import { localAudioControls, queue$ } from "@/components/LocalAudioPlayer";
 import { PlaylistSelectorSearchDropdown } from "@/components/PlaylistSelectorSearchDropdown";
 import { SelectLegendList } from "@/components/SelectLegendList";
 import { useOnHotkeys } from "@/systems/keyboard/Keyboard";
-import { library$, libraryUI$ } from "@/systems/LibraryState";
 import type { LibraryItem } from "@/systems/LibraryState";
+import { library$, libraryUI$ } from "@/systems/LibraryState";
 import type { LocalTrack } from "@/systems/LocalMusicState";
 import { localMusicState$, setCurrentPlaylist } from "@/systems/LocalMusicState";
 import { stateSaved$ } from "@/systems/State";

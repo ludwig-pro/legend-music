@@ -1,8 +1,7 @@
 import { observer } from "@legendapp/state/react";
 import { ScrollView, Text, View } from "react-native";
-
+import { Button } from "@/components/Button";
 import { ColorPicker } from "@/components/ColorPicker";
-import { Button } from "@/native-modules/Button";
 import { themeState$, useTheme } from "@/theme/ThemeProvider";
 
 type ThemeType = "light" | "dark";
@@ -16,7 +15,9 @@ export const ThemeSettings = observer(() => {
             <View className="p-4">
                 <View className="flex-row items-center justify-between mb-5">
                     <Text className="text-2xl font-bold text-text-primary">Theme Settings</Text>
-                    <Button onPress={resetTheme} title="Reset" bezelStyle="regular" controlSize="regular" />
+                    <Button onClick={resetTheme} variant="secondary" className="px-3 py-1.5 h-auto">
+                        <Text className="text-sm text-text-primary">Reset</Text>
+                    </Button>
                 </View>
 
                 <Text className="text-xl font-bold text-text-primary mb-3">Background Colors</Text>
@@ -33,7 +34,8 @@ export const ThemeSettings = observer(() => {
                 <ColorPicker label="Primary" $color={colors$.accent.primary} />
                 <ColorPicker label="Secondary" $color={colors$.accent.secondary} />
 
-                <ColorPicker label="Border" $color={colors$.border} />
+                <ColorPicker label="Border" $color={colors$.border.primary} />
+                <ColorPicker label="Popup Border" $color={colors$.border.popup} />
             </View>
         </ScrollView>
     );

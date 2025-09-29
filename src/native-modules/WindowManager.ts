@@ -1,4 +1,4 @@
-import { NativeEventEmitter, NativeModules } from "react-native";
+import { NativeEventEmitter, type NativeModule, NativeModules } from "react-native";
 
 const { WindowManager } = NativeModules;
 
@@ -123,7 +123,7 @@ export type WindowFocusedEvent = {
     moduleName?: string;
 };
 
-type NativeWindowManagerType = {
+type NativeWindowManagerType = NativeModule & {
     openWindow: (options?: NativeWindowOptions) => Promise<{ success: boolean }>;
     closeWindow: (identifier?: string) => Promise<{ success: boolean; message?: string }>;
     getMainWindowFrame: () => Promise<WindowFrame>;

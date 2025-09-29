@@ -1,20 +1,28 @@
-import { Platform, requireNativeComponent, StyleSheet, type ViewStyle } from "react-native";
 import type React from "react";
+import { Platform, requireNativeComponent, type StyleProp, StyleSheet, type ViewStyle } from "react-native";
 
 export interface SplitViewResizeEvent {
     sizes: number[];
     isVertical: boolean;
 }
 
+interface NativeSplitViewProps {
+    isVertical?: boolean;
+    dividerThickness?: number;
+    onSplitViewDidResize?: (event: { nativeEvent: SplitViewResizeEvent }) => void;
+    style?: StyleProp<ViewStyle>;
+    children?: React.ReactNode;
+}
+
 interface SplitViewProps {
     isVertical?: boolean;
     dividerThickness?: number;
     onSplitViewDidResize?: (event: SplitViewResizeEvent) => void;
-    style?: ViewStyle;
+    style?: StyleProp<ViewStyle>;
     children?: React.ReactNode;
 }
 
-const RNSplitView = requireNativeComponent<SplitViewProps>("RNSplitView");
+const RNSplitView = requireNativeComponent<NativeSplitViewProps>("RNSplitView");
 
 export function SplitView({
     isVertical = true,
@@ -28,8 +36,8 @@ export function SplitView({
     if (Platform.OS === "macos" && RNSplitView) {
         const handleResize = onSplitViewDidResize
             ? (event: { nativeEvent: SplitViewResizeEvent }) => {
-                onSplitViewDidResize(event.nativeEvent);
-            }
+                  onSplitViewDidResize(event.nativeEvent);
+              }
             : undefined;
 
         return (

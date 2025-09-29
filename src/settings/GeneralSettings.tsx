@@ -1,4 +1,4 @@
-import { observer, use$ } from "@legendapp/state/react";
+import { observer } from "@legendapp/state/react";
 import { Text, View } from "react-native";
 
 import { Checkbox } from "@/components/Checkbox";

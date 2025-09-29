@@ -5,9 +5,8 @@ import {
     openWindow as nativeOpenWindow,
     type WindowOptions,
 } from "@/native-modules/WindowManager";
-
-import { withWindowProvider } from "./WindowProvider";
 import type { WindowConfigEntry, WindowsConfig } from "./types";
+import { withWindowProvider } from "./WindowProvider";
 
 type WindowOpenOverrides = Omit<WindowOptions, "identifier" | "moduleName">;
 

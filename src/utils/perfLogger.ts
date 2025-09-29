@@ -8,7 +8,8 @@ declare global {
     var __LEGEND_PERF_LAST_MARKS__: Record<string, number> | undefined;
 }
 
-const lastMarks = (globalThis.__LEGEND_PERF_LAST_MARKS__ = globalThis.__LEGEND_PERF_LAST_MARKS__ || {});
+const lastMarks = globalThis.__LEGEND_PERF_LAST_MARKS__ ?? {};
+globalThis.__LEGEND_PERF_LAST_MARKS__ = lastMarks;
 
 export const isPerfLoggingEnabled = (): boolean =>
     typeof globalThis.__LEGEND_PERF_LOG__ === "boolean" ? Boolean(globalThis.__LEGEND_PERF_LOG__) : false;

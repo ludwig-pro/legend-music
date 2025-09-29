@@ -2,10 +2,14 @@ import { VibrancyView } from "@fluentui-react-native/vibrancy-view";
 import { AnimatePresence, Motion } from "@legendapp/motion";
 import { observe } from "@legendapp/state";
 import { Show } from "@legendapp/state/react";
+import type { JSX } from "react";
 import { Pressable, StyleSheet } from "react-native";
 import WindowControls from "@/native-modules/WindowControls";
 import { state$ } from "@/systems/State";
 import { perfCount, perfLog } from "@/utils/perfLogger";
+
+type MotionViewProps = Parameters<typeof Motion.View>[0];
+const MotionView = Motion.View as unknown as (props: MotionViewProps) => JSX.Element;
 
 export function TitleBar() {
     perfCount("TitleBar.render");
@@ -27,7 +31,7 @@ export function TitleBar() {
             onHoverOut={onHoverLeave}
         >
             <Show if={state$.titleBarHovered} wrap={AnimatePresence}>
-                <Motion.View
+                <MotionView
                     className="absolute inset-0 border-b border-border-popup"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -40,7 +44,7 @@ export function TitleBar() {
                         material="popover"
                         style={styles.vibrancy}
                     />
-                </Motion.View>
+                </MotionView>
             </Show>
         </Pressable>
     );

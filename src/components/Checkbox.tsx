@@ -42,7 +42,7 @@ export function Checkbox({
 
     return (
         <Button
-            onPress={handlePress}
+            onClick={handlePress}
             className={cn("flex flex-row items-center gap-x-2", disabled && "opacity-50", className)}
             disabled={disabled}
         >

@@ -1,9 +1,8 @@
-import { LegendList } from "@legendapp/list";
+import { LegendList, type LegendListRenderItemProps } from "@legendapp/list";
 import type { Observable, ObservableParam } from "@legendapp/state";
 import { use$, useObservable } from "@legendapp/state/react";
 import type { ReactNode } from "react";
 import { Text, View } from "react-native";
-
 import { DropdownMenu } from "@/components/DropdownMenu";
 import { WithCheckbox } from "@/components/WithCheckbox";
 import { cn } from "@/utils/cn";
@@ -23,7 +22,6 @@ export interface SelectLegendListPropsBase<T> {
     showCaret?: boolean;
     caretPosition?: "right" | "left";
     textClassName?: string;
-    caretClassName?: string;
     maxWidthMatchTrigger?: boolean;
 }
 
@@ -85,7 +83,6 @@ export function SelectLegendListMultiple<T>({
     showCaret = false,
     caretPosition = "right",
     textClassName,
-    caretClassName,
     // maxWidthMatchTrigger = false,
 }: SelectLegendListMultipleProps<T>) {
     const selectedItems = use$<T[]>(selectedItems$);
@@ -108,7 +105,7 @@ export function SelectLegendListMultiple<T>({
         return <WithCheckbox checked={checked}>{renderItem(item, "item")}</WithCheckbox>;
     };
 
-    const renderListItem = ({ item }: { item: T }) => (
+    const renderListItem = ({ item }: LegendListRenderItemProps<T>) => (
         <DropdownMenu.Item key={getItemKey(item)} onSelect={() => handleSelectItem(item)}>
             {withCheckbox ? renderWithCheckbox(item) : renderItem(item, "item")}
         </DropdownMenu.Item>
@@ -136,7 +133,6 @@ export function SelectLegendListMultiple<T>({
                 showCaret={showCaret}
                 caretPosition={caretPosition}
                 textClassName={textClassName}
-                caretClassName={caretClassName}
             >
                 <Text
                     className={cn(

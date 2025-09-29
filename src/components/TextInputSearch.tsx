@@ -1,7 +1,13 @@
 import type { Observable } from "@legendapp/state";
 import { use$ } from "@legendapp/state/react";
 import { forwardRef, memo, useCallback, useImperativeHandle, useRef } from "react";
-import { NativeModules, type NativeSyntheticEvent, type ViewProps, findNodeHandle, requireNativeComponent } from "react-native";
+import {
+    findNodeHandle,
+    NativeModules,
+    type NativeSyntheticEvent,
+    requireNativeComponent,
+    type ViewProps,
+} from "react-native";
 
 interface TextInputSearchNativeProps extends ViewProps {
     placeholder?: string;

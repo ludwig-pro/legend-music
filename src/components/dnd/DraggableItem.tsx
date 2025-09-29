@@ -113,7 +113,7 @@ export const DraggableItem = <T,>({
                 // Find absolute position of the item for portal positioning
                 if (viewRef.current && childMeasurementsRef.current) {
                     // More reliable positioning using element bounds and touch position
-                    viewRef.current.measure((x, y, width, height, pageX, pageY) => {
+                    viewRef.current.measure((_x, _y, _width, _height, pageX, pageY) => {
                         setPortalPosition({
                             left: pageX,
                             top: pageY,
@@ -124,7 +124,7 @@ export const DraggableItem = <T,>({
                 }
             },
 
-            onPanResponderMove: (e: GestureResponderEvent, gestureState) => {
+            onPanResponderMove: (_e: GestureResponderEvent, gestureState) => {
                 // Update the position of the item
                 pan.setValue({
                     x: gestureState.dx,

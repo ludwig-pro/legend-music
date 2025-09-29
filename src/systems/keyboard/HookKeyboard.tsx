@@ -1,6 +1,6 @@
-import { useHookKeyboard } from "@/systems/keyboard/Keyboard";
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { AppState, type AppStateStatus, TextInput } from "react-native";
+import { useHookKeyboard } from "@/systems/keyboard/Keyboard";
 import { perfCount, perfLog } from "@/utils/perfLogger";
 
 export function HookKeyboard() {

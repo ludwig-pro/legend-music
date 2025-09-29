@@ -51,8 +51,7 @@ export const MediaLibraryWindowManager = () => {
                     const width = MEDIA_LIBRARY_WIDTH;
                     const height = Math.max(mainFrame.height, 600);
                     const screen = Dimensions.get("screen");
-                    const fitsOnRight =
-                        mainFrame.x + mainFrame.width + WINDOW_GAP + width <= screen.width;
+                    const fitsOnRight = mainFrame.x + mainFrame.width + WINDOW_GAP + width <= screen.width;
                     const x = fitsOnRight
                         ? mainFrame.x + mainFrame.width + WINDOW_GAP
                         : Math.max(mainFrame.x - WINDOW_GAP - width, 0);

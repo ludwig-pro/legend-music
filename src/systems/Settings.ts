@@ -14,7 +14,7 @@ export interface AppSettings {
     };
     registration: {
         isRegistered: boolean;
-        registrationType?: 'legendkit' | 'standalone';
+        registrationType?: "legendkit" | "standalone";
     };
     uniqueId: string;
     isAuthed: boolean;

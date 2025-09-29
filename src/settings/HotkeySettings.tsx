@@ -1,7 +1,7 @@
 import { use$, useObservable, useObserveEffect, useSelector } from "@legendapp/state/react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
-import { HotkeyMetadata, type HotkeyName, hotkeys$ } from "@/settings/Hotkeys";
+import { HotkeyMetadata, type HotkeyName, hotkeys$ } from "@/systems/hotkeys";
 import { HiddenTextInput } from "@/systems/keyboard/HookKeyboard";
 import { type KeyboardEventCodeHotkey, keysPressed$ } from "@/systems/keyboard/Keyboard";
 import { KeyCodes, KeyText } from "@/systems/keyboard/KeyboardManager";

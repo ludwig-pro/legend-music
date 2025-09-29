@@ -116,7 +116,7 @@ export function CustomSlider({
                 disabled={disabled}
                 className="flex-1 justify-center"
             >
-                <View className="h-1 bg-white/20 rounded-full">
+                <View className="h-1 bg-white/20 rounded-full" style={{ backgroundColor: maximumTrackTintColor }}>
                     {/* Progress track */}
                     <Animated.View className="h-full rounded-full" style={trackAnimatedStyle} />
                     {/* Vertical line thumb */}

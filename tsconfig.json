@@ -1,6 +1,8 @@
 {
   "extends": "@react-native/typescript-config/tsconfig.json",
   "compilerOptions": {
+    "skipLibCheck": true,
+    "lib": ["esnext", "dom"],
     "paths": {
       "@legend-kit/*": [
         "./src/legend-kit/*"
@@ -9,5 +11,11 @@
         "./src/*"
       ]
     }
-  }
+  },
+  "include": [
+    "src/**/*",
+    "__tests__/**/*",
+    "scripts/**/*",
+    "nativewind-env.d.ts"
+  ]
 }
