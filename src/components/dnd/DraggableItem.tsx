@@ -233,7 +233,7 @@ export const DraggableItem = <T,>({
                                 width: childMeasurementsRef.current.width + 2,
                                 height: childMeasurementsRef.current.height + 2,
                                 transform: [{ translateX: pan.x }, { translateY: pan.y }],
-                                ...ShadowDropdown,
+                                // ...ShadowDropdown,
                             },
                         ]}
                     >
