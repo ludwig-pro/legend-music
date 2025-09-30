@@ -11,18 +11,23 @@ import { playlistNavigationState$ } from "@/state/playlistNavigationState";
 import KeyboardManager, { KeyCodes } from "@/systems/keyboard/KeyboardManager";
 import type { LibraryItem } from "@/systems/LibraryState";
 import { library$ } from "@/systems/LibraryState";
-import type { LocalTrack } from "@/systems/LocalMusicState";
+import type { LocalPlaylist, LocalTrack } from "@/systems/LocalMusicState";
 import { cn } from "@/utils/cn";
 
 interface PlaylistSelectorSearchDropdownProps {
     tracks: LocalTrack[];
+    playlists: LocalPlaylist[];
     onSelectTrack: (track: LocalTrack, action: "enqueue" | "play-next") => void;
     onSelectLibraryItem?: (item: LibraryItem, action: "enqueue" | "play-next") => void;
+    onSelectPlaylist?: (playlist: LocalPlaylist) => void;
     onOpenChange?: (open: boolean) => void;
 }
 
 export const PlaylistSelectorSearchDropdown = forwardRef<DropdownMenuRootRef, PlaylistSelectorSearchDropdownProps>(
-    function PlaylistSelectorSearchDropdown({ tracks, onSelectTrack, onSelectLibraryItem, onOpenChange }, ref) {
+    function PlaylistSelectorSearchDropdown(
+        { tracks, playlists, onSelectTrack, onSelectLibraryItem, onSelectPlaylist, onOpenChange },
+        ref,
+    ) {
         const searchQuery$ = useObservable("");
         const searchQuery = use$(searchQuery$);
         const isOpen$ = useObservable(false);
@@ -48,7 +53,10 @@ export const PlaylistSelectorSearchDropdown = forwardRef<DropdownMenuRootRef, Pl
             };
         }, [effectiveWindowWidth]);
 
-        type SearchResult = { type: "track"; item: LocalTrack } | { type: "library"; item: LibraryItem };
+        type SearchResult =
+            | { type: "track"; item: LocalTrack }
+            | { type: "library"; item: LibraryItem }
+            | { type: "playlist"; item: LocalPlaylist };
 
         const searchResults = useMemo(() => {
             if (!trimmedQuery) {
@@ -57,6 +65,11 @@ export const PlaylistSelectorSearchDropdown = forwardRef<DropdownMenuRootRef, Pl
 
             const lowerQuery = trimmedQuery.toLowerCase();
             const results: SearchResult[] = [];
+
+            const matchingPlaylists = playlists
+                .filter((playlist) => playlist.name.toLowerCase().includes(lowerQuery))
+                .slice(0, 5)
+                .map((playlist): SearchResult => ({ type: "playlist", item: playlist }));
 
             // Search tracks
             const matchingTracks = tracks
@@ -82,12 +95,13 @@ export const PlaylistSelectorSearchDropdown = forwardRef<DropdownMenuRootRef, Pl
                 .map((artist): SearchResult => ({ type: "library", item: artist }));
 
             // Combine results: albums first, then artists, then tracks
+            results.push(...matchingPlaylists);
             results.push(...matchingAlbums);
             results.push(...matchingArtists);
             results.push(...matchingTracks);
 
             return results.slice(0, 20);
-        }, [tracks, library.albums, library.artists, trimmedQuery]);
+        }, [tracks, playlists, library.albums, library.artists, trimmedQuery]);
 
         useEffect(() => {
             if (!isOpen) {
@@ -149,10 +163,12 @@ export const PlaylistSelectorSearchDropdown = forwardRef<DropdownMenuRootRef, Pl
                     onSelectTrack(result.item, action);
                 } else if (result.type === "library") {
                     onSelectLibraryItem?.(result.item, action);
+                } else if (result.type === "playlist") {
+                    onSelectPlaylist?.(result.item);
                 }
                 handleOpenChange(false);
             },
-            [handleOpenChange, onSelectTrack, onSelectLibraryItem],
+            [handleOpenChange, onSelectLibraryItem, onSelectPlaylist, onSelectTrack],
         );
 
         useEffect(() => {
@@ -255,13 +271,11 @@ export const PlaylistSelectorSearchDropdown = forwardRef<DropdownMenuRootRef, Pl
                                     <View style={{ maxHeight: 256 }}>
                                         <LegendList
                                             data={searchResults}
-                                            keyExtractor={(result) =>
-                                                result.type === "track" ? result.item.id : result.item.id
-                                            }
+                                            keyExtractor={(result) => `${result.type}-${result.item.id}`}
                                             style={{ maxHeight: 256 }}
                                             extraData={{ highlightedIndex }}
                                             renderItem={({ item: result, index }) => {
-                                                const key = result.type === "track" ? result.item.id : result.item.id;
+                                                const key = `${result.type}-${result.item.id}`;
                                                 return (
                                                     <DropdownMenu.Item
                                                         key={key}
@@ -284,7 +298,7 @@ export const PlaylistSelectorSearchDropdown = forwardRef<DropdownMenuRootRef, Pl
                                                                     handleSearchResultAction(result, action);
                                                                 }}
                                                             />
-                                                        ) : (
+                                                        ) : result.type === "library" ? (
                                                             <View className="flex-row items-center px-3 py-2">
                                                                 <View className="mr-3 w-8 h-8 bg-white/10 rounded flex-row items-center justify-center">
                                                                     <Text className="text-white/70 text-xs font-medium">
@@ -299,6 +313,24 @@ export const PlaylistSelectorSearchDropdown = forwardRef<DropdownMenuRootRef, Pl
                                                                         {result.item.type === "album"
                                                                             ? `Album • ${result.item.trackCount} tracks`
                                                                             : `Artist • ${result.item.trackCount} tracks`}
+                                                                    </Text>
+                                                                </View>
+                                                            </View>
+                                                        ) : (
+                                                            <View className="flex-row items-center px-3 py-2">
+                                                                <View className="mr-3 w-8 h-8 bg-white/10 rounded flex-row items-center justify-center">
+                                                                    <Text className="text-white/70 text-xs font-medium">
+                                                                        PL
+                                                                    </Text>
+                                                                </View>
+                                                                <View className="flex-1">
+                                                                    <Text className="text-white text-sm font-medium">
+                                                                        {result.item.name}
+                                                                    </Text>
+                                                                    <Text className="text-white/60 text-xs">
+                                                                        {result.item.trackCount === 1
+                                                                            ? "1 track"
+                                                                            : `${result.item.trackCount} tracks`}
                                                                     </Text>
                                                                 </View>
                                                             </View>

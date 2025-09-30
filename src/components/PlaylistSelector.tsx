@@ -11,7 +11,7 @@ import { showSaveDialog } from "@/native-modules/FileDialog";
 import { useOnHotkeys } from "@/systems/keyboard/Keyboard";
 import type { LibraryItem } from "@/systems/LibraryState";
 import { library$, libraryUI$ } from "@/systems/LibraryState";
-import type { LocalTrack } from "@/systems/LocalMusicState";
+import type { LocalPlaylist, LocalTrack } from "@/systems/LocalMusicState";
 import { loadLocalPlaylists, localMusicState$, setCurrentPlaylist } from "@/systems/LocalMusicState";
 import { stateSaved$ } from "@/systems/State";
 import { ensureCacheDirectory, getCacheDirectory } from "@/utils/cacheDirectories";
@@ -46,7 +46,7 @@ interface PlaylistOption {
     id: string;
     name: string;
     count: number;
-    type: "all-files" | "saved";
+    type: "local-files" | "saved";
     trackPaths?: string[];
 }
 
@@ -60,10 +60,10 @@ export function PlaylistSelector() {
 
     const localFilesPlaylist = useMemo<PlaylistOption>(
         () => ({
-            id: "ALL_FILES",
-            name: "All Files",
+            id: "LOCAL_FILES",
+            name: "Local Files",
             count: localMusicState.tracks.length,
-            type: "all-files",
+            type: "local-files",
         }),
         [localMusicState.tracks.length],
     );
@@ -116,7 +116,7 @@ export function PlaylistSelector() {
 
         console.log("Navigating to playlist:", playlistId, playlist.name);
 
-        if (playlist.type === "all-files") {
+        if (playlist.type === "local-files") {
             const tracks = localMusicState.tracks;
             if (tracks.length > 0) {
                 localAudioControls.queue.replace(tracks, { startIndex: 0, playImmediately: true });
@@ -181,6 +181,32 @@ export function PlaylistSelector() {
 
         localAudioControls.queue.append(tracksToAdd);
     };
+
+    const handleSearchPlaylistSelect = useCallback(
+        (playlist: LocalPlaylist) => {
+            perfLog("PlaylistSelector.handleSearchPlaylistSelect", { playlistId: playlist.id });
+
+            const trackPaths = playlist.trackPaths ?? [];
+            const resolvedTracks = trackPaths
+                .map((path) => tracksByPath.get(path))
+                .filter((track): track is LocalTrack => track !== undefined);
+
+            if (resolvedTracks.length > 0) {
+                localAudioControls.queue.replace(resolvedTracks, { startIndex: 0, playImmediately: true });
+            } else {
+                console.warn(`No tracks resolved for playlist ${playlist.name}`);
+                localAudioControls.queue.clear();
+            }
+
+            const missingCount = trackPaths.length - resolvedTracks.length;
+            if (missingCount > 0) {
+                console.warn(`Playlist ${playlist.name} is missing ${missingCount} tracks from the library`);
+            }
+
+            setCurrentPlaylist(playlist.id, "file");
+        },
+        [tracksByPath],
+    );
 
     const handleSaveQueue = useCallback(async () => {
         perfLog("PlaylistSelector.handleSaveQueue");
@@ -290,8 +316,10 @@ export function PlaylistSelector() {
                 <PlaylistSelectorSearchDropdown
                     ref={dropdownMenuRef}
                     tracks={localMusicState.tracks}
+                    playlists={localMusicState.playlists}
                     onSelectTrack={handleTrackSelect}
                     onSelectLibraryItem={handleLibraryItemSelect}
+                    onSelectPlaylist={handleSearchPlaylistSelect}
                 />
                 <Button
                     icon="square.and.arrow.down"
