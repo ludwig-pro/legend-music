@@ -180,32 +180,37 @@ function LibraryTree({ searchQuery }: LibraryTreeProps) {
 
     const normalizedQuery = searchQuery.trim().toLowerCase();
 
-    const collectionItems = useMemo(() => {
-        let items: LibraryItem[];
-        switch (selectedCollection) {
-            case "albums":
-                items = albums;
-                break;
-            case "playlists":
-                items = [allSongsItem, ...playlists];
-                break;
-            default:
-                items = artists;
-                break;
-        }
-
-        if (!normalizedQuery) {
-            return items;
-        }
-
-        return items.filter((item) => {
-            if (item.id === allSongsItem.id) {
-                return true;
+    const computeCollectionItems = useCallback(
+        (collection: "artists" | "albums" | "playlists") => {
+            let items: LibraryItem[];
+            switch (collection) {
+                case "albums":
+                    items = albums;
+                    break;
+                case "playlists":
+                    items = [allSongsItem, ...playlists];
+                    break;
+                default:
+                    items = artists;
+                    break;
             }
 
-            return item.name.toLowerCase().includes(normalizedQuery);
-        });
-    }, [albums, allSongsItem, artists, normalizedQuery, playlists, selectedCollection]);
+            if (!normalizedQuery) {
+                return items;
+            }
+
+            return items.filter((item) => {
+                if (item.id === allSongsItem.id) {
+                    return true;
+                }
+
+                return item.name.toLowerCase().includes(normalizedQuery);
+            });
+        },
+        [albums, allSongsItem, artists, normalizedQuery, playlists],
+    );
+
+    const collectionItems = useMemo(() => computeCollectionItems(selectedCollection), [computeCollectionItems, selectedCollection]);
 
     useEffect(() => {
         const collectionTypeMap: Record<string, LibraryItem["type"][]> = {
@@ -223,9 +228,19 @@ function LibraryTree({ searchQuery }: LibraryTreeProps) {
         }
     }, [collectionItems, normalizedQuery, selectedCollection, selectedItem]);
 
-    const handleCollectionChange = useCallback((collection: "artists" | "albums" | "playlists") => {
-        libraryUI$.selectedCollection.set(collection);
-    }, []);
+    const handleCollectionChange = useCallback(
+        (collection: "artists" | "albums" | "playlists") => {
+            libraryUI$.selectedCollection.set(collection);
+            if (normalizedQuery) {
+                return;
+            }
+
+            const itemsForCollection = computeCollectionItems(collection);
+            const nextSelection = itemsForCollection[0] ?? null;
+            libraryUI$.selectedItem.set(nextSelection);
+        },
+        [computeCollectionItems, normalizedQuery],
+    );
 
     const renderRow = useCallback(
         ({ item }: { item: LibraryItem }) => {

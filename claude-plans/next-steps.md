@@ -7,5 +7,5 @@
 1. Try to fix album art
 2. Add tooltips with button description and hotkey
 3. Media Library should have a recently added feature or sort by date or something
-[] Selecting a tab in @MediaLibrary.tsx is not immediately updating the TrackList.
+[x] Selecting a tab in @MediaLibrary.tsx is not immediately updating the TrackList.
 [] Playlist selector
