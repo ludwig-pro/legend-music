@@ -129,6 +129,12 @@ export function CustomSlider({
         isHovered$.set(false);
     };
 
+    const handlePress = (event: GestureResponderEvent) => {
+        perfLog("CustomSlider.handlePress", { disabled: isDisabled$.get() });
+        if (isDisabled$.get()) return;
+        updateValueFromLocation(event.nativeEvent.locationX);
+    };
+
     // Animated style for the thumb
     const thumbAnimatedStyle = useAnimatedStyle(() => {
         const height = thumbHeight.value;
@@ -151,6 +157,7 @@ export function CustomSlider({
             <Pressable
                 onHoverIn={handleHoverIn}
                 onHoverOut={handleHoverOut}
+                onPress={handlePress}
                 disabled={isDisabled}
                 className="flex-1 justify-center"
             >
