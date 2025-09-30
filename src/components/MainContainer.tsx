@@ -7,19 +7,20 @@ import { Playlist } from "@/components/Playlist";
 import { PlaylistSelector } from "@/components/PlaylistSelector";
 import { Unregistered } from "@/components/Unregistered";
 import { playlistNavigationState$ } from "@/state/playlistNavigationState";
+import { useOnHotkeys } from "@/systems/keyboard/Keyboard";
 import { perfCount, perfLog } from "@/utils/perfLogger";
 
 export function MainContainer() {
     perfCount("MainContainer.render");
-    const _playlistNavigation = use$(playlistNavigationState$);
+    // const _playlistNavigation = use$(playlistNavigationState$);
 
-    // useOnHotkeys({
-    //     PlayPause: localAudioControls.togglePlayPause,
-    //     NextTrack: localAudioControls.playNext,
-    //     PreviousTrack: localAudioControls.playPrevious,
-    //     // Only handle space bar globally when no track is selected in the playlist
-    //     PlayPauseSpace: !playlistNavigation.hasSelection ? localAudioControls.togglePlayPause : undefined,
-    // });
+    useOnHotkeys({
+        // PlayPause: localAudioControls.togglePlayPause,
+        // NextTrack: localAudioControls.playNext,
+        // PreviousTrack: localAudioControls.playPrevious,
+        // Only handle space bar globally when no track is selected in the playlist
+        PlayPauseSpace: localAudioControls.togglePlayPause,
+    });
 
     perfLog("MainContainer.hotkeys", {
         activeTrack: localAudioControls.getCurrentState().currentTrack?.title,

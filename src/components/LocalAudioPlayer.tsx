@@ -477,11 +477,13 @@ function loadPlaylist(playlist: LocalTrack[], startIndex = 0, options: QueueUpda
 
 async function togglePlayPause(): Promise<void> {
     perfLog("LocalAudioControls.togglePlayPause", { isPlaying: localPlayerState$.isPlaying.get() });
-    const isPlaying = localPlayerState$.isPlaying.get();
-    if (isPlaying) {
-        await pause();
-    } else {
-        await play();
+    if (localPlayerState$.currentTrack.get()) {
+        const isPlaying = localPlayerState$.isPlaying.get();
+        if (isPlaying) {
+            await pause();
+        } else {
+            await play();
+        }
     }
 }
 
