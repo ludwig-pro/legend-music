@@ -20,6 +20,14 @@ export interface LocalTrack {
     thumbnail?: string;
 }
 
+export interface LocalPlaylist {
+    id: string;
+    name: string;
+    filePath: string;
+    trackPaths: string[];
+    trackCount: number;
+}
+
 export interface LocalMusicSettings {
     libraryPaths: string[];
     autoScanOnStart: boolean;
@@ -33,6 +41,7 @@ export interface LocalMusicState {
     scanTotal: number;
     error: string | null;
     isLocalFilesSelected: boolean;
+    playlists: LocalPlaylist[];
 }
 
 // Settings persistence
@@ -53,6 +62,7 @@ export const localMusicState$ = observable<LocalMusicState>({
     scanTotal: 0,
     error: null,
     isLocalFilesSelected: false,
+    playlists: [],
 });
 
 const ARTWORK_CACHE_VERSION = "v2";
@@ -563,6 +573,57 @@ export async function scanLocalMusic(): Promise<void> {
     }
 }
 
+export async function loadLocalPlaylists(): Promise<void> {
+    perfLog("LocalMusic.loadLocalPlaylists.start");
+
+    const playlistDirectory = getCacheDirectory("playlists");
+    ensureCacheDirectory(playlistDirectory);
+
+    let entries: (Directory | File)[] = [];
+    try {
+        entries = playlistDirectory.list();
+    } catch (error) {
+        console.error("Failed to list playlists directory:", error);
+        localMusicState$.playlists.set([]);
+        return;
+    }
+
+    const playlists: LocalPlaylist[] = [];
+
+    for (const entry of entries) {
+        if (!(entry instanceof File)) {
+            continue;
+        }
+
+        if (!entry.name.toLowerCase().endsWith(".m3u")) {
+            continue;
+        }
+
+        try {
+            const content = entry.text();
+            const trackPaths = content
+                .split(/\r?\n/)
+                .map((line) => line.trim())
+                .filter((line) => line.length > 0 && !line.startsWith("#"));
+
+            playlists.push({
+                id: entry.uri,
+                name: entry.name.replace(/\.m3u$/i, ""),
+                filePath: entry.uri,
+                trackPaths,
+                trackCount: trackPaths.length,
+            });
+        } catch (error) {
+            console.warn(`Failed to read playlist ${entry.uri}:`, error);
+        }
+    }
+
+    playlists.sort((a, b) => a.name.localeCompare(b.name));
+
+    localMusicState$.playlists.set(playlists);
+    perfLog("LocalMusic.loadLocalPlaylists.end", { total: playlists.length });
+}
+
 // Set current playlist selection
 export function setCurrentPlaylist(playlistId: string, playlistType: "file"): void {
     localMusicState$.isLocalFilesSelected.set(true);
@@ -593,6 +654,10 @@ export function initializeLocalMusic(): void {
         localMusicState$.isLocalFilesSelected.set(true);
         console.log("Restored Local Files playlist selection on startup");
     }
+
+    loadLocalPlaylists().catch((error) => {
+        console.error("Failed to load local playlists:", error);
+    });
 
     if (settings.autoScanOnStart) {
         console.log("Auto-scanning local music on startup...");
