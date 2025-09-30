@@ -112,7 +112,7 @@ export function usePlaylistSelection<T extends { isSeparator?: boolean }>(
         return Boolean(keysPressed$.get()[modifier]);
     }, []);
 
-    const shouldHandleHotkeys = useCallback(() => {
+    const canHandleHotkeys = useCallback(() => {
         if (itemsLength === 0) {
             return false;
         }
@@ -121,12 +121,20 @@ export function usePlaylistSelection<T extends { isSeparator?: boolean }>(
             return false;
         }
 
+        return true;
+    }, [itemsLength]);
+
+    const shouldHandleHotkeys = useCallback(() => {
+        if (!canHandleHotkeys()) {
+            return false;
+        }
+
         if (state$.isDropdownOpen.get()) {
             return false;
         }
 
         return true;
-    }, [itemsLength]);
+    }, [canHandleHotkeys]);
 
     const getPrimarySelectionIndex = useCallback(() => {
         const focusIndex = selectionFocus$.get();
@@ -313,7 +321,7 @@ export function usePlaylistSelection<T extends { isSeparator?: boolean }>(
     }, [getPrimarySelectionIndex, handleTrackClick, itemsLength, shouldHandleHotkeys]);
 
     const handleDeleteHotkey = useCallback(() => {
-        if (!onDeleteSelection || !shouldHandleHotkeys()) {
+        if (!onDeleteSelection || !canHandleHotkeys()) {
             return;
         }
 
@@ -325,7 +333,7 @@ export function usePlaylistSelection<T extends { isSeparator?: boolean }>(
         const indices = Array.from(currentSelection).sort((a, b) => a - b);
         onDeleteSelection(indices);
         clearSelection();
-    }, [clearSelection, onDeleteSelection, selectedIndices$, shouldHandleHotkeys]);
+    }, [canHandleHotkeys, clearSelection, onDeleteSelection, selectedIndices$]);
 
     const selectAllItems = useCallback(() => {
         if (!shouldHandleHotkeys()) {
