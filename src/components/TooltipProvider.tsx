@@ -87,7 +87,14 @@ export function useTooltip(): TooltipContextValue {
     const context = useContext(TooltipContext);
 
     if (!context) {
-        throw new Error("useTooltip must be used within a TooltipProvider");
+        if (__DEV__) {
+            console.warn("useTooltip called outside of TooltipProvider; falling back to no-op handlers.");
+        }
+
+        return {
+            showTooltip: () => {},
+            hideTooltip: () => {},
+        };
     }
 
     return context;
