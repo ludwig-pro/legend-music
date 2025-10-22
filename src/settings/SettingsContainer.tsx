@@ -10,6 +10,7 @@ import { LibrarySettings } from "@/settings/LibrarySettings";
 import { OpenSourceSettings } from "@/settings/OpenSourceSettings";
 import { state$ } from "@/systems/State";
 import { ThemeProvider } from "@/theme/ThemeProvider";
+import { TooltipProvider } from "@/components/TooltipProvider";
 
 export type SettingsPage = "general" | "library" | "account" | "open-source";
 
@@ -45,10 +46,12 @@ export const SettingsContainer = () => {
         <VibrancyView blendingMode="behindWindow" material="sidebar" style={styles.vibrancy}>
             <ThemeProvider>
                 <PortalProvider>
-                    <View className="flex flex-1 flex-row">
-                        <Sidebar items={SETTING_PAGES} selectedItem$={selectedItem$} width={140} className="py-2" />
-                        <View className="flex-1 bg-background-primary">{renderContent()}</View>
-                    </View>
+                    <TooltipProvider>
+                        <View className="flex flex-1 flex-row">
+                            <Sidebar items={SETTING_PAGES} selectedItem$={selectedItem$} width={140} className="py-2" />
+                            <View className="flex-1 bg-background-primary">{renderContent()}</View>
+                        </View>
+                    </TooltipProvider>
                 </PortalProvider>
             </ThemeProvider>
         </VibrancyView>

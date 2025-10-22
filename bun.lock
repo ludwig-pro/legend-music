@@ -7,7 +7,7 @@
         "@fluentui-react-native/callout": "^0.27.3",
         "@fluentui-react-native/vibrancy-view": "^0.3.0",
         "@gorhom/portal": "^1.0.14",
-        "@legendapp/list": "^2.0.7",
+        "@legendapp/list": "^2.0.14",
         "@legendapp/motion": "^2.4.0",
         "@legendapp/state": "^3.0.0-beta.30",
         "clsx": "^2.1.1",
@@ -460,7 +460,7 @@
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.25", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-vNk6aEwybGtawWmy/PzwnGDOjCkLWSD2wqvjGGAgOAwCGWySYXfYoxt00IJkTF+8Lb57DwOb3Aa0o9CApepiYQ=="],
 
-    "@legendapp/list": ["@legendapp/list@2.0.7", "", { "dependencies": { "use-sync-external-store": "^1.5.0" }, "peerDependencies": { "react": "*", "react-native": "*" } }, "sha512-EkzspHHfj5sVFUrdG6E4//azyyps05tgGU37J8LfBhywGd/rOndnnTz7NrWh1IxYo3uQDw3nMrtyWSB5t1u/5A=="],
+    "@legendapp/list": ["@legendapp/list@2.0.14", "", { "dependencies": { "use-sync-external-store": "^1.5.0" }, "peerDependencies": { "react": "*", "react-native": "*" } }, "sha512-16r4zNrjm9GrydHwdCJxZWnvc20BLo/9SOwPI3ACTFnuzuek9Xe9jUd3wvrIB193sjzuoZOyIZOSsGuZSxqTtQ=="],
 
     "@legendapp/motion": ["@legendapp/motion@2.4.0", "", { "dependencies": { "@legendapp/tools": "2.0.1" }, "peerDependencies": { "nativewind": "*", "react": ">=16", "react-native": "*" } }, "sha512-AAYpRLGvxGD5hIGl9sVHyoUufr66zoH82PuxYcKiPSMdCBI3jwZFWh6CuHjV1leRKVIRk2py1rSvIVabG8eqcw=="],
 
