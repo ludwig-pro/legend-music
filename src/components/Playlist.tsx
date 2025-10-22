@@ -1,6 +1,6 @@
 import { LegendList } from "@legendapp/list";
 import { use$ } from "@legendapp/state/react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { localAudioControls, localPlayerState$, queue$ } from "@/components/LocalAudioPlayer";
 import { type TrackData, TrackItem } from "@/components/TrackItem";
@@ -10,6 +10,7 @@ import type { LocalTrack } from "@/systems/LocalMusicState";
 import { localMusicState$ } from "@/systems/LocalMusicState";
 import { settings$ } from "@/systems/Settings";
 import { perfCount, perfLog } from "@/utils/perfLogger";
+import { cn } from "@/utils/cn";
 import {
     DraggableItem,
     type DraggedItem,
@@ -17,7 +18,6 @@ import {
     MEDIA_LIBRARY_DRAG_ZONE_ID,
     PLAYLIST_DRAG_ZONE_ID,
     type DragData,
-    type MediaLibraryDragData,
     type PlaylistDragData,
 } from "./dnd";
 
@@ -27,6 +27,11 @@ type PlaylistTrackWithSuggestions = TrackData & {
     isSeparator?: boolean;
 };
 
+interface DropFeedback {
+    type: "success" | "warning";
+    message: string;
+}
+
 export function Playlist() {
     perfCount("Playlist.render");
     const localMusicState = use$(localMusicState$);
@@ -35,6 +40,8 @@ export function Playlist() {
     const isPlayerActive = use$(localPlayerState$.isPlaying);
     const playlistStyle = use$(settings$.general.playlistStyle);
     const [isDragOver, setIsDragOver] = useState(false);
+    const [dropFeedback, setDropFeedback] = useState<DropFeedback | null>(null);
+    const feedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Render the active playback queue
     const playlist: PlaylistTrackWithSuggestions[] = useMemo(
@@ -73,6 +80,29 @@ export function Playlist() {
         items: playlist,
         onDeleteSelection: handleDeleteSelection,
     });
+
+    const showDropFeedback = useCallback(
+        (feedback: DropFeedback) => {
+            setDropFeedback(feedback);
+            if (feedbackTimeoutRef.current) {
+                clearTimeout(feedbackTimeoutRef.current);
+            }
+            feedbackTimeoutRef.current = setTimeout(() => {
+                setDropFeedback(null);
+                feedbackTimeoutRef.current = null;
+            }, 3000);
+        },
+        [setDropFeedback],
+    );
+
+    useEffect(
+        () => () => {
+            if (feedbackTimeoutRef.current) {
+                clearTimeout(feedbackTimeoutRef.current);
+            }
+        },
+        [],
+    );
 
     const allowPlaylistDrop = useCallback((item: DraggedItem<DragData>) => {
         if (item.data?.type === "playlist-track") {
@@ -132,13 +162,30 @@ export function Playlist() {
                 });
 
                 if (tracksToInsert.length === 0) {
+                    showDropFeedback({
+                        type: "warning",
+                        message: "All dropped tracks are already in the queue.",
+                    });
                     return;
                 }
 
+                const duplicatesSkipped = item.data.tracks.length - tracksToInsert.length;
                 localAudioControls.queue.insertAt(boundedTarget, tracksToInsert);
+
+                if (duplicatesSkipped > 0) {
+                    showDropFeedback({
+                        type: "warning",
+                        message: `Added ${formatTrackCount(tracksToInsert.length)} (skipped ${formatTrackCount(duplicatesSkipped)} already in queue).`,
+                    });
+                } else {
+                    showDropFeedback({
+                        type: "success",
+                        message: `Added ${formatTrackCount(tracksToInsert.length)} to the queue.`,
+                    });
+                }
             }
         },
-        [playlist, queueTracks, syncSelectionAfterReorder],
+        [playlist, queueTracks, showDropFeedback, syncSelectionAfterReorder],
     );
 
     const handleTrackDoubleClick = (index: number) => {
@@ -246,6 +293,27 @@ export function Playlist() {
             onDrop={handleDrop}
             allowedFileTypes={["mp3", "wav", "m4a", "aac", "flac"]}
         >
+            {dropFeedback ? (
+                <View className="pointer-events-none absolute top-3 right-3 z-20">
+                    <View
+                        className={cn(
+                            "px-3 py-2 rounded-md border shadow-lg backdrop-blur-md",
+                            dropFeedback.type === "warning"
+                                ? "bg-yellow-500/20 border-yellow-400/70"
+                                : "bg-emerald-500/20 border-emerald-400/60",
+                        )}
+                    >
+                        <Text
+                            className={cn(
+                                "text-xs font-medium",
+                                dropFeedback.type === "warning" ? "text-yellow-50" : "text-emerald-50",
+                            )}
+                        >
+                            {dropFeedback.message}
+                        </Text>
+                    </View>
+                </View>
+            ) : null}
             {msg ? (
                 <View className="flex-1 items-center justify-center">
                     <Text className="text-white/60 text-sm">{msg}</Text>
@@ -311,6 +379,10 @@ const styles = StyleSheet.create({
         paddingVertical: 2,
     },
 });
+
+function formatTrackCount(count: number): string {
+    return `${count} track${count === 1 ? "" : "s"}`;
+}
 
 interface PlaylistDropZoneProps {
     position: number;
