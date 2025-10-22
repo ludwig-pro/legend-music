@@ -1,25 +1,31 @@
 import { LegendList } from "@legendapp/list";
 import { use$ } from "@legendapp/state/react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { type ElementRef, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { findNodeHandle, StyleSheet, Text, UIManager, View } from "react-native";
 import { localAudioControls, localPlayerState$, queue$ } from "@/components/LocalAudioPlayer";
 import { type TrackData, TrackItem } from "@/components/TrackItem";
 import { usePlaylistSelection } from "@/hooks/usePlaylistSelection";
-import { DragDropView, type NativeDragTrack, type TrackDragEvent } from "@/native-modules/DragDropView";
+import {
+    DragDropView,
+    type NativeDragTrack,
+    type TrackDragEnterEvent,
+    type TrackDragEvent,
+} from "@/native-modules/DragDropView";
 import type { LocalTrack } from "@/systems/LocalMusicState";
 import { localMusicState$ } from "@/systems/LocalMusicState";
 import { settings$ } from "@/systems/Settings";
-import { perfCount, perfLog } from "@/utils/perfLogger";
 import { cn } from "@/utils/cn";
+import { perfCount, perfLog } from "@/utils/perfLogger";
 import {
+    type DragData,
     DraggableItem,
     type DraggedItem,
     DroppableZone,
     MEDIA_LIBRARY_DRAG_ZONE_ID,
     PLAYLIST_DRAG_ZONE_ID,
-    type DragData,
     type PlaylistDragData,
 } from "./dnd";
+import { useDragDrop } from "./dnd/DragDropContext";
 
 type PlaylistTrackWithSuggestions = TrackData & {
     queueEntryId: string;
@@ -39,12 +45,14 @@ export function Playlist() {
     const currentTrackIndex = use$(localPlayerState$.currentIndex);
     const isPlayerActive = use$(localPlayerState$.isPlaying);
     const playlistStyle = use$(settings$.general.playlistStyle);
+    const queueLength = queueTracks.length;
     const [isDragOver, setIsDragOver] = useState(false);
-    const [isTrackDragOver, setIsTrackDragOver] = useState(false);
-    const [trackDropIndicatorIndex, setTrackDropIndicatorIndex] = useState<number | null>(null);
     const [dropFeedback, setDropFeedback] = useState<DropFeedback | null>(null);
     const feedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const dropAreaHeightRef = useRef(0);
+    const dropAreaRef = useRef<ElementRef<typeof DragDropView>>(null);
+    const dropAreaWindowRectRef = useRef({ x: 0, y: 0, width: 0, height: 0 });
+    const lastDropIndexRef = useRef<number>(queueLength);
+    const { draggedItem$, activeDropZone$, checkDropZones } = useDragDrop();
 
     // Render the active playback queue
     const playlist: PlaylistTrackWithSuggestions[] = useMemo(
@@ -107,6 +115,49 @@ export function Playlist() {
         [],
     );
 
+    const updateDropAreaWindowRect = useCallback(() => {
+        const node = dropAreaRef.current;
+        if (!node) {
+            return;
+        }
+
+        const updateRect = (x: number, y: number, width: number, height: number) => {
+            dropAreaWindowRectRef.current = { x, y, width, height };
+        };
+
+        if ("measureInWindow" in node && typeof node.measureInWindow === "function") {
+            node.measureInWindow((x, y, width, height) => {
+                updateRect(x, y, width, height);
+            });
+            return;
+        }
+
+        const handle = findNodeHandle(node);
+        if (handle != null) {
+            UIManager.measure(handle, (_x, _y, width, height, pageX, pageY) => {
+                updateRect(pageX, pageY, width, height);
+            });
+        }
+    }, []);
+
+    const toWindowCoordinates = useCallback((location: { x: number; y: number }) => {
+        const rect = dropAreaWindowRectRef.current;
+        const clampedX = Math.max(0, Math.min(location.x, rect.width));
+        const clampedY = Math.max(0, Math.min(location.y, rect.height));
+        return {
+            x: rect.x + clampedX,
+            y: rect.y + clampedY,
+        };
+    }, []);
+
+    useEffect(() => {
+        updateDropAreaWindowRect();
+    }, [updateDropAreaWindowRect, playlist.length]);
+
+    useEffect(() => {
+        lastDropIndexRef.current = Math.min(lastDropIndexRef.current, queueLength);
+    }, [queueLength]);
+
     const allowPlaylistDrop = useCallback((item: DraggedItem<DragData>) => {
         if (item.data?.type === "playlist-track") {
             return true;
@@ -119,24 +170,6 @@ export function Playlist() {
         return false;
     }, []);
 
-    const computeDropIndexFromLocation = useCallback(
-        (locationY: number) => {
-            const height = dropAreaHeightRef.current;
-            const length = playlist.length;
-
-            if (height <= 0 || length === 0) {
-                return queueTracks.length;
-            }
-
-            const clampedY = Math.min(Math.max(locationY, 0), height);
-            const distanceFromTop = height - clampedY;
-            const ratio = height > 0 ? distanceFromTop / height : 1;
-            const index = Math.round(ratio * length);
-            return Math.max(0, Math.min(index, queueTracks.length));
-        },
-        [playlist.length, queueTracks.length],
-    );
-
     const handleDropAtPosition = useCallback(
         (item: DraggedItem<DragData>, targetPosition: number) => {
             if (item.data?.type === "playlist-track") {
@@ -147,7 +180,10 @@ export function Playlist() {
 
                 const boundedTarget = Math.max(0, Math.min(targetPosition, playlist.length));
 
-                if (sourceIndex === boundedTarget || (sourceIndex < boundedTarget && sourceIndex + 1 === boundedTarget)) {
+                if (
+                    sourceIndex === boundedTarget ||
+                    (sourceIndex < boundedTarget && sourceIndex + 1 === boundedTarget)
+                ) {
                     return;
                 }
 
@@ -199,7 +235,7 @@ export function Playlist() {
                 return;
             }
 
-            const boundedPosition = Math.max(0, Math.min(dropIndex ?? queueTracks.length, queueTracks.length));
+            const boundedPosition = Math.max(0, Math.min(dropIndex ?? queueLength, queueLength));
 
             localAudioControls.queue.insertAt(boundedPosition, filtered);
 
@@ -218,33 +254,65 @@ export function Playlist() {
         [queueTracks, showDropFeedback],
     );
 
-    const handleTrackDragEnter = useCallback(() => {
-        setIsTrackDragOver(true);
-    }, []);
+    const handleTrackDragEnter = useCallback(
+        (event: { nativeEvent: TrackDragEnterEvent }) => {
+            activeDropZone$.set(null);
+            const tracks = convertNativeTracksToLocal(event.nativeEvent.tracks);
+            if (tracks.length === 0) {
+                draggedItem$.set(null);
+                return;
+            }
+
+            draggedItem$.set({
+                id: "media-library-native",
+                sourceZoneId: MEDIA_LIBRARY_DRAG_ZONE_ID,
+                data: {
+                    type: "media-library-tracks",
+                    tracks,
+                },
+            });
+            updateDropAreaWindowRect();
+            requestAnimationFrame(updateDropAreaWindowRect);
+            lastDropIndexRef.current = queueLength;
+        },
+        [activeDropZone$, draggedItem$, queueLength, updateDropAreaWindowRect],
+    );
 
     const handleTrackDragLeave = useCallback(() => {
-        setIsTrackDragOver(false);
-        setTrackDropIndicatorIndex(null);
-    }, []);
+        lastDropIndexRef.current = queueLength;
+        draggedItem$.set(null);
+        activeDropZone$.set(null);
+    }, [activeDropZone$, draggedItem$, queueLength]);
 
     const handleTrackDragHover = useCallback(
         (event: { nativeEvent: TrackDragEvent }) => {
-            const dropIndex = computeDropIndexFromLocation(event.nativeEvent.location.y);
-            setTrackDropIndicatorIndex(dropIndex);
+            const { x, y } = toWindowCoordinates(event.nativeEvent.location);
+            checkDropZones(x, y);
+            const activeDropZoneId = activeDropZone$.get();
+            const dropIndexFromZone = parseDropZonePosition(activeDropZoneId);
+            if (dropIndexFromZone !== null) {
+                lastDropIndexRef.current = dropIndexFromZone;
+            }
         },
-        [computeDropIndexFromLocation],
+        [activeDropZone$, checkDropZones, toWindowCoordinates],
     );
 
     const handleTrackDrop = useCallback(
         (event: { nativeEvent: TrackDragEvent }) => {
-            setIsTrackDragOver(false);
             const { tracks, location } = event.nativeEvent;
-            const dropIndex = computeDropIndexFromLocation(location.y);
-            setTrackDropIndicatorIndex(null);
-            const converted = convertNativeTracksToLocal(tracks as NativeDragTrack[]);
+            const converted = convertNativeTracksToLocal(tracks);
+            const { x, y } = toWindowCoordinates(location);
+            checkDropZones(x, y);
+            const activeDropZoneId = activeDropZone$.get();
+            const zoneIndex = parseDropZonePosition(activeDropZoneId);
+            const fallbackIndex = Math.min(lastDropIndexRef.current, queueLength);
+            const dropIndex = zoneIndex !== null ? zoneIndex : fallbackIndex;
+            draggedItem$.set(null);
+            activeDropZone$.set(null);
+            lastDropIndexRef.current = queueLength;
             handleNativeTracksDrop(converted, dropIndex);
         },
-        [computeDropIndexFromLocation, handleNativeTracksDrop],
+        [activeDropZone$, checkDropZones, draggedItem$, handleNativeTracksDrop, queueLength, toWindowCoordinates],
     );
 
     const handleTrackDoubleClick = (index: number) => {
@@ -337,10 +405,6 @@ export function Playlist() {
 
     const overlayClassName = isDragOver ? "bg-blue-500/20 border-2 border-blue-500 border-dashed" : "";
 
-    const dropIndicatorTop = trackDropIndicatorIndex !== null && playlist.length > 0 && dropAreaHeightRef.current > 0
-        ? (dropAreaHeightRef.current * (trackDropIndicatorIndex / Math.max(playlist.length, 1)))
-        : null;
-
     const msg =
         playlist.length === 0
             ? localMusicState.isScanning
@@ -352,6 +416,7 @@ export function Playlist() {
 
     return (
         <DragDropView
+            ref={dropAreaRef}
             className={cn("flex-1", overlayClassName)}
             onDragEnter={handleDragEnter}
             onDragLeave={handleDragLeave}
@@ -360,8 +425,8 @@ export function Playlist() {
             onTrackDragLeave={handleTrackDragLeave}
             onTrackDragHover={handleTrackDragHover}
             onTrackDrop={handleTrackDrop}
-            onLayout={(event) => {
-                dropAreaHeightRef.current = event.nativeEvent.layout.height;
+            onLayout={() => {
+                requestAnimationFrame(updateDropAreaWindowRect);
             }}
             allowedFileTypes={["mp3", "wav", "m4a", "aac", "flac"]}
         >
@@ -402,14 +467,6 @@ export function Playlist() {
                             </View>
                         </View>
                     )}
-                    {dropIndicatorTop !== null && isTrackDragOver && (
-                        <View
-                            className="pointer-events-none absolute left-0 right-0 z-20"
-                            style={{ top: dropIndicatorTop - 1 }}
-                        >
-                            <View className="h-[2px] bg-blue-400/90" />
-                        </View>
-                    )}
                     <LegendList
                         data={playlist}
                         keyExtractor={(item, index) => `queue-${item.queueEntryId ?? item.id ?? index}`}
@@ -417,7 +474,11 @@ export function Playlist() {
                         waitForInitialLayout={false}
                         estimatedItemSize={playlistStyle === "compact" ? 32 : 50}
                         ListHeaderComponent={
-                            <PlaylistDropZone position={0} allowDrop={allowPlaylistDrop} onDrop={handleDropAtPosition} />
+                            <PlaylistDropZone
+                                position={0}
+                                allowDrop={allowPlaylistDrop}
+                                onDrop={handleDropAtPosition}
+                            />
                         }
                         recycleItems
                         renderItem={({ item: track, index }) => (
@@ -460,11 +521,20 @@ const styles = StyleSheet.create({
     },
 });
 
+function parseDropZonePosition(id: string | null): number | null {
+    if (!id || !id.startsWith("playlist-drop-")) {
+        return null;
+    }
+
+    const value = Number.parseInt(id.replace("playlist-drop-", ""), 10);
+    return Number.isFinite(value) ? value : null;
+}
+
 function formatTrackCount(count: number): string {
     return `${count} track${count === 1 ? "" : "s"}`;
 }
 
-function convertNativeTracksToLocal(tracks: NativeDragTrack[]): LocalTrack[] {
+function convertNativeTracksToLocal(tracks: NativeDragTrack[] = []): LocalTrack[] {
     return tracks.map((track) => ({
         id: track.id,
         title: track.title,

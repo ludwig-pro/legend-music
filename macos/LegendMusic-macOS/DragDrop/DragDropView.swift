@@ -31,6 +31,17 @@ class DragDropView: NSView {
     private var isDragOver = false
     private var currentDragType: DragContentType?
 
+    override var isFlipped: Bool {
+        return true
+    }
+
+    private func clampedLocation(from sender: NSDraggingInfo) -> CGPoint {
+        let locationInView = convert(sender.draggingLocation, from: nil)
+        let clampedX = max(0, min(locationInView.x, bounds.width))
+        let clampedY = max(0, min(locationInView.y, bounds.height))
+        return CGPoint(x: clampedX, y: clampedY)
+    }
+
     override init(frame: NSRect) {
         super.init(frame: frame)
         setupDragDrop()
@@ -57,7 +68,9 @@ class DragDropView: NSView {
            !tracks.isEmpty {
             currentDragType = .tracks
             isDragOver = true
-            onTrackDragEnter?([:])
+            onTrackDragEnter?([
+                "tracks": tracks,
+            ])
             return .copy
         }
 
@@ -98,7 +111,7 @@ class DragDropView: NSView {
 
     override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
         if currentDragType == .tracks, let onTrackDragHover = onTrackDragHover {
-            let location = convert(sender.draggingLocation, from: nil)
+            let location = clampedLocation(from: sender)
             onTrackDragHover([
                 "location": [
                     "x": location.x,
@@ -125,7 +138,7 @@ class DragDropView: NSView {
                 return false
             }
 
-            let location = convert(sender.draggingLocation, from: nil)
+            let location = clampedLocation(from: sender)
 
             onTrackDrop?([
                 "tracks": tracks,
