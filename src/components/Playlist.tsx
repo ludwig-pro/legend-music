@@ -335,11 +335,7 @@ export function Playlist() {
     //     playlistNavigationState$.hasSelection.set(playlist.length > 0 && selectedIndex !== -1);
     // }, [playlist.length, selectedIndex]);
 
-    const overlayClassName = isDragOver
-        ? "bg-blue-500/20 border-2 border-blue-500 border-dashed"
-        : isTrackDragOver
-          ? "bg-emerald-500/15 border-2 border-emerald-400 border-dashed"
-          : "";
+    const overlayClassName = isDragOver ? "bg-blue-500/20 border-2 border-blue-500 border-dashed" : "";
 
     const dropIndicatorTop = trackDropIndicatorIndex !== null && playlist.length > 0 && dropAreaHeightRef.current > 0
         ? (dropAreaHeightRef.current * (trackDropIndicatorIndex / Math.max(playlist.length, 1)))
@@ -399,17 +395,10 @@ export function Playlist() {
                 </View>
             ) : (
                 <>
-                    {(isDragOver || isTrackDragOver) && (
+                    {isDragOver && (
                         <View className="absolute inset-0 z-10 flex-1 items-center justify-center">
-                            <View
-                                className={cn(
-                                    "px-4 py-2 rounded-lg",
-                                    isTrackDragOver ? "bg-emerald-500" : "bg-blue-500",
-                                )}
-                            >
-                                <Text className="text-white font-medium">
-                                    {isTrackDragOver ? "Drop tracks to add to queue" : "Drop files to add to queue"}
-                                </Text>
+                            <View className="bg-blue-500 px-4 py-2 rounded-lg">
+                                <Text className="text-white font-medium">Drop files to add to queue</Text>
                             </View>
                         </View>
                     )}
@@ -418,7 +407,7 @@ export function Playlist() {
                             className="pointer-events-none absolute left-0 right-0 z-20"
                             style={{ top: dropIndicatorTop - 1 }}
                         >
-                            <View className="h-[2px] bg-emerald-400/80" />
+                            <View className="h-[2px] bg-blue-400/90" />
                         </View>
                     )}
                     <LegendList
