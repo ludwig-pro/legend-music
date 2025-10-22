@@ -298,6 +298,45 @@ function queueInsertNext(input: QueueInput, options: QueueUpdateOptions = {}): v
     }
 }
 
+function queueInsertAt(position: number, input: QueueInput, options: QueueUpdateOptions = {}): void {
+    const additions = asArray(input);
+    const existing = getQueueSnapshot();
+
+    if (existing.length === 0) {
+        queueReplace(additions, options);
+        return;
+    }
+
+    const boundedPosition = Math.max(0, Math.min(position, existing.length));
+    const queuedAdditions = additions.map(createQueuedTrack);
+    const nextQueue = [
+        ...existing.slice(0, boundedPosition),
+        ...queuedAdditions,
+        ...existing.slice(boundedPosition),
+    ];
+
+    perfLog("Queue.insertAt", { additions: additions.length, position: boundedPosition });
+    setQueueTracks(nextQueue);
+
+    const currentIndex = localPlayerState$.currentIndex.peek();
+    if (currentIndex === -1) {
+        playTrackFromQueue(0, {
+            playImmediately: options.playImmediately ?? true,
+            startIndex: 0,
+        });
+        return;
+    }
+
+    if (options.playImmediately) {
+        playTrackFromQueue(boundedPosition, { playImmediately: true, startIndex: boundedPosition });
+        return;
+    }
+
+    if (currentIndex >= boundedPosition) {
+        localPlayerState$.currentIndex.set(currentIndex + queuedAdditions.length);
+    }
+}
+
 function queueReorder(fromIndex: number, toIndex: number): void {
     const tracks = getQueueSnapshot();
     const length = tracks.length;
@@ -443,6 +482,7 @@ export const queueControls = {
     replace: queueReplace,
     append: queueAppend,
     insertNext: queueInsertNext,
+    insertAt: queueInsertAt,
     reorder: queueReorder,
     remove: queueRemoveIndices,
     clear: queueClear,
