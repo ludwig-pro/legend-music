@@ -138,30 +138,9 @@ export function Playlist() {
             if (item.data?.type === "media-library-tracks") {
                 const existingQueue = queueTracks;
                 const boundedTarget = Math.max(0, Math.min(targetPosition, existingQueue.length));
-                const seenKeys = new Set<string>();
+                const { filtered, skipped } = filterTracksForInsert(existingQueue, item.data.tracks);
 
-                for (const track of existingQueue) {
-                    const key = track.filePath ?? track.id ?? track.queueEntryId;
-                    if (key) {
-                        seenKeys.add(key);
-                    }
-                }
-
-                const tracksToInsert = item.data.tracks.filter((track) => {
-                    const key = track.filePath ?? track.id;
-                    if (!key) {
-                        return true;
-                    }
-
-                    if (seenKeys.has(key)) {
-                        return false;
-                    }
-
-                    seenKeys.add(key);
-                    return true;
-                });
-
-                if (tracksToInsert.length === 0) {
+                if (filtered.length === 0) {
                     showDropFeedback({
                         type: "warning",
                         message: "All dropped tracks are already in the queue.",
@@ -169,18 +148,17 @@ export function Playlist() {
                     return;
                 }
 
-                const duplicatesSkipped = item.data.tracks.length - tracksToInsert.length;
-                localAudioControls.queue.insertAt(boundedTarget, tracksToInsert);
+                localAudioControls.queue.insertAt(boundedTarget, filtered);
 
-                if (duplicatesSkipped > 0) {
+                if (skipped > 0) {
                     showDropFeedback({
                         type: "warning",
-                        message: `Added ${formatTrackCount(tracksToInsert.length)} (skipped ${formatTrackCount(duplicatesSkipped)} already in queue).`,
+                        message: `Added ${formatTrackCount(filtered.length)} (skipped ${formatTrackCount(skipped)} already in queue).`,
                     });
                 } else {
                     showDropFeedback({
                         type: "success",
-                        message: `Added ${formatTrackCount(tracksToInsert.length)} to the queue.`,
+                        message: `Added ${formatTrackCount(filtered.length)} to the queue.`,
                     });
                 }
             }
@@ -382,6 +360,45 @@ const styles = StyleSheet.create({
 
 function formatTrackCount(count: number): string {
     return `${count} track${count === 1 ? "" : "s"}`;
+}
+
+interface TrackIdentity {
+    id?: string;
+    filePath?: string;
+    queueEntryId?: string;
+}
+
+export function filterTracksForInsert(
+    existingQueue: TrackIdentity[],
+    incomingTracks: LocalTrack[],
+): { filtered: LocalTrack[]; skipped: number } {
+    const seen = new Set<string>();
+
+    for (const track of existingQueue) {
+        const key = track.filePath ?? track.id ?? track.queueEntryId;
+        if (key) {
+            seen.add(key);
+        }
+    }
+
+    const filtered: LocalTrack[] = [];
+    let skipped = 0;
+
+    for (const track of incomingTracks) {
+        const key = track.filePath ?? track.id;
+        if (key && seen.has(key)) {
+            skipped += 1;
+            continue;
+        }
+
+        if (key) {
+            seen.add(key);
+        }
+
+        filtered.push(track);
+    }
+
+    return { filtered, skipped };
 }
 
 interface PlaylistDropZoneProps {

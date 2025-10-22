@@ -1,3 +1,11 @@
 module.exports = {
-  preset: 'react-native',
+    preset: "react-native",
+    setupFiles: ["<rootDir>/jest.setup.js"],
+    moduleNameMapper: {
+        "^@/(.*)$": "<rootDir>/src/$1",
+        "^.+\\.(css|less|scss)$": "<rootDir>/jest/mocks/styleMock.js",
+        "^nativewind$": "<rootDir>/jest/mocks/nativewindMock.js",
+        "^react-native-css-interop$": "<rootDir>/jest/mocks/nativewindMock.js",
+    },
+    transformIgnorePatterns: ["node_modules/(?!(react-native|@react-native|@react-native-community|expo-file-system)/)"],
 };

@@ -31,4 +31,4 @@ Allow users to drag one or more tracks from the media library into the active pl
 - [x] Add draggable affordances to media library items emitting track payloads.
 - [x] Make the main playlist droppable and handle track insertion logic with persistence.
 - [x] Implement visual feedback and user messaging for successful drops and conflicts.
-- [ ] Cover the new flows with automated tests and perform manual verification.
+- [x] Cover the new flows with automated tests and perform manual verification.

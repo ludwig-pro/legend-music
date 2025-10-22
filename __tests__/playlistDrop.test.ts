@@ -1,0 +1,59 @@
+import { filterTracksForInsert } from "../src/components/Playlist";
+import type { LocalTrack } from "../src/systems/LocalMusicState";
+
+const makeQueueItem = (id: string, overrides: Partial<{ filePath: string }> = {}) => ({
+    id,
+    filePath: overrides.filePath ?? `/incoming/${id}.mp3`,
+    queueEntryId: `existing-${id}`,
+});
+
+const makeTrack = (id: string, overrides: Partial<LocalTrack> = {}): LocalTrack => ({
+    id,
+    filePath: `/incoming/${id}.mp3`,
+    fileName: `${id}.mp3`,
+    title: `Incoming ${id}`,
+    artist: "Drop Artist",
+    duration: "1:00",
+    ...overrides,
+});
+
+describe("filterTracksForInsert", () => {
+    it("filters out tracks already present in the queue", () => {
+        const existing = [makeQueueItem("a")];
+        const incoming = [makeTrack("a"), makeTrack("b")];
+
+        const result = filterTracksForInsert(existing, incoming);
+
+        expect(result.filtered).toHaveLength(1);
+        expect(result.filtered[0]?.id).toBe("b");
+        expect(result.skipped).toBe(1);
+    });
+
+    it("filters duplicate tracks within the drop payload while preserving order", () => {
+        const existing = [makeQueueItem("duplicate", { filePath: "/shared/path.mp3" })];
+        const incoming = [
+            makeTrack("unique-1"),
+            makeTrack("duplicate", { filePath: "/shared/path.mp3" }),
+            makeTrack("duplicate-again", { filePath: "/shared/path.mp3" }),
+            makeTrack("unique-2"),
+        ];
+
+        const result = filterTracksForInsert(existing, incoming);
+
+        expect(result.filtered.map((track) => track.id)).toEqual(["unique-1", "unique-2"]);
+        expect(result.skipped).toBe(2);
+    });
+
+    it("allows tracks without identifiers to pass through", () => {
+        const existing = [];
+        const incoming = [
+            makeTrack("no-id", { id: "", filePath: "" }),
+            makeTrack("with-id"),
+        ];
+
+        const result = filterTracksForInsert(existing, incoming);
+
+        expect(result.filtered.map((track) => track.id)).toEqual(["", "with-id"]);
+        expect(result.skipped).toBe(0);
+    });
+});
