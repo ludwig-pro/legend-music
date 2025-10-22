@@ -10,20 +10,22 @@ import type { LocalTrack } from "@/systems/LocalMusicState";
 import { localMusicState$ } from "@/systems/LocalMusicState";
 import { settings$ } from "@/systems/Settings";
 import { perfCount, perfLog } from "@/utils/perfLogger";
-import { DraggableItem, type DraggedItem, DroppableZone } from "./dnd";
+import {
+    DraggableItem,
+    type DraggedItem,
+    DroppableZone,
+    MEDIA_LIBRARY_DRAG_ZONE_ID,
+    PLAYLIST_DRAG_ZONE_ID,
+    type DragData,
+    type MediaLibraryDragData,
+    type PlaylistDragData,
+} from "./dnd";
 
 type PlaylistTrackWithSuggestions = TrackData & {
     queueEntryId: string;
     fromSuggestions?: true;
     isSeparator?: boolean;
 };
-
-type PlaylistDragData = {
-    type: "playlist-track";
-    queueEntryId: string;
-};
-
-const PLAYLIST_DRAG_ZONE_ID = "playlist-tracks";
 
 export function Playlist() {
     perfCount("Playlist.render");
