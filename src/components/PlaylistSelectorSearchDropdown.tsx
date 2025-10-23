@@ -13,6 +13,7 @@ import type { LibraryItem } from "@/systems/LibraryState";
 import { library$ } from "@/systems/LibraryState";
 import type { LocalPlaylist, LocalTrack } from "@/systems/LocalMusicState";
 import { cn } from "@/utils/cn";
+import { getQueueAction } from "@/utils/queueActions";
 
 interface PlaylistSelectorSearchDropdownProps {
     tracks: LocalTrack[];
@@ -138,21 +139,10 @@ export const PlaylistSelectorSearchDropdown = forwardRef<DropdownMenuRootRef, Pl
 
         const getActionFromEvent = useCallback(
             (event?: NativeMouseEvent | GestureResponderEvent): "enqueue" | "play-next" => {
-                if (event) {
-                    // Check if it's a NativeMouseEvent (direct from Button)
-                    if ("shiftKey" in event && event.shiftKey) {
-                        return "play-next";
-                    }
-                    // Check if it's a GestureResponderEvent (from DropdownMenu)
-                    if ("nativeEvent" in event) {
-                        const nativeEvent = event.nativeEvent as any;
-                        if (nativeEvent?.shiftKey) {
-                            return "play-next";
-                        }
-                    }
-                }
-
-                return shiftPressedRef.current ? "play-next" : "enqueue";
+                return getQueueAction({
+                    event: event as unknown as { shiftKey?: boolean; nativeEvent?: { shiftKey?: boolean } },
+                    shiftPressedFallback: shiftPressedRef.current,
+                });
             },
             [],
         );

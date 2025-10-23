@@ -1,6 +1,6 @@
 import { LegendList } from "@legendapp/list";
 import type { Observable } from "@legendapp/state";
-import { use$, useObservable } from "@legendapp/state/react";
+import { use$ } from "@legendapp/state/react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { Platform, Text, View } from "react-native";
 import type { NativeMouseEvent } from "react-native-macos";
@@ -11,6 +11,7 @@ import { Panel, PanelGroup, ResizeHandle } from "@/components/ResizablePanels";
 import { TextInputSearch, type TextInputSearchRef } from "@/components/TextInputSearch";
 import { type TrackData, TrackItem } from "@/components/TrackItem";
 import { useListItemStyles } from "@/hooks/useListItemStyles";
+import { usePlaylistSelection } from "@/hooks/usePlaylistSelection";
 import { type ContextMenuItem, showContextMenu } from "@/native-modules/ContextMenu";
 import { type NativeDragTrack, TrackDragSource } from "@/native-modules/TrackDragSource";
 import { Icon } from "@/systems/Icon";
@@ -20,6 +21,7 @@ import { settings$ } from "@/systems/Settings";
 import type { SFSymbols } from "@/types/SFSymbols";
 import { cn } from "@/utils/cn";
 import { perfCount, perfLog } from "@/utils/perfLogger";
+import { getQueueAction } from "@/utils/queueActions";
 import { getTracksForLibraryItem } from "@/utils/trackResolution";
 
 const MEDIA_LIBRARY_CONTEXT_MENU_ITEMS: ContextMenuItem[] = [
@@ -328,7 +330,6 @@ function TrackList({ searchQuery }: TrackListProps) {
     perfCount("MediaLibrary.TrackList.render");
     const selectedItem = use$(libraryUI$.selectedItem);
     const allTracks = use$(library$.tracks);
-    const selectedIndices$ = useObservable<Set<number>>(new Set());
     const skipClickRef = useRef(false);
 
     const { trackItems, sourceTracks } = useMemo(() => {
@@ -385,15 +386,15 @@ function TrackList({ searchQuery }: TrackListProps) {
 
     const tracks = trackItems;
 
+    const { selectedIndices$, handleTrackClick: handleSelectionClick } = usePlaylistSelection({
+        items: trackItems,
+    });
+
     const keyExtractor = useCallback((item: TrackData) => item.id, []);
 
-    const clearSelection = useCallback(() => {
-        selectedIndices$.set(new Set());
-    }, [selectedIndices$]);
-
     useEffect(() => {
-        clearSelection();
-    }, [clearSelection, selectedItem?.id, trackItems.length]);
+        selectedIndices$.set(new Set());
+    }, [selectedIndices$, selectedItem?.id, trackItems.length]);
 
     const handleTrackAction = useCallback(
         (index: number, action: "enqueue" | "play-next") => {
@@ -431,10 +432,6 @@ function TrackList({ searchQuery }: TrackListProps) {
         [handleTrackAction],
     );
 
-    const getActionFromEvent = useCallback((event?: NativeMouseEvent): "enqueue" | "play-next" => {
-        return event?.shiftKey ? "play-next" : "enqueue";
-    }, []);
-
     const handleTrackClick = useCallback(
         (index: number, event?: NativeMouseEvent) => {
             if (skipClickRef.current) {
@@ -442,44 +439,16 @@ function TrackList({ searchQuery }: TrackListProps) {
                 return;
             }
 
-            const action = getActionFromEvent(event);
-            handleTrackAction(index, action);
-        },
-        [getActionFromEvent, handleTrackAction],
-    );
+            handleSelectionClick(index, event);
 
-    const toggleSelection = useCallback(
-        (index: number) => {
-            const nextSelection = new Set(selectedIndices$.get());
-            if (nextSelection.has(index)) {
-                nextSelection.delete(index);
-            } else {
-                nextSelection.add(index);
-            }
-            selectedIndices$.set(nextSelection);
-        },
-        [selectedIndices$],
-    );
-
-    const setSingleSelection = useCallback(
-        (index: number) => {
-            selectedIndices$.set(new Set([index]));
-        },
-        [selectedIndices$],
-    );
-
-    const handleTrackMouseDown = useCallback(
-        (index: number, event: NativeMouseEvent) => {
-            if (event.metaKey) {
-                skipClickRef.current = true;
-                toggleSelection(index);
+            if (event?.metaKey || event?.ctrlKey) {
                 return;
             }
 
-            skipClickRef.current = false;
-            setSingleSelection(index);
+            const action = getQueueAction({ event });
+            handleTrackAction(index, action);
         },
-        [setSingleSelection, toggleSelection],
+        [handleSelectionClick, handleTrackAction],
     );
 
     const handleNativeDragStart = useCallback(() => {
@@ -525,20 +494,12 @@ function TrackList({ searchQuery }: TrackListProps) {
                 index={index}
                 onClick={handleTrackClick}
                 onRightClick={handleTrackContextMenu}
-                onMouseDown={handleTrackMouseDown}
                 selectedIndices$={selectedIndices$}
                 buildDragData={buildDragData}
                 onNativeDragStart={handleNativeDragStart}
             />
         ),
-        [
-            buildDragData,
-            handleTrackClick,
-            handleTrackContextMenu,
-            handleTrackMouseDown,
-            handleNativeDragStart,
-            selectedIndices$,
-        ],
+        [buildDragData, handleTrackClick, handleTrackContextMenu, handleNativeDragStart, selectedIndices$],
     );
 
     if (!selectedItem) {
@@ -585,7 +546,6 @@ interface LibraryTrackRowProps {
     index: number;
     onClick: (index: number, event?: NativeMouseEvent) => void;
     onRightClick: (index: number, event: NativeMouseEvent) => void;
-    onMouseDown: (index: number, event: NativeMouseEvent) => void;
     selectedIndices$: Observable<Set<number>>;
     buildDragData: (activeIndex: number) => MediaLibraryDragData;
     onNativeDragStart: () => void;
@@ -596,7 +556,6 @@ function LibraryTrackRow({
     index,
     onClick,
     onRightClick,
-    onMouseDown,
     selectedIndices$,
     buildDragData,
     onNativeDragStart,
@@ -615,7 +574,6 @@ function LibraryTrackRow({
                     index={index}
                     onClick={onClick}
                     onRightClick={onRightClick}
-                    onMouseDown={onMouseDown}
                     showIndex={false}
                     showAlbumArt={false}
                     selectedIndices$={selectedIndices$}
@@ -636,7 +594,6 @@ function LibraryTrackRow({
                 index={index}
                 onClick={onClick}
                 onRightClick={onRightClick}
-                onMouseDown={onMouseDown}
                 showIndex={false}
                 showAlbumArt={false}
                 selectedIndices$={selectedIndices$}
