@@ -9,7 +9,6 @@ import {
     View,
 } from "react-native";
 
-import { ShadowDropdown } from "@/utils/styles";
 import { useDragDrop } from "./DragDropContext";
 
 type DragDataResolver<T> = T | (() => T);
@@ -235,7 +234,7 @@ export const DraggableItem = <T,>({
                                 width: childMeasurementsRef.current.width + 2,
                                 height: childMeasurementsRef.current.height + 2,
                                 transform: [{ translateX: pan.x }, { translateY: pan.y }],
-                                // ...ShadowDropdown,
+                                // Apply drop shadow styling here if desired,
                             },
                         ]}
                     >
