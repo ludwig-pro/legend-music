@@ -18,6 +18,7 @@ export function TrackList({ searchQuery }: TrackListProps) {
         tracks,
         selectedIndices$,
         handleTrackClick,
+        handleTrackDoubleClick,
         handleTrackContextMenu,
         handleNativeDragStart,
         buildDragData,
@@ -31,13 +32,21 @@ export function TrackList({ searchQuery }: TrackListProps) {
                 track={item}
                 index={index}
                 onClick={handleTrackClick}
+                onDoubleClick={handleTrackDoubleClick}
                 onRightClick={handleTrackContextMenu}
                 selectedIndices$={selectedIndices$}
                 buildDragData={buildDragData}
                 onNativeDragStart={handleNativeDragStart}
             />
         ),
-        [buildDragData, handleTrackClick, handleTrackContextMenu, handleNativeDragStart, selectedIndices$],
+        [
+            buildDragData,
+            handleTrackClick,
+            handleTrackDoubleClick,
+            handleTrackContextMenu,
+            handleNativeDragStart,
+            selectedIndices$,
+        ],
     );
 
     if (!selectedItem) {
@@ -83,6 +92,7 @@ interface LibraryTrackRowProps {
     track: TrackData;
     index: number;
     onClick: (index: number, event?: NativeMouseEvent) => void;
+    onDoubleClick: (index: number, event?: NativeMouseEvent) => void;
     onRightClick: (index: number, event: NativeMouseEvent) => void;
     selectedIndices$: Observable<Set<number>>;
     buildDragData: (activeIndex: number) => MediaLibraryDragData;
@@ -93,6 +103,7 @@ function LibraryTrackRow({
     track,
     index,
     onClick,
+    onDoubleClick,
     onRightClick,
     selectedIndices$,
     buildDragData,
@@ -111,6 +122,7 @@ function LibraryTrackRow({
                     track={track}
                     index={index}
                     onClick={onClick}
+                    onDoubleClick={onDoubleClick}
                     onRightClick={onRightClick}
                     showIndex={false}
                     showAlbumArt={false}
@@ -132,6 +144,7 @@ function LibraryTrackRow({
                 track={track}
                 index={index}
                 onClick={onClick}
+                onDoubleClick={onDoubleClick}
                 onRightClick={onRightClick}
                 showIndex={false}
                 showAlbumArt={false}

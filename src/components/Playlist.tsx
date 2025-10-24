@@ -1,15 +1,7 @@
 import { LegendList } from "@legendapp/list";
 import { use$ } from "@legendapp/state/react";
 import { type ElementRef, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-    findNodeHandle,
-    Platform,
-    StyleSheet,
-    Text,
-    UIManager,
-    View,
-    type NativeSyntheticEvent,
-} from "react-native";
+import { findNodeHandle, type NativeSyntheticEvent, Platform, StyleSheet, Text, UIManager, View } from "react-native";
 import type { NativeMouseEvent } from "react-native-macos";
 import { localAudioControls, localPlayerState$, queue$ } from "@/components/LocalAudioPlayer";
 import { type TrackData, TrackItem } from "@/components/TrackItem";
@@ -102,11 +94,15 @@ export function Playlist() {
         localAudioControls.queue.remove(indices);
     }, []);
 
-    const { selectedIndices$, handleTrackClick: handleTrackClickBase, syncSelectionAfterReorder, clearSelection } =
-        usePlaylistSelection({
-            items: playlist,
-            onDeleteSelection: handleDeleteSelection,
-        });
+    const {
+        selectedIndices$,
+        handleTrackClick: handleTrackClickBase,
+        syncSelectionAfterReorder,
+        clearSelection,
+    } = usePlaylistSelection({
+        items: playlist,
+        onDeleteSelection: handleDeleteSelection,
+    });
 
     const handleTrackClick = useCallback(
         (index: number, event?: Parameters<typeof handleTrackClickBase>[1]) => {
@@ -153,6 +149,31 @@ export function Playlist() {
 
     const handleReorderDragStart = useCallback(() => {
         skipClickRef.current = true;
+    }, []);
+
+    const updateDropAreaWindowRect = useCallback(() => {
+        const node = dropAreaRef.current;
+        if (!node) {
+            return;
+        }
+
+        const updateRect = (x: number, y: number, width: number, height: number) => {
+            dropAreaWindowRectRef.current = { x, y, width, height };
+        };
+
+        if ("measureInWindow" in node && typeof node.measureInWindow === "function") {
+            node.measureInWindow((x, y, width, height) => {
+                updateRect(x, y, width, height);
+            });
+            return;
+        }
+
+        const handle = findNodeHandle(node);
+        if (handle != null) {
+            UIManager.measure(handle, (_x, _y, width, height, pageX, pageY) => {
+                updateRect(pageX, pageY, width, height);
+            });
+        }
     }, []);
 
     const handleNativeDragStart = useCallback(
@@ -203,31 +224,6 @@ export function Playlist() {
         },
         [],
     );
-
-    const updateDropAreaWindowRect = useCallback(() => {
-        const node = dropAreaRef.current;
-        if (!node) {
-            return;
-        }
-
-        const updateRect = (x: number, y: number, width: number, height: number) => {
-            dropAreaWindowRectRef.current = { x, y, width, height };
-        };
-
-        if ("measureInWindow" in node && typeof node.measureInWindow === "function") {
-            node.measureInWindow((x, y, width, height) => {
-                updateRect(x, y, width, height);
-            });
-            return;
-        }
-
-        const handle = findNodeHandle(node);
-        if (handle != null) {
-            UIManager.measure(handle, (_x, _y, width, height, pageX, pageY) => {
-                updateRect(pageX, pageY, width, height);
-            });
-        }
-    }, []);
 
     const toWindowCoordinates = useCallback((location: { x: number; y: number }) => {
         const rect = dropAreaWindowRectRef.current;

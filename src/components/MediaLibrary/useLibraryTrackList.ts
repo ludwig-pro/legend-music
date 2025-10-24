@@ -16,6 +16,7 @@ interface UseLibraryTrackListResult {
     tracks: TrackData[];
     selectedIndices$: Observable<Set<number>>;
     handleTrackClick: (index: number, event?: NativeMouseEvent) => void;
+    handleTrackDoubleClick: (index: number, event?: NativeMouseEvent) => void;
     handleTrackContextMenu: (index: number, event: NativeMouseEvent) => Promise<void>;
     handleNativeDragStart: () => void;
     buildDragData: (activeIndex: number) => MediaLibraryDragData;
@@ -190,6 +191,18 @@ export function useLibraryTrackList(searchQuery: string): UseLibraryTrackListRes
             }
 
             handleSelectionClick(index, event);
+        },
+        [handleSelectionClick],
+    );
+
+    const handleTrackDoubleClick = useCallback(
+        (index: number, event?: NativeMouseEvent) => {
+            if (skipClickRef.current) {
+                skipClickRef.current = false;
+                return;
+            }
+
+            handleSelectionClick(index, event);
 
             if (event?.metaKey || event?.ctrlKey) {
                 return;
@@ -207,6 +220,7 @@ export function useLibraryTrackList(searchQuery: string): UseLibraryTrackListRes
         tracks: trackItems,
         selectedIndices$,
         handleTrackClick,
+        handleTrackDoubleClick,
         handleTrackContextMenu,
         handleNativeDragStart,
         buildDragData,

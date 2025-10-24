@@ -144,40 +144,14 @@ export function LibraryTree({ searchQuery }: LibraryTreeProps) {
             <LegendList
                 data={collectionItems}
                 keyExtractor={(item) => item.id}
-                renderItem={({ item }) => {
-                    const isSelected = selectedItem?.id === item.id;
-                    return (
-                        <Button
-                            onClick={() => selectItem(item)}
-                            onMouseDown={(event) => {
-                                void handleItemContextMenu(item, event);
-                            }}
-                            className={listItemStyles.getRowClassName({
-                                variant: "compact",
-                                isSelected,
-                            })}
-                        >
-                            <View className="flex-1 flex-row items-center justify-between overflow-hidden">
-                                <Text
-                                    className={cn(
-                                        "text-sm truncate flex-1 pr-4",
-                                        isSelected ? listItemStyles.text.primary : listItemStyles.text.secondary,
-                                    )}
-                                    numberOfLines={1}
-                                >
-                                    {item.name}
-                                </Text>
-                                {item.trackCount ? (
-                                    <View className="shrink-0">
-                                        <Text className={listItemStyles.getMetaClassName({ className: "text-xs" })}>
-                                            {item.trackCount}
-                                        </Text>
-                                    </View>
-                                ) : null}
-                            </View>
-                        </Button>
-                    );
-                }}
+                renderItem={({ item }) => (
+                    <LibraryTreeRow
+                        item={item}
+                        listItemStyles={listItemStyles}
+                        onSelect={selectItem}
+                        onContextMenu={handleItemContextMenu}
+                    />
+                )}
                 style={{ flex: 1 }}
                 contentContainerStyle={{ alignItems: "stretch" }}
                 estimatedItemSize={44}
@@ -189,5 +163,49 @@ export function LibraryTree({ searchQuery }: LibraryTreeProps) {
                 }
             />
         </View>
+    );
+}
+
+interface LibraryTreeRowProps {
+    item: LibraryItem;
+    listItemStyles: ReturnType<typeof useListItemStyles>;
+    onSelect: (item: LibraryItem) => void;
+    onContextMenu: (item: LibraryItem, event: NativeMouseEvent) => void;
+}
+
+function LibraryTreeRow({ item, listItemStyles, onSelect, onContextMenu }: LibraryTreeRowProps) {
+    const selectedItem = use$(libraryUI$.selectedItem);
+    const isSelected = selectedItem?.id === item.id;
+
+    return (
+        <Button
+            onClick={() => onSelect(item)}
+            onMouseDown={(event) => {
+                void onContextMenu(item, event);
+            }}
+            className={listItemStyles.getRowClassName({
+                variant: "compact",
+                isSelected,
+            })}
+        >
+            <View className="flex-1 flex-row items-center justify-between overflow-hidden">
+                <Text
+                    className={cn(
+                        "text-sm truncate flex-1 pr-4",
+                        isSelected ? listItemStyles.text.primary : listItemStyles.text.secondary,
+                    )}
+                    numberOfLines={1}
+                >
+                    {item.name}
+                </Text>
+                {item.trackCount ? (
+                    <View className="shrink-0">
+                        <Text className={listItemStyles.getMetaClassName({ className: "text-xs" })}>
+                            {item.trackCount}
+                        </Text>
+                    </View>
+                ) : null}
+            </View>
+        </Button>
     );
 }
