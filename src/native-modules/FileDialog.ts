@@ -16,8 +16,9 @@ type NativeFileDialogOpenOptions = {
 };
 
 type NativeFileDialogSaveOptions = {
-    suggestedFileName?: string;
-    directoryURL?: string | null;
+    defaultName?: string;
+    directory?: string;
+    allowedFileTypes?: string[];
 };
 
 const { FileDialog: NativeFileDialog = {} as NativeFileDialogModule } = NativeModules;
@@ -30,8 +31,9 @@ export interface FileDialogOpenOptions {
 }
 
 export interface FileDialogSaveOptions {
-    suggestedFileName?: string;
-    directoryURL?: DirectoryLike;
+    defaultName?: string;
+    directory?: string;
+    allowedFileTypes?: string[];
 }
 
 export const defaultDirectoryUri = FileSystem.Paths.document?.uri ?? null;
@@ -119,11 +121,12 @@ export async function saveFileDialog(options: FileDialogSaveOptions = {}): Promi
         return null;
     }
 
-    const directoryURL = resolveDirectory(options.directoryURL);
+    const directory = resolveDirectory(options.directory);
 
     return saveMethod({
-        suggestedFileName: options.suggestedFileName,
-        directoryURL,
+        defaultName: options.defaultName,
+        directory,
+        allowedFileTypes: options.allowedFileTypes,
     });
 }
 

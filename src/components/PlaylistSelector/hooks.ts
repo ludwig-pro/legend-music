@@ -3,7 +3,7 @@ import { File } from "expo-file-system/next";
 import { useCallback, useMemo } from "react";
 
 import { localAudioControls } from "@/components/LocalAudioPlayer";
-import { showSaveDialog } from "@/native-modules/FileDialog";
+import { saveFileDialog } from "@/native-modules/FileDialog";
 import type { LibraryItem, LibraryTrack } from "@/systems/LibraryState";
 import { libraryUI$ } from "@/systems/LibraryState";
 import type { LocalMusicState, LocalPlaylist, LocalTrack } from "@/systems/LocalMusicState";
@@ -247,7 +247,7 @@ export function useQueueExporter({ queueTracks }: QueueExporterArgs) {
                 ? new URL(defaultDirectoryUri).pathname
                 : defaultDirectoryUri;
 
-            const savePath = await showSaveDialog({
+            const savePath = await saveFileDialog({
                 defaultName: filename,
                 directory: defaultDirectoryPath,
                 allowedFileTypes: ["m3u", "m3u8"],
