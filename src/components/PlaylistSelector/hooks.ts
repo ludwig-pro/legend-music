@@ -11,6 +11,7 @@ import { loadLocalPlaylists, setCurrentPlaylist } from "@/systems/LocalMusicStat
 import { stateSaved$ } from "@/systems/State";
 import { ensureCacheDirectory, getCacheDirectory } from "@/utils/cacheDirectories";
 import { perfLog } from "@/utils/perfLogger";
+import type { QueueAction } from "@/utils/queueActions";
 import { buildTrackLookup, getTracksForLibraryItem, resolvePlaylistTracks } from "@/utils/trackResolution";
 
 interface PlaylistOption {
@@ -80,8 +81,8 @@ interface PlaylistQueueHandlersInput {
 
 interface PlaylistQueueHandlersResult {
     handlePlaylistSelect: (playlistId: string) => void;
-    handleTrackSelect: (track: LocalTrack, action: "enqueue" | "play-next") => void;
-    handleLibraryItemSelect: (item: LibraryItem, action: "enqueue" | "play-next") => void;
+    handleTrackSelect: (track: LocalTrack, action: QueueAction) => void;
+    handleLibraryItemSelect: (item: LibraryItem, action: QueueAction) => void;
     handleSearchPlaylistSelect: (playlist: LocalPlaylist) => void;
 }
 
@@ -131,19 +132,24 @@ export function usePlaylistQueueHandlers({
         [localTracks, playlistMap, tracksByPath],
     );
 
-    const handleTrackSelect = useCallback((track: LocalTrack, action: "enqueue" | "play-next") => {
+    const handleTrackSelect = useCallback((track: LocalTrack, action: QueueAction) => {
         perfLog("PlaylistSelector.handleTrackSelect", { trackId: track.id, action });
 
-        if (action === "play-next") {
-            localAudioControls.queue.insertNext(track);
-            return;
+        switch (action) {
+            case "play-now":
+                localAudioControls.queue.insertNext(track, { playImmediately: true });
+                break;
+            case "play-next":
+                localAudioControls.queue.insertNext(track);
+                break;
+            default:
+                localAudioControls.queue.append(track);
+                break;
         }
-
-        localAudioControls.queue.append(track);
     }, []);
 
     const handleLibraryItemSelect = useCallback(
-        (item: LibraryItem, action: "enqueue" | "play-next") => {
+        (item: LibraryItem, action: QueueAction) => {
             perfLog("PlaylistSelector.handleLibraryItemSelect", { itemId: item.id, type: item.type, action });
 
             const tracksToAdd = getTracksForLibraryItem(libraryTracks, item);
@@ -151,12 +157,17 @@ export function usePlaylistQueueHandlers({
                 return;
             }
 
-            if (action === "play-next") {
-                localAudioControls.queue.insertNext(tracksToAdd);
-                return;
+            switch (action) {
+                case "play-now":
+                    localAudioControls.queue.insertNext(tracksToAdd, { playImmediately: true });
+                    break;
+                case "play-next":
+                    localAudioControls.queue.insertNext(tracksToAdd);
+                    break;
+                default:
+                    localAudioControls.queue.append(tracksToAdd);
+                    break;
             }
-
-            localAudioControls.queue.append(tracksToAdd);
         },
         [libraryTracks],
     );

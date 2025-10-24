@@ -12,7 +12,7 @@ import type { LibraryItem } from "@/systems/LibraryState";
 import { library$ } from "@/systems/LibraryState";
 import type { LocalPlaylist, LocalTrack } from "@/systems/LocalMusicState";
 import { cn } from "@/utils/cn";
-import { getQueueAction } from "@/utils/queueActions";
+import { getQueueAction, type QueueAction } from "@/utils/queueActions";
 
 import {
     type SearchResult,
@@ -24,8 +24,8 @@ import {
 interface PlaylistSelectorSearchDropdownProps {
     tracks: LocalTrack[];
     playlists: LocalPlaylist[];
-    onSelectTrack: (track: LocalTrack, action: "enqueue" | "play-next") => void;
-    onSelectLibraryItem?: (item: LibraryItem, action: "enqueue" | "play-next") => void;
+    onSelectTrack: (track: LocalTrack, action: QueueAction) => void;
+    onSelectLibraryItem?: (item: LibraryItem, action: QueueAction) => void;
     onSelectPlaylist?: (playlist: LocalPlaylist) => void;
     onOpenChange?: (open: boolean) => void;
 }
@@ -51,7 +51,7 @@ export const PlaylistSelectorSearchDropdown = forwardRef<DropdownMenuRootRef, Pl
         });
 
         const handleSearchResultAction = useCallback(
-            (result: SearchResult, action: "enqueue" | "play-next") => {
+            (result: SearchResult, action: QueueAction) => {
                 if (result.type === "track") {
                     onSelectTrack(result.item, action);
                 } else if (result.type === "library") {
@@ -63,14 +63,14 @@ export const PlaylistSelectorSearchDropdown = forwardRef<DropdownMenuRootRef, Pl
             [onSelectLibraryItem, onSelectPlaylist, onSelectTrack],
         );
 
-        const { highlightedIndex, shiftPressedRef } = useDropdownKeyboardNavigation({
+        const { highlightedIndex, modifierStateRef, resetModifiers } = useDropdownKeyboardNavigation({
             isOpen,
             resultsLength: searchResults.length,
             onSubmit: (index, action) => {
                 const result = searchResults[index];
                 if (result) {
                     handleSearchResultAction(result, action);
-                    shiftPressedRef.current = false;
+                    resetModifiers();
                     handleOpenChange(false);
                 }
             },
@@ -99,21 +99,33 @@ export const PlaylistSelectorSearchDropdown = forwardRef<DropdownMenuRootRef, Pl
         const handleDropdownOpenChange = useCallback(
             (open: boolean) => {
                 if (!open) {
-                    shiftPressedRef.current = false;
+                    resetModifiers();
                 }
                 handleOpenChange(open);
             },
-            [handleOpenChange, shiftPressedRef],
+            [handleOpenChange, resetModifiers],
         );
 
         const getActionFromEvent = useCallback(
-            (event?: NativeMouseEvent | GestureResponderEvent): "enqueue" | "play-next" => {
+            (event?: NativeMouseEvent | GestureResponderEvent): QueueAction => {
                 return getQueueAction({
-                    event: event as unknown as { shiftKey?: boolean; nativeEvent?: { shiftKey?: boolean } },
-                    shiftPressedFallback: shiftPressedRef.current,
+                    event: event as unknown as {
+                        shiftKey?: boolean;
+                        altKey?: boolean;
+                        ctrlKey?: boolean;
+                        metaKey?: boolean;
+                        nativeEvent?: {
+                            shiftKey?: boolean;
+                            altKey?: boolean;
+                            ctrlKey?: boolean;
+                            metaKey?: boolean;
+                        };
+                    },
+                    modifierState: modifierStateRef.current,
+                    fallbackAction: "play-now",
                 });
             },
-            [shiftPressedRef],
+            [modifierStateRef],
         );
 
         return (
@@ -161,7 +173,7 @@ export const PlaylistSelectorSearchDropdown = forwardRef<DropdownMenuRootRef, Pl
                                                     onSelect={(event) => {
                                                         const action = getActionFromEvent(event);
                                                         handleSearchResultAction(result, action);
-                                                        shiftPressedRef.current = false;
+                                                        resetModifiers();
                                                         handleOpenChange(false);
                                                     }}
                                                     className={cn(
@@ -175,7 +187,7 @@ export const PlaylistSelectorSearchDropdown = forwardRef<DropdownMenuRootRef, Pl
                                                         highlighted={highlightedIndex === index}
                                                         onSelect={(action) => {
                                                             handleSearchResultAction(result, action);
-                                                            shiftPressedRef.current = false;
+                                                            resetModifiers();
                                                             handleOpenChange(false);
                                                         }}
                                                         getActionFromEvent={getActionFromEvent}
@@ -200,8 +212,8 @@ interface SearchResultContentProps {
     result: SearchResult;
     index: number;
     highlighted: boolean;
-    onSelect: (action: "enqueue" | "play-next") => void;
-    getActionFromEvent: (event?: NativeMouseEvent | GestureResponderEvent) => "enqueue" | "play-next";
+    onSelect: (action: QueueAction) => void;
+    getActionFromEvent: (event?: NativeMouseEvent | GestureResponderEvent) => QueueAction;
 }
 
 function SearchResultContent({ result, index, highlighted, onSelect, getActionFromEvent }: SearchResultContentProps) {

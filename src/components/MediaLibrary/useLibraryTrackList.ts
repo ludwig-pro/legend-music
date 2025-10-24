@@ -10,7 +10,7 @@ import { usePlaylistSelection } from "@/hooks/usePlaylistSelection";
 import { type ContextMenuItem, showContextMenu } from "@/native-modules/ContextMenu";
 import type { LibraryItem, LibraryTrack } from "@/systems/LibraryState";
 import { library$, libraryUI$ } from "@/systems/LibraryState";
-import { getQueueAction } from "@/utils/queueActions";
+import { getQueueAction, type QueueAction } from "@/utils/queueActions";
 
 interface UseLibraryTrackListResult {
     tracks: TrackData[];
@@ -106,16 +106,22 @@ export function useLibraryTrackList(searchQuery: string): UseLibraryTrackListRes
     }, [selectedIndices$, selectedItem?.id, trackItems.length]);
 
     const handleTrackAction = useCallback(
-        (index: number, action: "enqueue" | "play-next") => {
+        (index: number, action: QueueAction) => {
             const track = sourceTracks[index];
             if (!track) {
                 return;
             }
 
-            if (action === "play-next") {
-                localAudioControls.queue.insertNext(track);
-            } else {
-                localAudioControls.queue.append(track);
+            switch (action) {
+                case "play-now":
+                    localAudioControls.queue.insertNext(track, { playImmediately: true });
+                    break;
+                case "play-next":
+                    localAudioControls.queue.insertNext(track);
+                    break;
+                default:
+                    localAudioControls.queue.append(track);
+                    break;
             }
         },
         [sourceTracks],
@@ -189,7 +195,7 @@ export function useLibraryTrackList(searchQuery: string): UseLibraryTrackListRes
                 return;
             }
 
-            const action = getQueueAction({ event });
+            const action = getQueueAction({ event, fallbackAction: "enqueue" });
             handleTrackAction(index, action);
         },
         [handleSelectionClick, handleTrackAction],

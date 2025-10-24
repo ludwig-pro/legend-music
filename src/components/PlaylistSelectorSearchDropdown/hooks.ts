@@ -3,9 +3,10 @@ import { use$, useObservable } from "@legendapp/state/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { playlistNavigationState$ } from "@/state/playlistNavigationState";
-import KeyboardManager, { KeyCodes } from "@/systems/keyboard/KeyboardManager";
+import KeyboardManager, { type KeyboardEvent, KeyCodes } from "@/systems/keyboard/KeyboardManager";
 import type { LibraryItem } from "@/systems/LibraryState";
 import type { LocalPlaylist, LocalTrack } from "@/systems/LocalMusicState";
+import { getQueueAction, type QueueAction } from "@/utils/queueActions";
 
 export type SearchResult =
     | { type: "track"; item: LocalTrack }
@@ -117,8 +118,16 @@ export function usePlaylistSearchResults({
 interface UseDropdownKeyboardNavigationOptions {
     isOpen: boolean;
     resultsLength: number;
-    onSubmit: (index: number, action: "enqueue" | "play-next") => void;
+    onSubmit: (index: number, action: QueueAction) => void;
 }
+
+const createDefaultModifierState = () => ({
+    shift: false,
+    option: false,
+    alt: false,
+    ctrl: false,
+    meta: false,
+});
 
 export function useDropdownKeyboardNavigation({
     isOpen,
@@ -126,7 +135,21 @@ export function useDropdownKeyboardNavigation({
     onSubmit,
 }: UseDropdownKeyboardNavigationOptions) {
     const [highlightedIndex, setHighlightedIndex] = useState(-1);
-    const shiftPressedRef = useRef(false);
+    const modifierStateRef = useRef(createDefaultModifierState());
+
+    const resetModifiers = useCallback(() => {
+        modifierStateRef.current = createDefaultModifierState();
+    }, []);
+
+    const updateModifierState = useCallback((event: KeyboardEvent) => {
+        modifierStateRef.current = {
+            shift: KeyboardManager.hasModifier(event, KeyCodes.MODIFIER_SHIFT),
+            option: KeyboardManager.hasModifier(event, KeyCodes.MODIFIER_OPTION),
+            alt: KeyboardManager.hasModifier(event, KeyCodes.MODIFIER_OPTION),
+            ctrl: KeyboardManager.hasModifier(event, KeyCodes.MODIFIER_CONTROL),
+            meta: KeyboardManager.hasModifier(event, KeyCodes.MODIFIER_COMMAND),
+        };
+    }, []);
 
     useEffect(() => {
         if (!isOpen || resultsLength === 0) {
@@ -144,9 +167,7 @@ export function useDropdownKeyboardNavigation({
 
     useEffect(() => {
         const removeKeyDown = KeyboardManager.addKeyDownListener((event) => {
-            if (KeyboardManager.hasModifier(event, KeyCodes.MODIFIER_SHIFT)) {
-                shiftPressedRef.current = true;
-            }
+            updateModifierState(event);
 
             if (!isOpen || resultsLength === 0) {
                 return false;
@@ -173,9 +194,13 @@ export function useDropdownKeyboardNavigation({
             }
 
             if (event.keyCode === KeyCodes.KEY_RETURN && resultsLength > 0) {
-                const action = KeyboardManager.hasModifier(event, KeyCodes.MODIFIER_SHIFT) ? "play-next" : "enqueue";
+                const action = getQueueAction({
+                    modifierState: modifierStateRef.current,
+                    fallbackAction: "play-now",
+                });
                 const index = highlightedIndex >= 0 ? highlightedIndex : 0;
                 onSubmit(index, action);
+                resetModifiers();
                 return true;
             }
 
@@ -183,8 +208,9 @@ export function useDropdownKeyboardNavigation({
         });
 
         const removeKeyUp = KeyboardManager.addKeyUpListener((event) => {
-            if (event.keyCode === KeyCodes.MODIFIER_SHIFT) {
-                shiftPressedRef.current = false;
+            updateModifierState(event);
+            if (event.modifiers === 0) {
+                resetModifiers();
             }
             return false;
         });
@@ -193,11 +219,12 @@ export function useDropdownKeyboardNavigation({
             removeKeyDown();
             removeKeyUp();
         };
-    }, [highlightedIndex, isOpen, onSubmit, resultsLength]);
+    }, [highlightedIndex, isOpen, onSubmit, resetModifiers, resultsLength, updateModifierState]);
 
     return {
         highlightedIndex,
         setHighlightedIndex,
-        shiftPressedRef,
+        modifierStateRef,
+        resetModifiers,
     };
 }
