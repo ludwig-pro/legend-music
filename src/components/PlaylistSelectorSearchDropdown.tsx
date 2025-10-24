@@ -135,7 +135,7 @@ export const PlaylistSelectorSearchDropdown = forwardRef<DropdownMenuRootRef, Pl
                     setInitialFocus
                     variant="unstyled"
                 >
-                    <View style={{ width: effectiveWindowWidth }}>
+                    <View style={{ width: anchorRect.width }}>
                         <View className="bg-background-tertiary border border-border-primary rounded-md px-3 py-1.5">
                             <TextInputSearch
                                 ref={textInputRef}
@@ -165,7 +165,7 @@ export const PlaylistSelectorSearchDropdown = forwardRef<DropdownMenuRootRef, Pl
                                                         handleOpenChange(false);
                                                     }}
                                                     className={cn(
-                                                        "hover:bg-white/10 rounded-md",
+                                                        "hover:bg-white/10 rounded-md w-full overflow-hidden",
                                                         highlightedIndex === index && "bg-white/20",
                                                     )}
                                                 >
@@ -221,14 +221,14 @@ function SearchResultContent({ result, index, highlighted, onSelect, getActionFr
 
     if (result.type === "track") {
         return (
-            <View className={cn("px-1", highlighted && "bg-white/10")}>
-                <TrackItem
-                    track={result.item}
-                    index={index}
-                    onClick={(_, event) => handleClick(event)}
-                    onRightClick={handleContextMenu}
-                />
-            </View>
+            // <View className={cn(highlighted && "bg-white/10")}>
+            <TrackItem
+                track={result.item}
+                index={index}
+                onClick={(_, event) => handleClick(event)}
+                onRightClick={handleContextMenu}
+                showIndex={false}
+            />
         );
     }
 

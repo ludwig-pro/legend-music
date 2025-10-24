@@ -40,7 +40,6 @@ export const TrackItem = ({
     track,
     index,
     showIndex = true,
-    showAlbumArt = true,
     selectedIndices$,
     onClick,
     onDoubleClick,
@@ -102,6 +101,7 @@ export const TrackItem = ({
         const rowClassName = cn(
             listItemStyles.getRowClassName({ variant: "compact", isActive: isPlaying, isSelected }),
             track.fromSuggestions ? "opacity-75" : "",
+            "w-full",
         );
         const indexTone = track.fromSuggestions ? listItemStyles.text.muted : listItemStyles.text.secondary;
         const primaryTone = track.fromSuggestions ? listItemStyles.text.secondary : listItemStyles.text.primary;
@@ -121,7 +121,7 @@ export const TrackItem = ({
                         </Text>
                     </View>
                 )}
-                <Text className={cn("flex-1 tabular-nums min-w-32 text-sm", primaryTone)} numberOfLines={1}>
+                <Text className={cn("flex-1 tabular-nums text-sm", primaryTone)} numberOfLines={1}>
                     <Text className={cn("text-sm font-medium", listItemStyles.text.primary)}>{track.artist}</Text>
                     <Text className={cn("text-sm", listItemStyles.text.secondary)}> - {track.title}</Text>
                 </Text>
