@@ -89,7 +89,7 @@ export function buildSearchResults({
         .slice(0, 3)
         .map((artist): SearchResult => ({ type: "library", item: artist }));
 
-    results.push(...matchingPlaylists, ...matchingAlbums, ...matchingArtists, ...matchingTracks);
+    results.push(...matchingTracks, ...matchingPlaylists, ...matchingArtists, ...matchingAlbums);
     return results.slice(0, 20);
 }
 
