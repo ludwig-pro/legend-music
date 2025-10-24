@@ -12,14 +12,17 @@ import {
 interface TextInputSearchNativeProps extends ViewProps {
     placeholder?: string;
     text?: string;
+    defaultText?: string;
     onChangeText?: (event: NativeSyntheticEvent<{ text: string }>) => void;
 }
 
 const TextInputSearchNative = requireNativeComponent<TextInputSearchNativeProps>("TextInputSearch");
 
-export interface TextInputSearchProps extends Omit<TextInputSearchNativeProps, "text" | "onChangeText"> {
+export interface TextInputSearchProps
+    extends Omit<TextInputSearchNativeProps, "text" | "defaultText" | "onChangeText"> {
     value$?: Observable<string>;
     value?: string;
+    defaultValue?: string;
     onChangeText?: (text: string) => void;
 }
 
@@ -29,10 +32,10 @@ export interface TextInputSearchRef {
 
 export const TextInputSearch = memo(
     forwardRef<TextInputSearchRef, TextInputSearchProps>(function TextInputSearch(
-        { value$, value, onChangeText, ...rest },
+        { value$, value, defaultValue, onChangeText, ...rest },
         ref,
     ) {
-        const observableValue = value$ ? use$(value$) : value;
+        const defaultText = defaultValue ?? (value$ ? use$(value$) : value) ?? "";
         const nativeRef = useRef<any>(null);
 
         useImperativeHandle(
@@ -63,7 +66,7 @@ export const TextInputSearch = memo(
         return (
             <TextInputSearchNative
                 ref={nativeRef}
-                text={observableValue || ""}
+                defaultText={defaultText}
                 onChangeText={handleChangeText}
                 style={{ minHeight: 16 }}
                 {...rest}

@@ -65,6 +65,7 @@
 
 @property (nonatomic, strong) TextInputSearchView *textField;
 @property (nonatomic, copy) RCTBubblingEventBlock onChangeText;
+@property (nonatomic, assign) BOOL hasSetDefaultText;
 
 @end
 
@@ -111,6 +112,14 @@
     self.textField.stringValue = text ?: @"";
 }
 
+- (void)setDefaultText:(NSString *)text
+{
+    if (!self.hasSetDefaultText) {
+        self.textField.stringValue = text ?: @"";
+        self.hasSetDefaultText = YES;
+    }
+}
+
 - (NSString *)text
 {
     return self.textField.stringValue;
@@ -136,6 +145,11 @@ RCT_EXPORT_VIEW_PROPERTY(onChangeText, RCTBubblingEventBlock)
 RCT_CUSTOM_VIEW_PROPERTY(placeholder, NSString, TextInputSearchRCTView)
 {
     [view setPlaceholder:[RCTConvert NSString:json]];
+}
+
+RCT_CUSTOM_VIEW_PROPERTY(defaultText, NSString, TextInputSearchRCTView)
+{
+    [view setDefaultText:[RCTConvert NSString:json]];
 }
 
 RCT_CUSTOM_VIEW_PROPERTY(text, NSString, TextInputSearchRCTView)
