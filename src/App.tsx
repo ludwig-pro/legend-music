@@ -14,6 +14,7 @@ import { initializeLocalMusic } from "@/systems/LocalMusicState";
 import { initializeMenuManager } from "@/systems/MenuManager";
 import { perfLog } from "@/utils/perfLogger";
 import { ThemeProvider } from "./theme/ThemeProvider";
+import { WindowProvider } from "@/windows/WindowProvider";
 
 perfLog("App.initializeMenuManager");
 initializeMenuManager();
@@ -26,23 +27,25 @@ LogBox.ignoreLogs(["Open debugger", "unknown error"]);
 function App(): React.JSX.Element | null {
     perfLog("App.render");
     return (
-        <ThemeProvider>
-            <HookKeyboard />
-            <VibrancyView blendingMode="behindWindow" material="sidebar" style={styles.vibrancy}>
-                <View className="flex-1 bg-background-primary/40">
-                    <PortalProvider>
-                        <TooltipProvider>
-                            <DragDropProvider>
-                                <MainContainer />
-                            </DragDropProvider>
-                        </TooltipProvider>
-                    </PortalProvider>
-                </View>
-            </VibrancyView>
-            <TitleBar />
-            <MediaLibraryWindowManager />
-            <SettingsWindowManager />
-        </ThemeProvider>
+        <WindowProvider id="main">
+            <ThemeProvider>
+                <HookKeyboard />
+                <VibrancyView blendingMode="behindWindow" material="sidebar" style={styles.vibrancy}>
+                    <View className="flex-1 bg-background-primary/40">
+                        <PortalProvider>
+                            <TooltipProvider>
+                                <DragDropProvider>
+                                    <MainContainer />
+                                </DragDropProvider>
+                            </TooltipProvider>
+                        </PortalProvider>
+                    </View>
+                </VibrancyView>
+                <TitleBar />
+                <MediaLibraryWindowManager />
+                <SettingsWindowManager />
+            </ThemeProvider>
+        </WindowProvider>
     );
 }
 

@@ -24,9 +24,12 @@ export const MediaLibraryWindowManager = () => {
         libraryUI$.isOpen.set(!current);
     }, []);
 
-    useOnHotkeys({
-        ToggleLibrary: toggleLibrary,
-    });
+    useOnHotkeys(
+        {
+            ToggleLibrary: toggleLibrary,
+        },
+        { global: true },
+    );
 
     useEffect(() => {
         perfLog("MediaLibraryWindowManager.windowClosedEffect");

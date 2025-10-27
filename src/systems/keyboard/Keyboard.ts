@@ -5,6 +5,7 @@ import KeyboardManager, { type KeyboardEvent, KeyCodes, KeyText } from "@/system
 import { state$ } from "@/systems/State";
 import { ax } from "@/utils/ax";
 import { perfCount, perfLog } from "@/utils/perfLogger";
+import { useWindowId } from "@/windows/WindowProvider";
 
 type KeyboardEventCode = number;
 type KeyboardEventCodeModifier = string;
@@ -19,6 +20,7 @@ export const keysPressed$ = observable<Record<string, boolean>>({});
 const keyRepeat$ = event();
 
 const keysToPreventDefault = new Set<KeyboardEventCode>();
+export const activeWindowId$ = observable("main");
 
 const nativeHotkeyMap = {
     Up: [KeyCodes.KEY_UP],
@@ -133,9 +135,15 @@ function isNativeHotkey(name: string): name is NativeHotkeyName {
 // Updated HotkeyCallbacks to map hotkey names to simple action functions
 type HotkeyCallbacks = Partial<Record<HotkeyBindingName, () => void>>;
 
-export function onHotkeys(hotkeyCallbacks: HotkeyCallbacks) {
+export type HotkeyScopeOptions = {
+    windowId?: string;
+    global?: boolean;
+};
+
+export function onHotkeys(hotkeyCallbacks: HotkeyCallbacks, options: HotkeyScopeOptions = {}) {
     const hotkeyMap = new Map<string[], () => void>();
     const repeatActions = new Set<string[]>();
+    const targetWindowId = options.global ? undefined : options.windowId ?? "main";
 
     // Process each combination and its callback
     for (const name of Object.keys(hotkeyCallbacks) as HotkeyBindingName[]) {
@@ -190,6 +198,9 @@ export function onHotkeys(hotkeyCallbacks: HotkeyCallbacks) {
             // Disable hotkeys when settings or dropdowns are open
             return;
         }
+        if (targetWindowId && activeWindowId$.get() !== targetWindowId) {
+            return;
+        }
         for (const [keys, callback] of hotkeyMap) {
             // If every key in the hotkey is pressed, call the callback
             const allKeysPressed = keys.every((key) => keysPressed$[key].get());
@@ -202,6 +213,9 @@ export function onHotkeys(hotkeyCallbacks: HotkeyCallbacks) {
     const checkRepeatHotkeys = () => {
         if (state$.showSettings.get() || state$.isDropdownOpen.get()) {
             // Disable hotkeys when settings or dropdowns are open
+            return;
+        }
+        if (targetWindowId && activeWindowId$.get() !== targetWindowId) {
             return;
         }
         for (const keys of repeatActions) {
@@ -228,9 +242,18 @@ export function onHotkeys(hotkeyCallbacks: HotkeyCallbacks) {
     };
 }
 
-export function useOnHotkeys(hotkeyCallbacks: HotkeyCallbacks) {
+export function useOnHotkeys(hotkeyCallbacks: HotkeyCallbacks, options: HotkeyScopeOptions = {}) {
+    const windowIdFromContext = useWindowId();
+    const contextWindowId = windowIdFromContext && windowIdFromContext.length > 0 ? windowIdFromContext : "main";
+
     useObserveEffect((e) => {
-        const sub = onHotkeys(hotkeyCallbacks);
+        const effectiveOptions = options.global
+            ? { ...options }
+            : {
+                  ...options,
+                  windowId: options.windowId ?? contextWindowId,
+              };
+        const sub = onHotkeys(hotkeyCallbacks, effectiveOptions);
         e.onCleanup = sub;
     });
 }

@@ -295,10 +295,15 @@ RCT_EXPORT_METHOD(setMainWindowFrame:(NSDictionary *)frameDict
                                            selector:@selector(mainWindowDidMove:)
                                                name:NSWindowDidMoveNotification
                                              object:mainWindow];
-  
+
   [[NSNotificationCenter defaultCenter] addObserver:self
                                            selector:@selector(mainWindowDidResize:)
                                                name:NSWindowDidResizeNotification
+                                             object:mainWindow];
+
+  [[NSNotificationCenter defaultCenter] addObserver:self
+                                           selector:@selector(mainWindowDidBecomeKey:)
+                                               name:NSWindowDidBecomeKeyNotification
                                              object:mainWindow];
 }
 
@@ -330,8 +335,22 @@ RCT_EXPORT_METHOD(setMainWindowFrame:(NSDictionary *)frameDict
   };
   
   // No need to manually save - setFrameAutosaveName handles persistence
-  
+
   [self sendEventWithName:@"onMainWindowResized" body:frameDict];
+}
+
+- (void)mainWindowDidBecomeKey:(NSNotification *)notification {
+  NSWindow *window = notification.object;
+  if (!window) {
+    return;
+  }
+
+  NSWindow *mainWindow = [WindowManager getMainWindow];
+  if (window != mainWindow) {
+    return;
+  }
+
+  [self sendEventWithName:@"onWindowFocused" body:@{ @"identifier": @"main", @"moduleName": @"LegendMusic" }];
 }
 
 

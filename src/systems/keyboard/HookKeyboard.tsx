@@ -1,11 +1,26 @@
 import { useEffect, useRef } from "react";
 import { AppState, type AppStateStatus, TextInput } from "react-native";
-import { useHookKeyboard } from "@/systems/keyboard/Keyboard";
+import { useWindowManager } from "@/native-modules/WindowManager";
+import { activeWindowId$, useHookKeyboard } from "@/systems/keyboard/Keyboard";
 import { perfCount, perfLog } from "@/utils/perfLogger";
 
 export function HookKeyboard() {
     perfCount("HookKeyboard.render");
     useHookKeyboard();
+    const windowManagerRef = useRef(useWindowManager());
+
+    useEffect(() => {
+        activeWindowId$.set("main");
+
+        const subscription = windowManagerRef.current.onWindowFocused(({ identifier }) => {
+            const nextIdentifier = identifier && identifier.length > 0 ? identifier : "main";
+            activeWindowId$.set(nextIdentifier);
+        });
+
+        return () => {
+            subscription.remove();
+        };
+    }, []);
 
     return <HiddenTextInput />;
 }
