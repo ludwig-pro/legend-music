@@ -456,6 +456,39 @@ function parseDurationFromTags(tags: unknown): number | null {
     return null;
 }
 
+/**
+ * Creates a LocalTrack for an arbitrary audio file path by reusing the ID3 and native metadata pipeline.
+ */
+export async function createLocalTrackFromFile(filePath: string): Promise<LocalTrack> {
+    const fileName = fileNameFromPath(filePath);
+
+    try {
+        const metadata = await extractId3Metadata(filePath, fileName);
+
+        return {
+            id: filePath,
+            title: metadata.title,
+            artist: metadata.artist,
+            album: metadata.album,
+            duration: metadata.duration ?? "0:00",
+            filePath,
+            fileName,
+        };
+    } catch (error) {
+        console.error(`Failed to create LocalTrack from ${fileName}:`, error);
+
+        const fallback = parseFilenameOnly(fileName);
+        return {
+            id: filePath,
+            title: fallback.title,
+            artist: fallback.artist,
+            duration: "0:00",
+            filePath,
+            fileName,
+        };
+    }
+}
+
 // Scan directory for MP3 files
 async function scanDirectory(directoryPath: string): Promise<LocalTrack[]> {
     const tracks: LocalTrack[] = [];

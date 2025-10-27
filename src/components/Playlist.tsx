@@ -14,7 +14,7 @@ import {
 } from "@/native-modules/DragDropView";
 import { TrackDragSource } from "@/native-modules/TrackDragSource";
 import type { LocalTrack } from "@/systems/LocalMusicState";
-import { localMusicState$ } from "@/systems/LocalMusicState";
+import { createLocalTrackFromFile, ensureLocalTrackThumbnail, localMusicState$ } from "@/systems/LocalMusicState";
 import { settings$ } from "@/systems/Settings";
 import { cn } from "@/utils/cn";
 import { perfCount, perfLog } from "@/utils/perfLogger";
@@ -478,43 +478,63 @@ export function Playlist() {
         clearSelection();
     };
 
-    const handleFileDrop = useCallback(async (files: string[]) => {
-        perfLog("Playlist.handleFileDrop", { fileCount: files.length });
+    const handleFileDrop = useCallback(
+        async (files: string[]) => {
+            perfLog("Playlist.handleFileDrop", { fileCount: files.length });
 
-        if (files.length === 0) {
-            console.log("No files to add to queue");
-            return;
-        }
-
-        try {
-            // Create tracks from dropped files
-            const tracksToAdd: LocalTrack[] = [];
-
-            for (const filePath of files) {
-                // Extract filename from path
-                const fileName = filePath.split("/").pop() || filePath;
-                const fileExtension = fileName.split(".").pop()?.toLowerCase() || "";
-
-                // Create a basic track object - metadata will be loaded later
-                const track: LocalTrack = {
-                    id: filePath,
-                    title: fileName.replace(new RegExp(`\\.${fileExtension}$`, "i"), ""),
-                    artist: "Unknown Artist",
-                    duration: "0:00",
-                    filePath,
-                    fileName,
-                };
-
-                tracksToAdd.push(track);
+            if (files.length === 0) {
+                console.log("No files to add to queue");
+                return;
             }
 
-            // Add tracks to queue
-            localAudioControls.queue.append(tracksToAdd);
-            console.log(`Added ${tracksToAdd.length} files to queue`);
-        } catch (error) {
-            console.error("Error adding dropped files to queue:", error);
-        }
-    }, []);
+            try {
+                const trackPromises = files.map((filePath) =>
+                    createLocalTrackFromFile(filePath).catch((error) => {
+                        console.error(`Failed to load metadata for dropped file ${filePath}:`, error);
+                        return null;
+                    }),
+                );
+
+                const resolvedTracks = await Promise.all(trackPromises);
+                const tracksToAdd = resolvedTracks.filter((track): track is LocalTrack => track !== null);
+                const skipped = files.length - tracksToAdd.length;
+
+                if (tracksToAdd.length === 0) {
+                    showDropFeedback({
+                        type: "warning",
+                        message: "No supported audio files to add to the queue.",
+                    });
+                    return;
+                }
+
+                localAudioControls.queue.append(tracksToAdd);
+                tracksToAdd.forEach((track) => {
+                    void ensureLocalTrackThumbnail(track);
+                });
+
+                if (skipped > 0) {
+                    showDropFeedback({
+                        type: "warning",
+                        message: `Added ${formatTrackCount(tracksToAdd.length)} (skipped ${formatTrackCount(skipped)}).`,
+                    });
+                } else {
+                    showDropFeedback({
+                        type: "success",
+                        message: `Added ${formatTrackCount(tracksToAdd.length)} to the queue.`,
+                    });
+                }
+
+                console.log(`Added ${tracksToAdd.length} files to queue`);
+            } catch (error) {
+                console.error("Error adding dropped files to queue:", error);
+                showDropFeedback({
+                    type: "warning",
+                    message: "Failed to add dropped files to the queue.",
+                });
+            }
+        },
+        [showDropFeedback],
+    );
 
     const handleDragEnter = useCallback(() => {
         setIsDragOver(true);
