@@ -50,7 +50,7 @@ export function PlaylistSelector() {
             libraryTracks: library.tracks,
         });
 
-    const { handleSaveQueue } = useQueueExporter({ queueTracks: queue.tracks });
+    const { handleSavePlaylist } = useQueueExporter({ queueTracks: queue.tracks });
 
     useOnHotkeys({
         Search: () => dropdownMenuRef.current?.open(),
@@ -120,10 +120,10 @@ export function PlaylistSelector() {
                     variant="icon"
                     size="small"
                     iconSize={14}
-                    onClick={handleSaveQueue}
+                    onClick={handleSavePlaylist}
                     className="ml-2 hover:bg-white/10"
                     disabled={queue.tracks.length === 0}
-                    tooltip="Save queue"
+                    tooltip="Save playlist"
                 />
                 <Button
                     icon={isLibraryOpen ? "sidebar.right" : "sidebar.right"}

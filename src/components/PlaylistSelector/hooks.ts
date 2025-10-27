@@ -3,7 +3,6 @@ import { File } from "expo-file-system/next";
 import { useCallback, useMemo } from "react";
 
 import { localAudioControls } from "@/components/LocalAudioPlayer";
-import { saveFileDialog } from "@/native-modules/FileDialog";
 import type { LibraryItem, LibraryTrack } from "@/systems/LibraryState";
 import { libraryUI$ } from "@/systems/LibraryState";
 import type { LocalMusicState, LocalPlaylist, LocalTrack } from "@/systems/LocalMusicState";
@@ -226,8 +225,8 @@ interface QueueExporterArgs {
 }
 
 export function useQueueExporter({ queueTracks }: QueueExporterArgs) {
-    const handleSaveQueue = useCallback(async () => {
-        perfLog("PlaylistSelector.handleSaveQueue");
+    const handleSavePlaylist = useCallback(async () => {
+        perfLog("PlaylistSelector.handleSavePlaylist");
 
         if (queueTracks.length === 0) {
             console.log("No tracks in queue to save");
@@ -242,36 +241,20 @@ export function useQueueExporter({ queueTracks }: QueueExporterArgs) {
             const playlistDirectory = getCacheDirectory("playlists");
             ensureCacheDirectory(playlistDirectory);
 
-            const defaultDirectoryUri = playlistDirectory.uri;
-            const defaultDirectoryPath = defaultDirectoryUri.startsWith("file://")
-                ? new URL(defaultDirectoryUri).pathname
-                : defaultDirectoryUri;
-
-            const savePath = await saveFileDialog({
-                defaultName: filename,
-                directory: defaultDirectoryPath,
-                allowedFileTypes: ["m3u", "m3u8"],
-            });
-
-            if (!savePath) {
-                console.log("Save queue cancelled by user");
-                return;
-            }
-
-            const file = new File(savePath);
+            const file = new File(playlistDirectory, filename);
             file.create({ overwrite: true, intermediates: true });
             file.write(m3uContent);
 
             await loadLocalPlaylists();
 
-            console.log(`Playlist saved to: ${file.uri}`);
+            console.log(`Playlist saved to cache: ${file.uri}`);
             console.log(`Saved ${queueTracks.length} tracks to playlist`);
         } catch (error) {
-            console.error("Failed to save queue as playlist:", error);
+            console.error("Failed to save playlist to cache directory:", error);
         }
     }, [queueTracks]);
 
-    return { handleSaveQueue };
+    return { handleSavePlaylist };
 }
 
 export function generateM3UPlaylist(
@@ -287,6 +270,11 @@ export function generateM3UPlaylist(
                 const minutes = Number.parseInt(parts[0], 10) || 0;
                 const seconds = Number.parseInt(parts[1], 10) || 0;
                 durationSeconds = minutes * 60 + seconds;
+            } else {
+                const numeric = Number.parseInt(track.duration, 10);
+                if (!Number.isNaN(numeric) && numeric >= 0) {
+                    durationSeconds = numeric;
+                }
             }
         }
 
