@@ -30,6 +30,7 @@ const windowsConfig = {
         identifier: "current-song-overlay",
         options: {
             title: "",
+            level: "status",
             windowStyle: {
                 width: 360,
                 height: 140,

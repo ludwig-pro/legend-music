@@ -3,7 +3,7 @@ import { VibrancyView } from "@fluentui-react-native/vibrancy-view";
 import { PortalProvider } from "@gorhom/portal";
 import { use$ } from "@legendapp/state/react";
 import { useCallback, useEffect } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet } from "react-native";
 import Animated, {
     Easing,
     interpolateColor,
@@ -29,15 +29,8 @@ const styles = StyleSheet.create({
     vibrancy: {
         flex: 1,
     },
-    contentWrapper: {
+    overlaySurface: {
         flex: 1,
-        justifyContent: "center",
-        paddingHorizontal: 12,
-        paddingVertical: 16,
-    },
-    cardContainer: {
-        borderRadius: 18,
-        overflow: "hidden",
     },
 });
 
@@ -57,13 +50,10 @@ function CurrentSongOverlayWindow() {
         );
 
         return {
+            flex: 1,
             opacity: opacity.value,
             transform: [{ translateY: translateY.value }],
             backgroundColor,
-            shadowColor: "#000000",
-            shadowOpacity: 0.28,
-            shadowRadius: 16 + blurAmount.value,
-            shadowOffset: { width: 0, height: 16 },
         };
     });
 
@@ -122,11 +112,9 @@ function CurrentSongOverlayWindow() {
             <ThemeProvider>
                 <PortalProvider>
                     <TooltipProvider>
-                        <View style={styles.contentWrapper}>
-                            <Animated.View style={[styles.cardContainer, animatedStyle]}>
-                                <PlaybackArea />
-                            </Animated.View>
-                        </View>
+                        <Animated.View style={[styles.overlaySurface, animatedStyle]}>
+                            <PlaybackArea />
+                        </Animated.View>
                     </TooltipProvider>
                 </PortalProvider>
             </ThemeProvider>

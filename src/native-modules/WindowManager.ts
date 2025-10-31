@@ -36,6 +36,17 @@ const windowStyleMaskMap: Record<WindowStyleMask, number> = {
     [WindowStyleMask.NonactivatingPanel]: windowManagerConstants.STYLE_MASK_NONACTIVATING_PANEL ?? 0,
 };
 
+export type WindowLevel = "normal" | "floating" | "modalPanel" | "mainMenu" | "status" | "screenSaver";
+
+const windowLevelMap: Partial<Record<WindowLevel, number>> = {
+    normal: windowManagerConstants.WINDOW_LEVEL_NORMAL,
+    floating: windowManagerConstants.WINDOW_LEVEL_FLOATING,
+    modalPanel: windowManagerConstants.WINDOW_LEVEL_MODAL_PANEL,
+    mainMenu: windowManagerConstants.WINDOW_LEVEL_MAIN_MENU,
+    status: windowManagerConstants.WINDOW_LEVEL_STATUS,
+    screenSaver: windowManagerConstants.WINDOW_LEVEL_SCREEN_SAVER,
+};
+
 export type WindowStyleOptions = {
     mask?: WindowStyleMask[];
     width?: number;
@@ -51,16 +62,18 @@ export type WindowOptions = {
     y?: number;
     windowStyle?: WindowStyleOptions;
     initialProperties?: Record<string, unknown>;
+    level?: WindowLevel;
 };
 
 type NativeWindowStyleOptions = Omit<WindowStyleOptions, "mask"> & {
     mask?: number;
 };
 
-type NativeWindowOptions = Omit<WindowOptions, "windowStyle"> & {
+type NativeWindowOptions = Omit<WindowOptions, "windowStyle" | "level"> & {
     windowStyle?: NativeWindowStyleOptions;
     width?: number;
     height?: number;
+    level?: number;
 };
 
 const convertMaskArrayToBitwise = (mask?: WindowStyleMask[]) => {
@@ -87,11 +100,20 @@ const convertWindowStyleToNative = (windowStyle?: WindowStyleOptions): NativeWin
     };
 };
 
+const convertWindowLevelToNative = (level?: WindowLevel) => {
+    if (!level) {
+        return undefined;
+    }
+
+    return windowLevelMap[level];
+};
+
 const convertOptionsToNative = (options: WindowOptions = {}): NativeWindowOptions => {
-    const nativeWindowStyle = convertWindowStyleToNative(options.windowStyle);
+    const { level, windowStyle, ...rest } = options;
+    const nativeWindowStyle = convertWindowStyleToNative(windowStyle);
 
     const nativeOptions: NativeWindowOptions = {
-        ...options,
+        ...rest,
         windowStyle: nativeWindowStyle,
     };
 
@@ -101,6 +123,11 @@ const convertOptionsToNative = (options: WindowOptions = {}): NativeWindowOption
 
     if (nativeWindowStyle?.height !== undefined) {
         nativeOptions.height = nativeWindowStyle.height;
+    }
+
+    const nativeLevel = convertWindowLevelToNative(level);
+    if (nativeLevel !== undefined) {
+        nativeOptions.level = nativeLevel;
     }
 
     return nativeOptions;

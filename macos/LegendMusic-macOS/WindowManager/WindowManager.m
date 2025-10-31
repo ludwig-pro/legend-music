@@ -31,7 +31,13 @@ RCT_EXPORT_MODULE();
     @"STYLE_MASK_FULL_SIZE_CONTENT_VIEW": @(NSWindowStyleMaskFullSizeContentView),
     @"STYLE_MASK_UTILITY_WINDOW": @(NSWindowStyleMaskUtilityWindow),
     @"STYLE_MASK_DOC_MODAL_WINDOW": @(NSWindowStyleMaskDocModalWindow),
-    @"STYLE_MASK_NONACTIVATING_PANEL": @(NSWindowStyleMaskNonactivatingPanel)
+    @"STYLE_MASK_NONACTIVATING_PANEL": @(NSWindowStyleMaskNonactivatingPanel),
+    @"WINDOW_LEVEL_NORMAL": @(NSNormalWindowLevel),
+    @"WINDOW_LEVEL_FLOATING": @(NSFloatingWindowLevel),
+    @"WINDOW_LEVEL_MODAL_PANEL": @(NSModalPanelWindowLevel),
+    @"WINDOW_LEVEL_MAIN_MENU": @(NSMainMenuWindowLevel),
+    @"WINDOW_LEVEL_STATUS": @(NSStatusWindowLevel),
+    @"WINDOW_LEVEL_SCREEN_SAVER": @(NSScreenSaverWindowLevel)
   };
 }
 
@@ -71,6 +77,7 @@ RCT_EXPORT_METHOD(openWindow:(NSDictionary *)options
   NSDictionary *windowStyle = options[@"windowStyle"];
   NSNumber *maskNumber = windowStyle[@"mask"];
   NSNumber *transparentTitlebar = windowStyle[@"titlebarAppearsTransparent"];
+  NSNumber *levelNumber = options[@"level"];
 
   NSNumber *widthNumber = windowStyle[@"width"] ?: options[@"width"];
   NSNumber *heightNumber = windowStyle[@"height"] ?: options[@"height"];
@@ -117,6 +124,11 @@ RCT_EXPORT_METHOD(openWindow:(NSDictionary *)options
       [existingWindow setTitlebarAppearsTransparent:[transparentTitlebar boolValue]];
     }
 
+    if (levelNumber) {
+      [existingWindow setLevel:[levelNumber integerValue]];
+      [existingWindow orderFrontRegardless];
+    }
+
     existingWindow.title = title;
 
     existingWindow.delegate = self;
@@ -148,6 +160,10 @@ RCT_EXPORT_METHOD(openWindow:(NSDictionary *)options
   [window setTitle:title];
   if (transparentTitlebar != nil) {
     [window setTitlebarAppearsTransparent:[transparentTitlebar boolValue]];
+  }
+
+  if (levelNumber) {
+    [window setLevel:[levelNumber integerValue]];
   }
 
   if (originX || originY) {
@@ -183,6 +199,9 @@ RCT_EXPORT_METHOD(openWindow:(NSDictionary *)options
   self.rootViews[identifier] = rootView;
 
   [window makeKeyAndOrderFront:nil];
+  if (levelNumber) {
+    [window orderFrontRegardless];
+  }
 
   resolve(@{@"success": @YES});
 }
