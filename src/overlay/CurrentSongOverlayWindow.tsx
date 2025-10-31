@@ -18,10 +18,7 @@ import { TooltipProvider } from "@/components/TooltipProvider";
 import { ThemeProvider } from "@/theme/ThemeProvider";
 import { withWindowProvider } from "@/windows";
 
-import {
-    currentSongOverlay$,
-    finalizeCurrentSongOverlayDismissal,
-} from "./CurrentSongOverlayState";
+import { currentSongOverlay$, finalizeCurrentSongOverlayDismissal } from "./CurrentSongOverlayState";
 
 const WINDOW_ID = "current-song-overlay";
 
@@ -31,6 +28,8 @@ const styles = StyleSheet.create({
     },
     overlaySurface: {
         alignSelf: "stretch",
+        borderRadius: 20,
+        overflow: "hidden",
     },
 });
 
@@ -39,7 +38,6 @@ function CurrentSongOverlayWindow() {
     const isExiting = use$(currentSongOverlay$.isExiting);
 
     const opacity = useSharedValue(0);
-    const translateY = useSharedValue(-16);
     const blurAmount = useSharedValue(16);
 
     const animatedStyle = useAnimatedStyle(() => {
@@ -51,8 +49,6 @@ function CurrentSongOverlayWindow() {
 
         return {
             opacity: opacity.value,
-            transform: [{ translateY: translateY.value }],
-            backgroundColor,
         };
     });
 
@@ -62,14 +58,9 @@ function CurrentSongOverlayWindow() {
 
     useEffect(() => {
         opacity.value = 0;
-        translateY.value = -16;
         blurAmount.value = 16;
 
         opacity.value = withTiming(1, {
-            duration: 300,
-            easing: Easing.out(Easing.cubic),
-        });
-        translateY.value = withTiming(0, {
             duration: 300,
             easing: Easing.out(Easing.cubic),
         });
@@ -77,7 +68,7 @@ function CurrentSongOverlayWindow() {
             duration: 300,
             easing: Easing.out(Easing.cubic),
         });
-    }, [presentationId, opacity, translateY, blurAmount]);
+    }, [presentationId, opacity, blurAmount]);
 
     useEffect(() => {
         if (!isExiting) {
@@ -96,15 +87,11 @@ function CurrentSongOverlayWindow() {
                 }
             },
         );
-        translateY.value = withTiming(-18, {
-            duration: 220,
-            easing: Easing.in(Easing.cubic),
-        });
         blurAmount.value = withTiming(16, {
             duration: 220,
             easing: Easing.in(Easing.cubic),
         });
-    }, [isExiting, blurAmount, opacity, translateY, handleExitComplete]);
+    }, [isExiting, blurAmount, opacity, handleExitComplete]);
 
     return (
         <VibrancyView blendingMode="behindWindow" material="menu" style={styles.vibrancy}>
@@ -112,7 +99,7 @@ function CurrentSongOverlayWindow() {
                 <PortalProvider>
                     <TooltipProvider>
                         <Animated.View style={[styles.overlaySurface, animatedStyle]}>
-                            <PlaybackArea />
+                            <PlaybackArea showBorder={false} />
                         </Animated.View>
                     </TooltipProvider>
                 </PortalProvider>

@@ -9,6 +9,10 @@ import { localAudioControls, localPlayerState$ } from "@/components/LocalAudioPl
 import { cn } from "@/utils/cn";
 import { perfCount } from "@/utils/perfLogger";
 
+type PlaybackAreaProps = {
+    showBorder?: boolean;
+};
+
 // Format time for local playback with caching to reduce computation
 const formatTimeCache = new Map<number, string>();
 
@@ -104,7 +108,7 @@ function formatTime(seconds: number, cache?: boolean): string {
     return formatted;
 }
 
-export function PlaybackArea() {
+export function PlaybackArea({ showBorder = true }: PlaybackAreaProps = {}) {
     perfCount("PlaybackArea.render");
     const currentTrack = use$(localPlayerState$.currentTrack);
     const isPlaying = use$(localPlayerState$.isPlaying);
@@ -126,7 +130,7 @@ export function PlaybackArea() {
 
     return (
         <View
-            className="px-3 pt-3 border-b border-white/10"
+            className={cn("px-3 pt-3", showBorder && "border-b border-white/10")}
             onMouseEnter={() => isSliderHovered$.set(true)}
             onMouseLeave={() => isSliderHovered$.set(false)}
         >
