@@ -51,6 +51,7 @@ const deserializeQueuedTrack = (track: SerializedQueuedTrack): QueuedTrack => ({
 
 const snapshotFromCache = getPlaylistCacheSnapshot();
 let queueHydratedFromSnapshot = false;
+let pendingInitialTrackRestore: { track: QueuedTrack; autoPlay: boolean } | null = null;
 
 if (snapshotFromCache.queue.length > 0) {
     const hydratedTracks = snapshotFromCache.queue.map(deserializeQueuedTrack);
@@ -69,12 +70,17 @@ if (snapshotFromCache.queue.length > 0) {
         const currentTrack = hydratedTracks[resolvedIndex];
         localPlayerState$.currentTrack.set(currentTrack);
         localPlayerState$.currentIndex.set(resolvedIndex);
+        pendingInitialTrackRestore = {
+            track: currentTrack,
+            autoPlay: false,
+        };
     } else {
         localPlayerState$.currentTrack.set(null);
         localPlayerState$.currentIndex.set(-1);
+        pendingInitialTrackRestore = null;
     }
 
-    localPlayerState$.isPlaying.set(snapshotFromCache.isPlaying && resolvedIndex >= 0);
+    localPlayerState$.isPlaying.set(false);
     localPlayerState$.isLoading.set(false);
     queueHydratedFromSnapshot = true;
 }
@@ -216,6 +222,7 @@ function resetPlayerForEmptyQueue(): void {
     localPlayerState$.currentTime.set(0);
     localPlayerState$.duration.set(0);
     localPlayerState$.isPlaying.set(false);
+    pendingInitialTrackRestore = null;
     if (audioPlayer) {
         audioPlayer.stop().catch((error) => console.error("Error stopping playback:", error));
         audioPlayer.clearNowPlayingInfo();
@@ -703,6 +710,16 @@ function getCurrentState(): LocalPlayerState {
     return localPlayerState$.get();
 }
 
+async function restoreTrackFromSnapshotIfNeeded(): Promise<void> {
+    if (!audioPlayer || !pendingInitialTrackRestore) {
+        return;
+    }
+
+    const { track, autoPlay } = pendingInitialTrackRestore;
+    pendingInitialTrackRestore = null;
+    await loadTrackInternal(track, autoPlay);
+}
+
 // Expose control methods for local audio
 export const localAudioControls = {
     loadTrack,
@@ -732,6 +749,7 @@ export function LocalAudioPlayer() {
     useEffect(() => {
         perfLog("LocalAudioPlayer.useEffect[player]", { hasPlayer: !!player });
         audioPlayer = player;
+        void restoreTrackFromSnapshotIfNeeded();
         return () => {
             perfLog("LocalAudioPlayer.cleanup[player]");
             player.clearNowPlayingInfo();
