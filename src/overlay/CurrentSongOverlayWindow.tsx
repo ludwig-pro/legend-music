@@ -4,14 +4,7 @@ import { PortalProvider } from "@gorhom/portal";
 import { use$ } from "@legendapp/state/react";
 import { useCallback, useEffect } from "react";
 import { StyleSheet } from "react-native";
-import Animated, {
-    Easing,
-    interpolateColor,
-    runOnJS,
-    useAnimatedStyle,
-    useSharedValue,
-    withTiming,
-} from "react-native-reanimated";
+import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 
 import { PlaybackArea } from "@/components/PlaybackArea";
 import { TooltipProvider } from "@/components/TooltipProvider";
@@ -25,11 +18,14 @@ const WINDOW_ID = "current-song-overlay";
 const styles = StyleSheet.create({
     vibrancy: {
         flex: 1,
+        borderRadius: 20,
+        overflow: "hidden",
     },
     overlaySurface: {
         alignSelf: "stretch",
         borderRadius: 20,
         overflow: "hidden",
+        backgroundColor: "transparent",
     },
 });
 
@@ -38,19 +34,10 @@ function CurrentSongOverlayWindow() {
     const isExiting = use$(currentSongOverlay$.isExiting);
 
     const opacity = useSharedValue(0);
-    const blurAmount = useSharedValue(16);
 
-    const animatedStyle = useAnimatedStyle(() => {
-        const backgroundColor = interpolateColor(
-            blurAmount.value,
-            [0, 16],
-            ["rgba(18, 18, 21, 0.78)", "rgba(18, 18, 21, 0.92)"],
-        );
-
-        return {
-            opacity: opacity.value,
-        };
-    });
+    const animatedStyle = useAnimatedStyle(() => ({
+        opacity: opacity.value,
+    }));
 
     const handleExitComplete = useCallback(() => {
         finalizeCurrentSongOverlayDismissal();
@@ -58,17 +45,12 @@ function CurrentSongOverlayWindow() {
 
     useEffect(() => {
         opacity.value = 0;
-        blurAmount.value = 16;
 
         opacity.value = withTiming(1, {
             duration: 300,
             easing: Easing.out(Easing.cubic),
         });
-        blurAmount.value = withTiming(0, {
-            duration: 300,
-            easing: Easing.out(Easing.cubic),
-        });
-    }, [presentationId, opacity, blurAmount]);
+    }, [presentationId, opacity]);
 
     useEffect(() => {
         if (!isExiting) {
@@ -87,14 +69,10 @@ function CurrentSongOverlayWindow() {
                 }
             },
         );
-        blurAmount.value = withTiming(16, {
-            duration: 220,
-            easing: Easing.in(Easing.cubic),
-        });
-    }, [isExiting, blurAmount, opacity, handleExitComplete]);
+    }, [isExiting, opacity, handleExitComplete]);
 
     return (
-        <VibrancyView blendingMode="behindWindow" material="menu" style={styles.vibrancy}>
+        <VibrancyView blendingMode="behindWindow" material="hudWindow" style={styles.vibrancy}>
             <ThemeProvider>
                 <PortalProvider>
                     <TooltipProvider>
