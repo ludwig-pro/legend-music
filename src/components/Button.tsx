@@ -1,7 +1,7 @@
+import { isString } from "@legendapp/state";
 import { type PropsWithChildren, useEffect, useRef } from "react";
-import { type GestureResponderEvent, Pressable, type PressableProps } from "react-native";
+import { type GestureResponderEvent, Pressable, type PressableProps, Text } from "react-native";
 import type { NativeMouseEvent } from "react-native-macos";
-
 import { Icon } from "@/systems/Icon";
 import { startNavMeasurement } from "@/systems/NavTime";
 import type { SFSymbols } from "@/types/SFSymbols";
@@ -170,7 +170,7 @@ export function Button({
             onHoverOut={handleHoverOut}
         >
             {icon && <Icon name={icon} size={iconSize} />}
-            {children}
+            {isString(children) ? <Text className="text-white text-base">{children}</Text> : children}
         </Pressable>
     );
 }
