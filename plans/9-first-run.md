@@ -22,5 +22,5 @@ Smooth the first-run experience so new users understand how to add music, see a 
 
 ## Steps
 - [x] Update first-run empty-state copy and add Library Settings affordance.
-- [ ] Rename default playlist label and migrate dependent UI/state.
+- [x] Rename default playlist label and migrate dependent UI/state.
 - [ ] Verify drag-and-drop playback path works without library configuration and add regression coverage.

@@ -48,6 +48,9 @@ export interface LocalMusicState {
     playlists: LocalPlaylist[];
 }
 
+export const DEFAULT_LOCAL_PLAYLIST_ID = "LOCAL_FILES";
+export const DEFAULT_LOCAL_PLAYLIST_NAME = "All Songs";
+
 // Settings persistence
 export const localMusicSettings$ = createJSONManager<LocalMusicSettings>({
     filename: "localMusicSettings",
@@ -756,7 +759,7 @@ export async function loadLocalPlaylists(): Promise<void> {
 
 // Set current playlist selection
 export function setCurrentPlaylist(playlistId: string, playlistType: "file"): void {
-    localMusicState$.isLocalFilesSelected.set(playlistId === "LOCAL_FILES");
+    localMusicState$.isLocalFilesSelected.set(playlistId === DEFAULT_LOCAL_PLAYLIST_ID);
 
     console.log("setCurrentPlaylist", playlistId, playlistType);
 
@@ -795,10 +798,10 @@ export function initializeLocalMusic(): void {
     const savedPlaylistType = stateSaved$.playlistType.get();
     if (savedPlaylistType === "file") {
         const savedPlaylistId = stateSaved$.playlist.get();
-        const isLocalFiles = savedPlaylistId === "LOCAL_FILES";
+        const isLocalFiles = savedPlaylistId === DEFAULT_LOCAL_PLAYLIST_ID;
         localMusicState$.isLocalFilesSelected.set(isLocalFiles);
         if (isLocalFiles) {
-            console.log("Restored Local Files playlist selection on startup");
+            console.log("Restored default library playlist selection on startup");
         }
     }
 

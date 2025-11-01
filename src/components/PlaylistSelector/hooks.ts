@@ -6,7 +6,12 @@ import { localAudioControls } from "@/components/LocalAudioPlayer";
 import type { LibraryItem, LibraryTrack } from "@/systems/LibraryState";
 import { libraryUI$ } from "@/systems/LibraryState";
 import type { LocalMusicState, LocalPlaylist, LocalTrack } from "@/systems/LocalMusicState";
-import { loadLocalPlaylists, setCurrentPlaylist } from "@/systems/LocalMusicState";
+import {
+    DEFAULT_LOCAL_PLAYLIST_ID,
+    DEFAULT_LOCAL_PLAYLIST_NAME,
+    loadLocalPlaylists,
+    setCurrentPlaylist,
+} from "@/systems/LocalMusicState";
 import { stateSaved$ } from "@/systems/State";
 import { ensureCacheDirectory, getCacheDirectory } from "@/utils/cacheDirectories";
 import { perfLog } from "@/utils/perfLogger";
@@ -30,8 +35,8 @@ interface UsePlaylistOptionsResult {
 export function usePlaylistOptions(localMusicState: LocalMusicState): UsePlaylistOptionsResult {
     const localFilesPlaylist = useMemo<PlaylistOption>(
         () => ({
-            id: "LOCAL_FILES",
-            name: "Local Files",
+            id: DEFAULT_LOCAL_PLAYLIST_ID,
+            name: DEFAULT_LOCAL_PLAYLIST_NAME,
             count: localMusicState.tracks.length,
             type: "local-files",
         }),
@@ -42,7 +47,10 @@ export function usePlaylistOptions(localMusicState: LocalMusicState): UsePlaylis
         () =>
             localMusicState.playlists.map((playlist) => ({
                 id: playlist.id,
-                name: playlist.name,
+                name:
+                    playlist.id === DEFAULT_LOCAL_PLAYLIST_ID
+                        ? DEFAULT_LOCAL_PLAYLIST_NAME
+                        : playlist.name,
                 count: playlist.trackCount,
                 type: "saved" as const,
                 trackPaths: playlist.trackPaths,

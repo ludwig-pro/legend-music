@@ -9,7 +9,7 @@ import { PlaylistSelectorSearchDropdown } from "@/components/PlaylistSelectorSea
 import { SelectLegendList } from "@/components/SelectLegendList";
 import { useOnHotkeys } from "@/systems/keyboard/Keyboard";
 import { library$ } from "@/systems/LibraryState";
-import { localMusicState$ } from "@/systems/LocalMusicState";
+import { DEFAULT_LOCAL_PLAYLIST_NAME, localMusicState$ } from "@/systems/LocalMusicState";
 
 import {
     selectedPlaylist$,
@@ -98,7 +98,7 @@ export function PlaylistSelector() {
                     <SelectLegendList
                         items={availablePlaylistIds}
                         selected$={selectedPlaylist$}
-                        placeholder="Local Files"
+                        placeholder={DEFAULT_LOCAL_PLAYLIST_NAME}
                         onSelectItem={handlePlaylistSelect}
                         getItemKey={(playlist) => playlist}
                         className="min-h-[200px]"

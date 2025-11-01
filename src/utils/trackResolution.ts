@@ -1,5 +1,6 @@
 import type { LibraryItem, LibraryTrack } from "@/systems/LibraryState";
 import type { LocalTrack } from "@/systems/LocalMusicState";
+import { DEFAULT_LOCAL_PLAYLIST_ID } from "@/systems/LocalMusicState";
 
 export interface PlaylistResolutionSource {
     id: string;
@@ -18,7 +19,7 @@ export function resolvePlaylistTracks(
     allTracks: LocalTrack[],
     trackLookup: Map<string, LocalTrack>,
 ): PlaylistResolutionResult {
-    if (source.type === "local-files" || source.id === "LOCAL_FILES") {
+    if (source.type === "local-files" || source.id === DEFAULT_LOCAL_PLAYLIST_ID) {
         return {
             tracks: allTracks,
             missingPaths: [],
