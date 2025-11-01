@@ -19,12 +19,12 @@ export function HotkeySettings() {
     const hotkeyNames = Object.keys(hotkeys);
 
     return (
-        <SettingsPage title="Keyboard Shortcuts" scroll contentClassName="p-5 space-y-4">
+        <SettingsPage title="Keyboard Shortcuts" scroll contentClassName="p-5 gap-4">
             <HiddenTextInput />
             <View className="bg-gray-800 border border-gray-700 rounded-lg p-4">
                 <Text>Note: This may become a Pro feature once Pro is set up</Text>
             </View>
-            <View className="space-y-3">
+            <View className="flex flex-col gap-3">
                 {hotkeyNames.map((name) => (
                     <HotkeyItem
                         key={name}

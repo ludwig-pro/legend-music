@@ -13,42 +13,24 @@ interface SettingsPageProps {
     contentClassName?: string;
 }
 
-export function SettingsPage({
-    title,
-    description,
-    actions,
-    children,
-    scroll = false,
-    className,
-    contentClassName,
-}: SettingsPageProps) {
-    const Header = (
-        <View className="mb-6 flex-row items-start justify-between">
-            <View className="flex-1">
-                <Text className="text-2xl font-bold text-text-primary">{title}</Text>
-                {description ? <Text className="text-text-tertiary text-base mt-2">{description}</Text> : null}
-            </View>
-            {actions ? <View className="flex-none ml-4">{actions}</View> : null}
-        </View>
-    );
-
-    if (scroll) {
-        return (
-            <View className={cn("flex-1 bg-background-primary", className)}>
-                <ScrollView className="flex-1" contentContainerClassName={cn("p-6", contentClassName)}>
-                    {Header}
-                    {children}
-                </ScrollView>
-            </View>
-        );
-    }
-
+export function SettingsPage({ title, description, actions, children, contentClassName }: SettingsPageProps) {
     return (
-        <View className={cn("flex-1 bg-background-primary", className)}>
-            <View className={cn("flex-1 p-6", contentClassName)}>
-                {Header}
+        <View className={cn("flex-1 bg-background-primary")}>
+            <ScrollView
+                className="flex-1"
+                contentContainerClassName={cn("mx-auto w-full max-w-4xl p-6 flex flex-col", contentClassName)}
+            >
+                <View className="flex-row items-start justify-between gap-6">
+                    <View className="flex-1 flex-col gap-2">
+                        <Text className="text-[32px] font-semibold text-text-primary leading-tight">{title}</Text>
+                        {description ? (
+                            <Text className="text-base leading-relaxed text-text-secondary">{description}</Text>
+                        ) : null}
+                    </View>
+                    {actions ? <View className="flex-none flex-row gap-3">{actions}</View> : null}
+                </View>
                 {children}
-            </View>
+            </ScrollView>
         </View>
     );
 }
@@ -56,12 +38,10 @@ export function SettingsPage({
 interface SettingsSectionProps {
     title: string;
     description?: string;
-    children: ReactNode;
+    children?: ReactNode;
     className?: string;
     contentClassName?: string;
-    cardClassName?: string;
     headerRight?: ReactNode;
-    card?: boolean;
 }
 
 export function SettingsSection({
@@ -70,23 +50,21 @@ export function SettingsSection({
     children,
     className,
     contentClassName,
-    cardClassName,
     headerRight,
-    card = true,
 }: SettingsSectionProps) {
-    const content = contentClassName ? <View className={contentClassName}>{children}</View> : children;
-
     return (
-        <View className={cn("mb-8", className)}>
-            <View className="mb-4 flex-row items-start justify-between">
-                <View className="flex-1">
-                    <Text className="text-lg font-semibold text-text-primary">{title}</Text>
-                    {description ? <Text className="text-text-tertiary text-sm mt-1">{description}</Text> : null}
+        <SettingsCard className={cn("mt-6 flex flex-col gap-6", className)}>
+            <View className="flex-row items-start justify-between gap-4">
+                <View className="flex-1 flex-col gap-1.5">
+                    <Text className="text-xl font-semibold text-text-primary leading-tight">{title}</Text>
+                    {description ? (
+                        <Text className="text-sm leading-relaxed text-text-secondary">{description}</Text>
+                    ) : null}
                 </View>
                 {headerRight ? <View className="flex-none ml-4">{headerRight}</View> : null}
             </View>
-            {card ? <SettingsCard className={cn("gap-4", cardClassName)}>{content}</SettingsCard> : content}
-        </View>
+            {children ? <View className={cn("flex flex-col gap-5", contentClassName)}>{children}</View> : null}
+        </SettingsCard>
     );
 }
 
@@ -97,7 +75,12 @@ interface SettingsCardProps {
 
 export function SettingsCard({ children, className }: SettingsCardProps) {
     return (
-        <View className={cn("bg-background-secondary rounded-lg border border-border-primary p-4", className)}>
+        <View
+            className={cn(
+                "rounded-2xl border border-border-primary bg-background-secondary px-6 py-6 shadow-2xl",
+                className,
+            )}
+        >
             {children}
         </View>
     );
@@ -127,15 +110,17 @@ export function SettingsRow({
     return (
         <View
             className={cn(
-                "flex-row justify-between",
+                "flex-row justify-between gap-6 rounded-xl border border-border-primary bg-background-tertiary px-5 py-4",
                 align === "center" ? "items-center" : "items-start",
                 disabled ? "opacity-60" : "",
                 className,
             )}
         >
-            <View className={cn("flex-1 pr-6", contentClassName)}>
-                <Text className="text-text-primary text-base font-medium">{title}</Text>
-                {description ? <Text className="text-text-tertiary text-sm mt-1">{description}</Text> : null}
+            <View className={cn("flex-1 flex-col gap-1.5 pr-6", contentClassName)}>
+                <Text className="text-base font-semibold text-text-primary leading-tight">{title}</Text>
+                {description ? (
+                    <Text className="text-sm leading-relaxed text-text-secondary">{description}</Text>
+                ) : null}
             </View>
             <View className={cn("flex-none", controlWrapperClassName)}>{control}</View>
         </View>

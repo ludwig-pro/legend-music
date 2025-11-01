@@ -83,7 +83,7 @@ export const LibrarySettings = observer(function LibrarySettings() {
 
             <SettingsSection title="Library Paths">
                 {localMusicSettings.libraryPaths.length > 0 ? (
-                    <View className="space-y-2">
+                    <View className="flex flex-col gap-2">
                         {localMusicSettings.libraryPaths.map((path, index) => (
                             <View
                                 key={index}

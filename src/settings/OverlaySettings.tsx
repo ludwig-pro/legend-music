@@ -60,20 +60,20 @@ export const OverlaySettings = observer(function OverlaySettings() {
             <SettingsSection title="Overlay Options">
                 <SettingsRow
                     title="Enable overlay"
-                    description="Show the current song overlay when a new track begins."
+                    description="Show the current song overlay when a new track begins"
                     control={<Checkbox $checked={settings$.overlay.enabled} />}
                 />
 
                 <SettingsRow
                     title="Display duration"
-                    description={`Number of seconds the overlay remains visible (between ${OVERLAY_MIN_DISPLAY_DURATION_SECONDS} and ${OVERLAY_MAX_DISPLAY_DURATION_SECONDS}).`}
+                    description={`Number of seconds the overlay remains visible (${OVERLAY_MIN_DISPLAY_DURATION_SECONDS} - ${OVERLAY_MAX_DISPLAY_DURATION_SECONDS})`}
                     control={
                         <TextInput
                             value={durationDraft}
                             onChangeText={handleDurationChange}
                             onBlur={handleDurationBlur}
                             keyboardType="numeric"
-                            className="bg-background-tertiary text-text-primary border border-border-primary rounded-md px-3 py-1.5 w-20 text-center"
+                            className="bg-background-primary text-text-primary border border-border-primary rounded-md px-3 py-1.5 w-20 text-center"
                             accessibilityLabel="Overlay display duration"
                         />
                     }
@@ -84,7 +84,7 @@ export const OverlaySettings = observer(function OverlaySettings() {
                     title="Position"
                     description="Choose where the overlay appears on screen."
                     control={
-                        <View className="flex-row gap-3">
+                        <View className=" gap-3">
                             <View className="w-32">
                                 <Select
                                     options={verticalOptions}
