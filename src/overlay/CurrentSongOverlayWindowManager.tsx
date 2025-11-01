@@ -17,9 +17,9 @@ const OVERLAY_WINDOW_KEY = "CurrentSongOverlayWindow" as const;
 const OVERLAY_WINDOW_ID = WindowsNavigator.getIdentifier(OVERLAY_WINDOW_KEY);
 const DEFAULT_WIDTH = 400;
 const DEFAULT_HEIGHT = 154;
-const TOP_MARGIN = 0;
-const HORIZONTAL_MARGIN = 32;
-const BOTTOM_MARGIN = 32;
+const TOP_MARGIN = 48;
+const HORIZONTAL_MARGIN = 0;
+const BOTTOM_MARGIN = 0;
 
 export const CurrentSongOverlayWindowManager = () => {
     perfCount("CurrentSongOverlayWindowManager.render");
@@ -81,11 +81,14 @@ export const CurrentSongOverlayWindowManager = () => {
                     x = Math.max(screenWidth - DEFAULT_WIDTH - HORIZONTAL_MARGIN, 0);
                 }
 
-                let y = Math.max(TOP_MARGIN, 0);
+                const maxY = Math.max(screenHeight - DEFAULT_HEIGHT, 0);
+                const clampY = (value: number) => Math.min(Math.max(value, 0), maxY);
+
+                let y = clampY(maxY - TOP_MARGIN);
                 if (verticalPosition === "middle") {
-                    y = Math.max(Math.round((screenHeight - DEFAULT_HEIGHT) / 2), TOP_MARGIN);
+                    y = clampY(Math.round(maxY / 2));
                 } else if (verticalPosition === "bottom") {
-                    y = Math.max(screenHeight - DEFAULT_HEIGHT - BOTTOM_MARGIN, TOP_MARGIN);
+                    y = clampY(BOTTOM_MARGIN);
                 }
 
                 await WindowsNavigator.open(OVERLAY_WINDOW_KEY, {

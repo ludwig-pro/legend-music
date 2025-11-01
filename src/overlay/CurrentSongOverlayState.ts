@@ -1,12 +1,10 @@
-import { observable } from "@legendapp/state";
+import { batch, observable } from "@legendapp/state";
 
 import {
     OVERLAY_MAX_DISPLAY_DURATION_SECONDS,
     OVERLAY_MIN_DISPLAY_DURATION_SECONDS,
     settings$,
 } from "@/systems/Settings";
-
-export const DEFAULT_OVERLAY_DISPLAY_DURATION_MS = 5000;
 
 export const currentSongOverlay$ = observable({
     isWindowOpen: false,
@@ -25,12 +23,12 @@ const clearHideTimer = () => {
 
 const getDisplayDurationMs = () => {
     const configuredSeconds = settings$.overlay.displayDurationSeconds.get();
-    const numericSeconds =
-        typeof configuredSeconds === "number" ? configuredSeconds : DEFAULT_OVERLAY_DISPLAY_DURATION_MS / 1000;
     const clampedSeconds = Math.min(
-        Math.max(numericSeconds, OVERLAY_MIN_DISPLAY_DURATION_SECONDS),
+        Math.max(configuredSeconds, OVERLAY_MIN_DISPLAY_DURATION_SECONDS),
         OVERLAY_MAX_DISPLAY_DURATION_SECONDS,
     );
+
+    console.log("clampedSeconds", clampedSeconds, configuredSeconds);
     return clampedSeconds * 1000;
 };
 
@@ -47,10 +45,12 @@ export const presentCurrentSongOverlay = () => {
         return;
     }
     clearHideTimer();
-    currentSongOverlay$.isExiting.set(false);
-    currentSongOverlay$.isWindowOpen.set(true);
-    const nextPresentationId = currentSongOverlay$.presentationId.get() + 1;
-    currentSongOverlay$.presentationId.set(nextPresentationId);
+    batch(() => {
+        currentSongOverlay$.isExiting.set(false);
+        currentSongOverlay$.isWindowOpen.set(true);
+        const nextPresentationId = currentSongOverlay$.presentationId.get() + 1;
+        currentSongOverlay$.presentationId.set(nextPresentationId);
+    });
     scheduleHideTimer();
 };
 
@@ -64,14 +64,18 @@ export const requestCurrentSongOverlayDismissal = () => {
 
 export const finalizeCurrentSongOverlayDismissal = () => {
     clearHideTimer();
-    currentSongOverlay$.isExiting.set(false);
-    currentSongOverlay$.isWindowOpen.set(false);
+    batch(() => {
+        currentSongOverlay$.isExiting.set(false);
+        currentSongOverlay$.isWindowOpen.set(false);
+    });
 };
 
 export const cancelCurrentSongOverlay = () => {
     clearHideTimer();
-    currentSongOverlay$.isExiting.set(false);
-    currentSongOverlay$.isWindowOpen.set(false);
+    batch(() => {
+        currentSongOverlay$.isExiting.set(false);
+        currentSongOverlay$.isWindowOpen.set(false);
+    });
 };
 
 export const resetCurrentSongOverlayTimer = () => {

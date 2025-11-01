@@ -56,9 +56,9 @@ export const settings$ = createJSONManager<AppSettings>({
         },
         overlay: {
             enabled: true,
-            displayDurationSeconds: 5,
+            displayDurationSeconds: 2.5,
             position: {
-                vertical: "top",
+                vertical: "bottom",
                 horizontal: "center",
             },
         },

@@ -1,10 +1,16 @@
 import "@/../global.css";
 import { VibrancyView } from "@fluentui-react-native/vibrancy-view";
 import { PortalProvider } from "@gorhom/portal";
-import { use$ } from "@legendapp/state/react";
-import { useCallback, useEffect } from "react";
+import { useObserveEffect } from "@legendapp/state/react";
+import { useCallback } from "react";
 import { Platform, StyleSheet, View } from "react-native";
-import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import Animated, {
+    Easing,
+    runOnJS,
+    useAnimatedStyle,
+    useSharedValue,
+    withTiming,
+} from "react-native-reanimated";
 
 import { PlaybackArea } from "@/components/PlaybackArea";
 import { TooltipProvider } from "@/components/TooltipProvider";
@@ -48,23 +54,67 @@ const styles = StyleSheet.create({
 });
 
 function CurrentSongOverlayWindow() {
-    const presentationId = use$(currentSongOverlay$.presentationId);
-    const isExiting = use$(currentSongOverlay$.isExiting);
-
     const opacity = useSharedValue(0);
+    const scale = useSharedValue(0.95);
 
     const animatedStyle = useAnimatedStyle(() => ({
         opacity: opacity.value,
+        transform: [{ scale: scale.value }],
     }));
 
     const handleExitComplete = useCallback(() => {
         finalizeCurrentSongOverlayDismissal();
     }, []);
 
-    useEffect(() => {
+    useObserveEffect(() => {
+        const exiting = currentSongOverlay$.isExiting.get();
+        const windowOpen = currentSongOverlay$.isWindowOpen.peek();
+
+        if (exiting) {
+            if (Platform.OS === "macos") {
+                void (async () => {
+                    try {
+                        await setWindowBlur(WINDOW_ID, MAX_BLUR_RADIUS, HIDE_DURATION_MS);
+                    } catch (error) {
+                        console.error("Failed to animate overlay blur on hide:", error);
+                    }
+                })();
+            }
+
+            opacity.value = withTiming(
+                0,
+                {
+                    duration: HIDE_DURATION_MS,
+                    easing: Easing.in(Easing.cubic),
+                },
+                (finished) => {
+                    if (finished) {
+                        runOnJS(handleExitComplete)();
+                    }
+                },
+            );
+
+            scale.value = withTiming(0.95, {
+                duration: HIDE_DURATION_MS,
+                easing: Easing.in(Easing.cubic),
+            });
+
+            return;
+        }
+
+        if (!windowOpen) {
+            return;
+        }
+
         opacity.value = 0;
+        scale.value = 0.95;
 
         opacity.value = withTiming(1, {
+            duration: SHOW_DURATION_MS,
+            easing: Easing.out(Easing.cubic),
+        });
+
+        scale.value = withTiming(1, {
             duration: SHOW_DURATION_MS,
             easing: Easing.out(Easing.cubic),
         });
@@ -79,36 +129,7 @@ function CurrentSongOverlayWindow() {
                 }
             })();
         }
-    }, [presentationId, opacity]);
-
-    useEffect(() => {
-        if (!isExiting) {
-            return;
-        }
-
-        if (Platform.OS === "macos") {
-            void (async () => {
-                try {
-                    await setWindowBlur(WINDOW_ID, MAX_BLUR_RADIUS, HIDE_DURATION_MS);
-                } catch (error) {
-                    console.error("Failed to animate overlay blur on hide:", error);
-                }
-            })();
-        }
-
-        opacity.value = withTiming(
-            0,
-            {
-                duration: HIDE_DURATION_MS,
-                easing: Easing.in(Easing.cubic),
-            },
-            (finished) => {
-                if (finished) {
-                    runOnJS(handleExitComplete)();
-                }
-            },
-        );
-    }, [isExiting, opacity, handleExitComplete]);
+    });
 
     return (
         <Animated.View style={[styles.root, animatedStyle]}>
