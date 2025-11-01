@@ -3,6 +3,7 @@ import { use$ } from "@legendapp/state/react";
 import { type ElementRef, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { findNodeHandle, type NativeSyntheticEvent, Platform, StyleSheet, Text, UIManager, View } from "react-native";
 import type { NativeMouseEvent } from "react-native-macos";
+import { Button } from "@/components/Button";
 import { localAudioControls, localPlayerState$, queue$ } from "@/components/LocalAudioPlayer";
 import { type TrackData, TrackItem } from "@/components/TrackItem";
 import { usePlaylistSelection } from "@/hooks/usePlaylistSelection";
@@ -22,6 +23,7 @@ import {
     scanLocalMusic,
 } from "@/systems/LocalMusicState";
 import { settings$ } from "@/systems/Settings";
+import { state$ } from "@/systems/State";
 import { cn } from "@/utils/cn";
 import { perfCount, perfLog } from "@/utils/perfLogger";
 import {
@@ -72,6 +74,13 @@ export function Playlist() {
     const previousPlayedIndexRef = useRef<number>(typeof currentTrackIndex === "number" ? currentTrackIndex : -1);
     const wasPlayingRef = useRef<boolean>(isPlayerActive);
     const { draggedItem$, activeDropZone$, checkDropZones } = useDragDrop();
+    const handleOpenLibrarySettings = useCallback(() => {
+        perfLog("Playlist.openLibrarySettingsCTA");
+        state$.assign({
+            showSettings: true,
+            showSettingsPage: "library",
+        });
+    }, []);
 
     // Render the active playback queue
     const playlist: PlaylistTrackWithSuggestions[] = useMemo(
@@ -655,16 +664,66 @@ export function Playlist() {
     //     playlistNavigationState$.hasSelection.set(playlist.length > 0 && selectedIndex !== -1);
     // }, [playlist.length, selectedIndex]);
 
-    const overlayClassName = isDragOver ? "bg-blue-500/20 border-2 border-blue-500 border-dashed" : "";
+    const isQueueEmpty = playlist.length === 0;
 
-    const msg =
-        playlist.length === 0
-            ? localMusicState.isScanning
-                ? `Scanning... ${localMusicState.scanProgress}/${localMusicState.scanTotal}`
-                : localMusicState.error
-                  ? "Error scanning local files"
-                  : "Queue is empty"
-            : null;
+    const overlayClassName = cn(
+        isQueueEmpty && !isDragOver && "border border-white/12 border-dashed bg-white/5",
+        isDragOver && "bg-blue-500/20 border-2 border-blue-500 border-dashed",
+    );
+
+    const emptyStateContent = isQueueEmpty
+        ? localMusicState.isScanning
+            ? (
+                  <>
+                      <Text className="text-white font-medium text-base">Scanning your library…</Text>
+                      <Text className="text-white/70 text-sm mt-2">
+                          {localMusicState.scanTotal > 0
+                              ? `${localMusicState.scanProgress}/${localMusicState.scanTotal}`
+                              : `${localMusicState.scanProgress} items processed`}
+                      </Text>
+                      <Text className="text-white/50 text-xs mt-4 text-center max-w-sm">
+                          You can still drag songs or folders here while we finish scanning.
+                      </Text>
+                      {isDragOver ? (
+                          <Text className="text-blue-300 text-sm mt-6 font-medium">Drop to add these tracks</Text>
+                      ) : null}
+                  </>
+              )
+            : localMusicState.error
+              ? (
+                    <>
+                        <Text className="text-red-300 font-medium text-base">We couldn&apos;t read your music folder.</Text>
+                        <Text className="text-white/70 text-sm mt-2 text-center max-w-sm">
+                            {typeof localMusicState.error === "string"
+                                ? localMusicState.error
+                                : "Check the folder permissions or pick a different location."}
+                        </Text>
+                        <Button variant="secondary" size="medium" className="mt-4" onClick={handleOpenLibrarySettings}>
+                            Open Library Settings
+                        </Button>
+                        <Text className="text-white/50 text-xs mt-6 text-center max-w-sm">
+                            You can also drag songs directly into this area to start listening immediately.
+                        </Text>
+                    </>
+                )
+              : (
+                    <>
+                        <Text className="text-white font-semibold text-base">Bring your music</Text>
+                        <Text className="text-white/70 text-sm mt-2 text-center max-w-sm">
+                            Drag individual songs or an entire folder here to build your queue, or choose a library folder to watch.
+                        </Text>
+                        <Button variant="secondary" size="medium" className="mt-4" onClick={handleOpenLibrarySettings}>
+                            Open Library Settings
+                        </Button>
+                        <Text className="text-white/50 text-xs mt-6 text-center uppercase tracking-wide">
+                            Supported formats: MP3, WAV, M4A, AAC, FLAC
+                        </Text>
+                        {isDragOver ? (
+                            <Text className="text-blue-300 text-sm mt-6 font-medium">Drop to add these tracks</Text>
+                        ) : null}
+                    </>
+                )
+        : null;
 
     return (
         <DragDropView
@@ -704,13 +763,8 @@ export function Playlist() {
                     </View>
                 </View>
             ) : null}
-            {msg ? (
-                <View className="flex-1 items-center justify-center">
-                    <Text className="text-white/60 text-sm">{msg}</Text>
-                    {isDragOver && (
-                        <Text className="text-blue-400 text-sm mt-2">Drop audio files here to add to queue</Text>
-                    )}
-                </View>
+            {emptyStateContent ? (
+                <View className="flex-1 items-center justify-center px-8 text-center">{emptyStateContent}</View>
             ) : (
                 <>
                     {isDragOver && (
