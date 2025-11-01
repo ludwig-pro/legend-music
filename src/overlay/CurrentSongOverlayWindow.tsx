@@ -32,13 +32,13 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.3,
         shadowRadius: 8,
         backgroundColor: "transparent",
-        borderWidth: 1,
-        borderColor: "rgba(255, 255, 255, 0.08)",
         overflow: "hidden",
     },
     overlaySurface: {
         flex: 1,
         borderRadius: 18,
+        borderWidth: 1,
+        borderColor: "#464747",
         overflow: "hidden",
     },
 });
@@ -61,7 +61,7 @@ function CurrentSongOverlayWindow() {
         opacity.value = 0;
 
         opacity.value = withTiming(1, {
-            duration: 300,
+            duration: 500,
             easing: Easing.out(Easing.cubic),
         });
     }, [presentationId, opacity]);
@@ -74,7 +74,7 @@ function CurrentSongOverlayWindow() {
         opacity.value = withTiming(
             0,
             {
-                duration: 220,
+                duration: 300,
                 easing: Easing.in(Easing.cubic),
             },
             (finished) => {
@@ -94,13 +94,15 @@ function CurrentSongOverlayWindow() {
                     state="active"
                     style={styles.overlaySurface}
                 >
-                    <ThemeProvider>
-                        <PortalProvider>
-                            <TooltipProvider>
-                                <PlaybackArea showBorder={false} />
-                            </TooltipProvider>
-                        </PortalProvider>
-                    </ThemeProvider>
+                    <View className="flex-1 bg-background-primary/40">
+                        <ThemeProvider>
+                            <PortalProvider>
+                                <TooltipProvider>
+                                    <PlaybackArea showBorder={false} />
+                                </TooltipProvider>
+                            </PortalProvider>
+                        </ThemeProvider>
+                    </View>
                 </VibrancyView>
             </View>
         </Animated.View>
