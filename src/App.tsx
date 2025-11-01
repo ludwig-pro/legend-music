@@ -18,6 +18,7 @@ import { initializeLocalMusic } from "@/systems/LocalMusicState";
 import { initializeMenuManager } from "@/systems/MenuManager";
 import { perfLog } from "@/utils/perfLogger";
 import { runAfterInteractions } from "@/utils/runAfterInteractions";
+import { VisualizerWindowManager } from "@/visualizer/VisualizerWindowManager";
 import { WindowsNavigator } from "@/windows";
 import { WindowProvider } from "@/windows/WindowProvider";
 import { ThemeProvider } from "./theme/ThemeProvider";
@@ -53,6 +54,9 @@ function App(): React.JSX.Element | null {
             void WindowsNavigator.prefetch("CurrentSongOverlayWindow").catch((error) => {
                 console.warn("Failed to prefetch current song overlay window:", error);
             });
+            void WindowsNavigator.prefetch("VisualizerWindow").catch((error) => {
+                console.warn("Failed to prefetch visualizer window:", error);
+            });
         });
 
         return () => {
@@ -82,6 +86,7 @@ function App(): React.JSX.Element | null {
                 <SettingsWindowManager />
                 <CurrentSongOverlayWindowManager />
                 <CurrentSongOverlayController />
+                <VisualizerWindowManager />
             </ThemeProvider>
         </WindowProvider>
     );

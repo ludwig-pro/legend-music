@@ -1,6 +1,7 @@
 import { use$, useObservable, useObserveEffect, useSelector } from "@legendapp/state/react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 
+import { SettingsPage } from "@/settings/components";
 import { HotkeyMetadata, type HotkeyName, hotkeys$ } from "@/systems/hotkeys";
 import { HiddenTextInput } from "@/systems/keyboard/HookKeyboard";
 import { type KeyboardEventCodeHotkey, keysPressed$ } from "@/systems/keyboard/Keyboard";
@@ -18,21 +19,22 @@ export function HotkeySettings() {
     const hotkeyNames = Object.keys(hotkeys);
 
     return (
-        <ScrollView contentContainerClassName="p-5">
+        <SettingsPage title="Keyboard Shortcuts" scroll contentClassName="p-5 gap-4">
             <HiddenTextInput />
             <View className="bg-gray-800 border border-gray-700 rounded-lg p-4">
                 <Text>Note: This may become a Pro feature once Pro is set up</Text>
             </View>
-            <Text className="text-2xl font-bold mb-4 mt-4">Keyboard Shortcuts</Text>
-            {hotkeyNames.map((name) => (
-                <HotkeyItem
-                    key={name}
-                    name={name as HotkeyName}
-                    description={HotkeyMetadata[name as HotkeyName]?.description || ""}
-                    keyCode={hotkeys[name as HotkeyName]}
-                />
-            ))}
-        </ScrollView>
+            <View className="flex flex-col gap-3">
+                {hotkeyNames.map((name) => (
+                    <HotkeyItem
+                        key={name}
+                        name={name as HotkeyName}
+                        description={HotkeyMetadata[name as HotkeyName]?.description || ""}
+                        keyCode={hotkeys[name as HotkeyName]}
+                    />
+                ))}
+            </View>
+        </SettingsPage>
     );
 }
 

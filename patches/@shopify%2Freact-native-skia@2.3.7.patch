@@ -1,0 +1,13 @@
+diff --git a/apple/RNSkMetalCanvasProvider.mm b/apple/RNSkMetalCanvasProvider.mm
+index cc82c5c2fc965c9e0a7a654079574b1e4142ab22..0cc4ab5250afbcf824a9ca3b258f8b31a70bb28e 100644
+--- a/apple/RNSkMetalCanvasProvider.mm
++++ b/apple/RNSkMetalCanvasProvider.mm
+@@ -68,7 +68,7 @@
+     auto state = UIApplication.sharedApplication.applicationState;
+     bool appIsBackgrounded = (state == UIApplicationStateBackground);
+ #else
+-    bool appIsBackgrounded = !NSApplication.sharedApplication.isActive;
++    bool appIsBackgrounded = NSApplication.sharedApplication.isHidden;
+ #endif // !TARGET_OS_OSX
+     if (appIsBackgrounded) {
+       // Request a redraw in the next run loop callback

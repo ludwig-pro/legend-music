@@ -4,6 +4,7 @@ import { use$, useObservable } from "@legendapp/state/react";
 import { StyleSheet, View } from "react-native";
 
 import { Sidebar } from "@/components/Sidebar";
+import { TooltipProvider } from "@/components/TooltipProvider";
 import { AccountSettings } from "@/settings/AccountSettings";
 import { GeneralSettings } from "@/settings/GeneralSettings";
 import { LibrarySettings } from "@/settings/LibrarySettings";
@@ -11,7 +12,6 @@ import { OpenSourceSettings } from "@/settings/OpenSourceSettings";
 import { OverlaySettings } from "@/settings/OverlaySettings";
 import { state$ } from "@/systems/State";
 import { ThemeProvider } from "@/theme/ThemeProvider";
-import { TooltipProvider } from "@/components/TooltipProvider";
 
 export type SettingsPage = "general" | "library" | "overlay" | "account" | "open-source";
 

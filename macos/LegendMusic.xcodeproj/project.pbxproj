@@ -22,6 +22,8 @@
 		698A69F42E1838D0001B4A90 /* RNKeyboardManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 698A69F22E1838D0001B4A90 /* RNKeyboardManager.swift */; };
 		698A69F52E1838D0001B4A90 /* KeyboardManagerBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = 698A69F12E1838D0001B4A90 /* KeyboardManagerBridge.m */; };
 		698A69F62E1838D0001B4A90 /* KeyboardManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 698A69F02E1838D0001B4A90 /* KeyboardManager.swift */; };
+		699DCD2A2EB69511003BDB37 /* FileSystemWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 699DCD272EB69511003BDB37 /* FileSystemWatcher.swift */; };
+		699DCD2B2EB69511003BDB37 /* FileSystemWatcherBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = 699DCD282EB69511003BDB37 /* FileSystemWatcherBridge.m */; };
 		69B7C91B2E9C2A4A00980C4D /* DragDropConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69B7C91A2E9C2A4A00980C4D /* DragDropConstants.swift */; };
 		69B7C91D2E9C2A9000980C4D /* TrackDraggableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69B7C91C2E9C2A9000980C4D /* TrackDraggableView.swift */; };
 		69B7C91F2E9C2AD800980C4D /* TrackDragSourceBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = 69B7C91E2E9C2AD800980C4D /* TrackDragSourceBridge.m */; };
@@ -60,6 +62,8 @@
 		698A69F02E1838D0001B4A90 /* KeyboardManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardManager.swift; sourceTree = "<group>"; };
 		698A69F12E1838D0001B4A90 /* KeyboardManagerBridge.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = KeyboardManagerBridge.m; sourceTree = "<group>"; };
 		698A69F22E1838D0001B4A90 /* RNKeyboardManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RNKeyboardManager.swift; sourceTree = "<group>"; };
+		699DCD272EB69511003BDB37 /* FileSystemWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileSystemWatcher.swift; sourceTree = "<group>"; };
+		699DCD282EB69511003BDB37 /* FileSystemWatcherBridge.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = FileSystemWatcherBridge.m; sourceTree = "<group>"; };
 		69B7C91A2E9C2A4A00980C4D /* DragDropConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DragDropConstants.swift; sourceTree = "<group>"; };
 		69B7C91C2E9C2A9000980C4D /* TrackDraggableView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackDraggableView.swift; sourceTree = "<group>"; };
 		69B7C91E2E9C2AD800980C4D /* TrackDragSourceBridge.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TrackDragSourceBridge.m; sourceTree = "<group>"; };
@@ -120,6 +124,7 @@
 		5142014A2437B4B30078DB4F /* LegendMusic-macOS */ = {
 			isa = PBXGroup;
 			children = (
+				699DCD292EB69511003BDB37 /* FileSystemWatcher */,
 				69118FE82E7F652300F00B75 /* DragDrop */,
 				697C9C7C2E7D4F6400AB8492 /* TextInputSearch */,
 				690B85532E7C1B4C009B767D /* SplitView */,
@@ -199,6 +204,15 @@
 				698A69F22E1838D0001B4A90 /* RNKeyboardManager.swift */,
 			);
 			path = KeyboardManager;
+			sourceTree = "<group>";
+		};
+		699DCD292EB69511003BDB37 /* FileSystemWatcher */ = {
+			isa = PBXGroup;
+			children = (
+				699DCD272EB69511003BDB37 /* FileSystemWatcher.swift */,
+				699DCD282EB69511003BDB37 /* FileSystemWatcherBridge.m */,
+			);
+			path = FileSystemWatcher;
 			sourceTree = "<group>";
 		};
 		69D53FB62DC6653D0004AD94 /* SFSymbol */ = {
@@ -532,6 +546,8 @@
 				514201582437B4B40078DB4F /* main.m in Sources */,
 				A1B2C3D4E5F607801234567 /* AudioPlayer.m in Sources */,
 				69EDA8112DC910FA00CCB7F7 /* MenuEvents.m in Sources */,
+				699DCD2A2EB69511003BDB37 /* FileSystemWatcher.swift in Sources */,
+				699DCD2B2EB69511003BDB37 /* FileSystemWatcherBridge.m in Sources */,
 				69D53FB72DC6653D0004AD94 /* SFSymbol.swift in Sources */,
 				698A69F42E1838D0001B4A90 /* RNKeyboardManager.swift in Sources */,
 				698A69F52E1838D0001B4A90 /* KeyboardManagerBridge.m in Sources */,
@@ -743,10 +759,7 @@
 				);
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					" ",
-				);
+				OTHER_LDFLAGS = "$(inherited)  ";
 				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DEBUG";
@@ -805,10 +818,7 @@
 					"\"$(inherited)\"",
 				);
 				MTL_ENABLE_DEBUG_INFO = NO;
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					" ",
-				);
+				OTHER_LDFLAGS = "$(inherited)  ";
 				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
 				USE_HERMES = true;
