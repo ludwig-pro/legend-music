@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
         flex: 1,
         borderRadius: 18,
         borderWidth: 1,
-        borderColor: "#3a3b3b",
+        borderColor: "#AAABAB22",
         overflow: "hidden",
     },
 });

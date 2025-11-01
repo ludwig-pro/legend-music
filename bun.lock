@@ -51,6 +51,7 @@
     "@shopify/react-native-skia",
   ],
   "patchedDependencies": {
+    "@shopify/react-native-skia@2.3.7": "patches/@shopify%2Freact-native-skia@2.3.7.patch",
     "@fluentui-react-native/vibrancy-view@0.3.0": "patches/@fluentui-react-native%2Fvibrancy-view@0.3.0.patch",
     "id3js@2.1.1": "patches/id3js@2.1.1.patch",
   },
