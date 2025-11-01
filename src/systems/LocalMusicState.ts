@@ -4,6 +4,7 @@ import * as ID3 from "id3js";
 import type { JsMediaTagsSuccess } from "jsmediatags/build2/jsmediatags";
 import jsmediatags from "jsmediatags/build2/jsmediatags";
 import AudioPlayer from "@/native-modules/AudioPlayer";
+import { addChangeListener, setWatchedDirectories } from "@/native-modules/FileSystemWatcher";
 import { hasCachedLibraryData } from "@/systems/LibraryCache";
 import { hasCachedPlaylistData } from "@/systems/PlaylistCache";
 import { stateSaved$ } from "@/systems/State";
@@ -51,7 +52,7 @@ export interface LocalMusicState {
 export const localMusicSettings$ = createJSONManager<LocalMusicSettings>({
     filename: "localMusicSettings",
     initialValue: {
-        libraryPaths: ["/Users/jay/Downloads/mp3"],
+        libraryPaths: [],
         autoScanOnStart: true,
         lastScanTime: 0,
     },
@@ -67,6 +68,55 @@ export const localMusicState$ = observable<LocalMusicState>({
     isLocalFilesSelected: false,
     playlists: [],
 });
+
+const FILE_WATCH_DEBOUNCE_MS = 2000;
+
+let removeLibraryWatcher: (() => void) | undefined;
+let libraryWatcherTimeout: ReturnType<typeof setTimeout> | undefined;
+let hasSubscribedToLibraryPathChanges = false;
+
+function scheduleScanAfterFileChange(): void {
+    if (libraryWatcherTimeout) {
+        clearTimeout(libraryWatcherTimeout);
+    }
+
+    libraryWatcherTimeout = setTimeout(() => {
+        libraryWatcherTimeout = undefined;
+
+        if (localMusicState$.isScanning.get()) {
+            scheduleScanAfterFileChange();
+            return;
+        }
+
+        console.log("Rescanning local music after filesystem change");
+        scanLocalMusic().catch((error) => {
+            console.error("Failed to rescan local music after filesystem change:", error);
+        });
+    }, FILE_WATCH_DEBOUNCE_MS);
+}
+
+function configureLibraryPathWatcher(paths: string[]): void {
+    try {
+        setWatchedDirectories(paths);
+    } catch (error) {
+        console.error("Failed to configure filesystem watcher for local music:", error);
+        return;
+    }
+
+    if (paths.length === 0) {
+        if (removeLibraryWatcher) {
+            removeLibraryWatcher();
+            removeLibraryWatcher = undefined;
+        }
+        return;
+    }
+
+    if (!removeLibraryWatcher) {
+        removeLibraryWatcher = addChangeListener(() => {
+            scheduleScanAfterFileChange();
+        });
+    }
+}
 
 const ARTWORK_CACHE_VERSION = "v2";
 
@@ -729,6 +779,17 @@ export function initializeLocalMusic(): void {
     const settings = localMusicSettings$.get();
 
     console.log("initializeLocalMusic", settings);
+
+    configureLibraryPathWatcher(settings.libraryPaths);
+
+    if (!hasSubscribedToLibraryPathChanges) {
+        hasSubscribedToLibraryPathChanges = true;
+        localMusicSettings$.libraryPaths.onChange(({ value }) => {
+            const nextPaths = Array.isArray(value) ? value : [];
+            configureLibraryPathWatcher(nextPaths);
+            scheduleScanAfterFileChange();
+        });
+    }
 
     // Restore isLocalFilesSelected state based on saved playlist type
     const savedPlaylistType = stateSaved$.playlistType.get();

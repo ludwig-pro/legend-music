@@ -4,7 +4,7 @@ import { getLibrarySnapshot, hasCachedLibraryData, persistLibrarySnapshot } from
 import { type LocalTrack, localMusicSettings$, localMusicState$ } from "@/systems/LocalMusicState";
 import { createJSONManager } from "@/utils/JSONManager";
 import { perfCount, perfLog, perfTime } from "@/utils/perfLogger";
-import { createIdleTask, runAfterInteractions } from "@/utils/runAfterInteractions";
+import { runAfterInteractions } from "@/utils/runAfterInteractions";
 
 export interface LibraryItem {
     id: string;
@@ -25,7 +25,7 @@ export interface LibraryTrack extends LocalTrack {
 export const libraryUI$ = createJSONManager({
     filename: "libraryUI",
     initialValue: {
-        isOpen: true,
+        isOpen: false,
         selectedItem: null as LibraryItem | null,
         searchQuery: "",
         selectedCollection: "artists" as "artists" | "albums" | "playlists",
