@@ -2,10 +2,13 @@
 #import <React/RCTRootView.h>
 #import <React/RCTBridge.h>
 #import <AppKit/AppKit.h>
+#import <CoreImage/CoreImage.h>
+#import <QuartzCore/QuartzCore.h>
 
 @interface WindowManager() <NSWindowDelegate>
 @property (nonatomic, strong) NSMutableDictionary<NSString *, NSWindow *> *windows;
 @property (nonatomic, strong) NSMutableDictionary<NSString *, RCTRootView *> *rootViews;
+@property (nonatomic, strong) NSMutableDictionary<NSString *, CIFilter *> *windowBlurFilters;
 - (nullable NSDictionary *)initialPropsFromOptions:(NSDictionary *)options;
 @end
 
@@ -46,6 +49,7 @@ RCT_EXPORT_MODULE();
   if (self) {
     _windows = [NSMutableDictionary new];
     _rootViews = [NSMutableDictionary new];
+    _windowBlurFilters = [NSMutableDictionary new];
   }
   return self;
 }
@@ -234,6 +238,12 @@ RCT_EXPORT_METHOD(openWindow:(NSDictionary *)options
     window.contentView.layer.backgroundColor = [NSColor clearColor].CGColor;
     window.contentView.layer.masksToBounds = NO;
   }
+  rootView.wantsLayer = YES;
+  rootView.layerUsesCoreImageFilters = YES;
+  if (!rootView.layer) {
+    rootView.layer = [CALayer layer];
+  }
+  rootView.layer.masksToBounds = NO;
   [window setDelegate:self];
 
   self.windows[identifier] = window;
@@ -265,6 +275,108 @@ RCT_EXPORT_METHOD(closeWindow:(NSString *)identifier
   [self handleWindowClosedForIdentifier:targetIdentifier];
 
   resolve(@{@"success": @YES});
+}
+
+RCT_EXPORT_METHOD(setWindowBlur:(NSString *)identifier
+                  radius:(nonnull NSNumber *)radiusNumber
+                  duration:(nonnull NSNumber *)durationNumber
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject) {
+  NSString *targetIdentifier = identifier;
+  if (![targetIdentifier isKindOfClass:[NSString class]] || targetIdentifier.length == 0) {
+    targetIdentifier = @"default";
+  }
+
+  NSWindow *window = self.windows[targetIdentifier];
+  if (!window) {
+    reject(@"window_not_found", @"Target window not found for blur animation", nil);
+    return;
+  }
+
+  RCTRootView *rootView = self.rootViews[targetIdentifier];
+  NSView *contentView = window.contentView ?: rootView;
+  if (!contentView) {
+    reject(@"no_content_view", @"Window does not have a content view to blur", nil);
+    return;
+  }
+
+  contentView.wantsLayer = YES;
+  contentView.layerUsesCoreImageFilters = YES;
+  if (!contentView.layer) {
+    contentView.layer = [CALayer layer];
+  }
+  contentView.layer.masksToBounds = NO;
+
+  CIFilter *blurFilter = self.windowBlurFilters[targetIdentifier];
+  if (!blurFilter) {
+    blurFilter = [CIFilter filterWithName:@"CIGaussianBlur"];
+    if (!blurFilter) {
+      reject(@"filter_unavailable", @"CIGaussianBlur filter could not be created", nil);
+      return;
+    }
+    blurFilter.name = @"legendOverlayBlur";
+    [blurFilter setDefaults];
+    [blurFilter setValue:@(0.0) forKey:kCIInputRadiusKey];
+    self.windowBlurFilters[targetIdentifier] = blurFilter;
+
+    NSMutableArray *filters = [NSMutableArray arrayWithArray:contentView.layer.filters ?: @[]];
+    [filters addObject:blurFilter];
+    contentView.layer.filters = filters;
+  } else {
+    BOOL filterAttached = NO;
+    NSArray *existingFilters = contentView.layer.filters;
+    if (existingFilters) {
+      for (id existingFilter in existingFilters) {
+        if ([existingFilter isKindOfClass:[CIFilter class]] && [[existingFilter name] isEqualToString:@"legendOverlayBlur"]) {
+          filterAttached = YES;
+          break;
+        }
+      }
+    }
+    if (!filterAttached) {
+      NSMutableArray *filters = [NSMutableArray arrayWithArray:existingFilters ?: @[]];
+      [filters addObject:blurFilter];
+      contentView.layer.filters = filters;
+    }
+  }
+
+  NSNumber *targetRadiusNumber = radiusNumber ?: @(0.0);
+  CGFloat targetRadius = [targetRadiusNumber doubleValue];
+  NSNumber *currentRadiusNumber = [blurFilter valueForKey:kCIInputRadiusKey] ?: @(0.0);
+  CGFloat currentRadius = [currentRadiusNumber doubleValue];
+
+  double durationMs = [durationNumber doubleValue];
+  double durationSeconds = durationMs / 1000.0;
+
+  if (durationSeconds <= 0.0) {
+    [CATransaction begin];
+    [CATransaction setDisableActions:YES];
+    [blurFilter setValue:@(targetRadius) forKey:kCIInputRadiusKey];
+    [CATransaction commit];
+    [contentView.layer removeAnimationForKey:@"legendOverlayBlurAnimation"];
+    resolve(@{@"success": @YES});
+    return;
+  }
+
+  [contentView.layer removeAnimationForKey:@"legendOverlayBlurAnimation"];
+  CABasicAnimation *animation = [CABasicAnimation animationWithKeyPath:@"filters.legendOverlayBlur.inputRadius"];
+  animation.fromValue = @(currentRadius);
+  animation.toValue = @(targetRadius);
+  animation.duration = durationSeconds;
+  animation.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
+  animation.fillMode = kCAFillModeForwards;
+  animation.removedOnCompletion = NO;
+
+  [CATransaction begin];
+  [CATransaction setCompletionBlock:^{
+    [CATransaction begin];
+    [CATransaction setDisableActions:YES];
+    [blurFilter setValue:@(targetRadius) forKey:kCIInputRadiusKey];
+    [CATransaction commit];
+    resolve(@{@"success": @YES});
+  }];
+  [contentView.layer addAnimation:animation forKey:@"legendOverlayBlurAnimation"];
+  [CATransaction commit];
 }
 
 // Window delegate method to detect when window is closed by the system close button
@@ -434,6 +546,26 @@ RCT_EXPORT_METHOD(setMainWindowFrame:(NSDictionary *)frameDict
   if (rootView && [rootView.moduleName length] > 0) {
     moduleName = rootView.moduleName;
   }
+
+  CIFilter *blurFilter = self.windowBlurFilters[identifier];
+  if (blurFilter) {
+    NSWindow *window = self.windows[identifier];
+    NSView *contentView = window.contentView ?: rootView;
+    if (contentView.layer) {
+      [contentView.layer removeAnimationForKey:@"legendOverlayBlurAnimation"];
+      NSArray *existingFilters = contentView.layer.filters ?: @[];
+      NSMutableArray *remainingFilters = [NSMutableArray array];
+      for (id filter in existingFilters) {
+        if ([filter isKindOfClass:[CIFilter class]] && [[filter name] isEqualToString:@"legendOverlayBlur"]) {
+          continue;
+        }
+        [remainingFilters addObject:filter];
+      }
+      contentView.layer.filters = remainingFilters;
+    }
+    [self.windowBlurFilters removeObjectForKey:identifier];
+  }
+  [self.windowBlurFilters removeObjectForKey:identifier];
 
   [self.windows removeObjectForKey:identifier];
   [self.rootViews removeObjectForKey:identifier];

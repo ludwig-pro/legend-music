@@ -3,17 +3,21 @@ import { VibrancyView } from "@fluentui-react-native/vibrancy-view";
 import { PortalProvider } from "@gorhom/portal";
 import { use$ } from "@legendapp/state/react";
 import { useCallback, useEffect } from "react";
-import { StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 
 import { PlaybackArea } from "@/components/PlaybackArea";
 import { TooltipProvider } from "@/components/TooltipProvider";
+import { setWindowBlur } from "@/native-modules/WindowManager";
 import { ThemeProvider } from "@/theme/ThemeProvider";
 import { withWindowProvider } from "@/windows";
 
 import { currentSongOverlay$, finalizeCurrentSongOverlayDismissal } from "./CurrentSongOverlayState";
 
 const WINDOW_ID = "current-song-overlay";
+const SHOW_DURATION_MS = 400;
+const HIDE_DURATION_MS = 300;
+const MAX_BLUR_RADIUS = 8;
 
 const styles = StyleSheet.create({
     root: {
@@ -61,9 +65,20 @@ function CurrentSongOverlayWindow() {
         opacity.value = 0;
 
         opacity.value = withTiming(1, {
-            duration: 500,
+            duration: SHOW_DURATION_MS,
             easing: Easing.out(Easing.cubic),
         });
+
+        if (Platform.OS === "macos") {
+            void (async () => {
+                try {
+                    await setWindowBlur(WINDOW_ID, MAX_BLUR_RADIUS, 0);
+                    await setWindowBlur(WINDOW_ID, 0, SHOW_DURATION_MS);
+                } catch (error) {
+                    console.error("Failed to animate overlay blur on show:", error);
+                }
+            })();
+        }
     }, [presentationId, opacity]);
 
     useEffect(() => {
@@ -71,10 +86,20 @@ function CurrentSongOverlayWindow() {
             return;
         }
 
+        if (Platform.OS === "macos") {
+            void (async () => {
+                try {
+                    await setWindowBlur(WINDOW_ID, MAX_BLUR_RADIUS, HIDE_DURATION_MS);
+                } catch (error) {
+                    console.error("Failed to animate overlay blur on hide:", error);
+                }
+            })();
+        }
+
         opacity.value = withTiming(
             0,
             {
-                duration: 300,
+                duration: HIDE_DURATION_MS,
                 easing: Easing.in(Easing.cubic),
             },
             (finished) => {

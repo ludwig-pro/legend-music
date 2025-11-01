@@ -157,6 +157,7 @@ type NativeWindowManagerType = NativeModule & {
     closeWindow: (identifier?: string) => Promise<{ success: boolean; message?: string }>;
     getMainWindowFrame: () => Promise<WindowFrame>;
     setMainWindowFrame: (frame: WindowFrame) => Promise<{ success: boolean }>;
+    setWindowBlur: (identifier: string, radius: number, durationMs: number) => Promise<{ success: boolean }>;
 };
 
 const windowManagerModule = WindowManager as NativeWindowManagerType;
@@ -168,6 +169,7 @@ export type WindowManagerBridge = {
     closeWindow: (identifier?: string) => Promise<{ success: boolean; message?: string }>;
     getMainWindowFrame: () => Promise<WindowFrame>;
     setMainWindowFrame: (frame: WindowFrame) => Promise<{ success: boolean }>;
+    setWindowBlur: (identifier: string, radius: number, durationMs?: number) => Promise<{ success: boolean }>;
     onWindowClosed: (callback: (event: WindowClosedEvent) => void) => { remove: () => void };
     onWindowFocused: (callback: (event: WindowFocusedEvent) => void) => { remove: () => void };
 };
@@ -178,6 +180,8 @@ export const useWindowManager = (): WindowManagerBridge => {
         closeWindow: (identifier?: string) => windowManagerModule.closeWindow(identifier),
         getMainWindowFrame: () => windowManagerModule.getMainWindowFrame(),
         setMainWindowFrame: (frame: WindowFrame) => windowManagerModule.setMainWindowFrame(frame),
+        setWindowBlur: (identifier: string, radius: number, durationMs?: number) =>
+            windowManagerModule.setWindowBlur(identifier, radius, durationMs ?? 0),
         onWindowClosed: (callback: (event: WindowClosedEvent) => void) => {
             const subscription = windowManagerEmitter.addListener("onWindowClosed", callback);
             return {
@@ -197,5 +201,8 @@ export const openWindow = (options: WindowOptions = {}) =>
     windowManagerModule.openWindow(convertOptionsToNative(options));
 
 export const closeWindow = (identifier?: string) => windowManagerModule.closeWindow(identifier);
+
+export const setWindowBlur = (identifier: string, radius: number, durationMs?: number) =>
+    windowManagerModule.setWindowBlur(identifier, radius, durationMs ?? 0);
 
 export default windowManagerModule;
