@@ -10,7 +10,6 @@ import { SelectLegendList } from "@/components/SelectLegendList";
 import { useOnHotkeys } from "@/systems/keyboard/Keyboard";
 import { library$ } from "@/systems/LibraryState";
 import { DEFAULT_LOCAL_PLAYLIST_NAME, localMusicState$ } from "@/systems/LocalMusicState";
-
 import {
     selectedPlaylist$,
     useLibraryToggle,

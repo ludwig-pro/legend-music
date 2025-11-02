@@ -167,6 +167,7 @@ export function onHotkeys(hotkeyCallbacks: HotkeyCallbacks, options: HotkeyScope
                 console.warn(`No hotkey configuration found for ${name}`);
                 continue;
             }
+            console.log("onHotkeys", name, configuredKey);
 
             const keys =
                 typeof configuredKey === "number" ? [configuredKey.toString()] : configuredKey.toLowerCase().split("+");

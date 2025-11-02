@@ -3,6 +3,7 @@ import { File } from "expo-file-system/next";
 import { useCallback, useMemo } from "react";
 
 import { localAudioControls } from "@/components/LocalAudioPlayer";
+import { useOnHotkeys } from "@/systems/keyboard/Keyboard";
 import type { LibraryItem, LibraryTrack } from "@/systems/LibraryState";
 import { libraryUI$ } from "@/systems/LibraryState";
 import type { LocalMusicState, LocalPlaylist, LocalTrack } from "@/systems/LocalMusicState";
@@ -48,10 +49,7 @@ export function usePlaylistOptions(localMusicState: LocalMusicState): UsePlaylis
         () =>
             localMusicState.playlists.map((playlist) => ({
                 id: playlist.id,
-                name:
-                    playlist.id === DEFAULT_LOCAL_PLAYLIST_ID
-                        ? DEFAULT_LOCAL_PLAYLIST_NAME
-                        : playlist.name,
+                name: playlist.id === DEFAULT_LOCAL_PLAYLIST_ID ? DEFAULT_LOCAL_PLAYLIST_NAME : playlist.name,
                 count: playlist.trackCount,
                 type: "saved" as const,
                 trackPaths: playlist.trackPaths,
@@ -230,6 +228,13 @@ export function useLibraryToggle() {
 export function useVisualizerToggle() {
     const isVisualizerOpen = use$(visualizerWindowState$.isOpen);
     const toggleVisualizer = useCallback(toggleVisualizerWindow, [toggleVisualizerWindow]);
+
+    useOnHotkeys(
+        {
+            ToggleVisualizer: toggleVisualizer,
+        },
+        { global: true },
+    );
 
     return { isVisualizerOpen, toggleVisualizer };
 }

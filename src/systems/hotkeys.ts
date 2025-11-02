@@ -8,8 +8,6 @@ const DEFAULT_HOTKEYS = {
     Search: KeyCodes.KEY_J,
     ToggleLibrary: KeyCodes.KEY_L,
     ToggleVisualizer: KeyCodes.KEY_V,
-    ToggleVisualizerZ: KeyCodes.KEY_Z,
-    ToggleVisualizerI: KeyCodes.KEY_I,
     PlayPause: KeyCodes.KEY_MEDIA_PLAY_PAUSE,
     PlayPauseSpace: KeyCodes.KEY_SPACE,
     NextTrack: KeyCodes.KEY_MEDIA_NEXT,
@@ -32,12 +30,6 @@ export const HotkeyMetadata: Record<HotkeyName, { description: string; repeat?: 
     },
     ToggleVisualizer: {
         description: "Toggle visualizer window",
-    },
-    ToggleVisualizerZ: {
-        description: "Toggle visualizer window (debug: Z key)",
-    },
-    ToggleVisualizerI: {
-        description: "Toggle visualizer window (debug: I key)",
     },
     PlayPause: {
         description: "Toggle playback",
@@ -75,20 +67,38 @@ export const hotkeys$ = createJSONManager<Record<HotkeyName, KeyboardEventCodeHo
     initialValue: DEFAULT_HOTKEYS,
     saveDefaultToFile: true,
     transform: {
-        load: (value: Record<string, string>) => {
+        load: (value: Record<string, KeyboardEventCodeHotkey>) => {
             return Object.fromEntries(
                 Object.entries(value).map(([key, val]) => {
-                    const vals = `${val}`.split("+");
-                    const parts = vals.map((v) => {
-                        const keyCode = Object.entries(KeyText).find(([, text]) => text === v)?.[0];
-                        return keyCode || v;
+                    if (typeof val === "number") {
+                        return [key, val];
+                    }
+
+                    const segments = `${val}`.split("+");
+                    const parsed = segments.map((segment) => {
+                        const keyCodeEntry = Object.entries(KeyText).find(([, text]) => text === segment);
+                        if (keyCodeEntry) {
+                            return Number(keyCodeEntry[0]);
+                        }
+
+                        const numeric = Number(segment);
+                        if (!Number.isNaN(numeric) && `${numeric}` === segment) {
+                            return numeric;
+                        }
+
+                        return segment;
                     });
-                    // Convert the KeyText to corresponding key code
-                    return [key, parts.join("+")];
+
+                    if (parsed.length === 1) {
+                        const [single] = parsed;
+                        return [key, typeof single === "number" ? single : `${single}`];
+                    }
+
+                    return [key, parsed.map((part) => `${part}`).join("+")];
                 }),
             );
         },
-        save: (value: Record<string, string>) => {
+        save: (value: Record<string, KeyboardEventCodeHotkey>) => {
             return Object.fromEntries(
                 Object.entries(value).map(([key, val]) => {
                     const vals = `${val}`.split("+");
