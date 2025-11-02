@@ -21,7 +21,7 @@ type ControlDragData<T extends string> = {
 interface ControlDefinition<T extends string> {
     id: T;
     label: string;
-    description: string;
+    // description: string;
     icon: SFSymbols;
 }
 
@@ -34,31 +34,31 @@ const PLAYBACK_CONTROL_DEFINITIONS: ControlDefinition<PlaybackControlId>[] = [
     {
         id: "previous",
         label: "Previous",
-        description: "Skip to the previous track",
+        // description: "Skip to the previous track",
         icon: "backward.end.fill",
     },
     {
         id: "playPause",
         label: "Play / Pause",
-        description: "Toggle playback",
+        // description: "Toggle playback",
         icon: "play.fill",
     },
     {
         id: "next",
         label: "Next",
-        description: "Advance to the next track",
+        // description: "Advance to the next track",
         icon: "forward.end.fill",
     },
     {
         id: "shuffle",
         label: "Shuffle",
-        description: "Toggle shuffle mode",
+        // description: "Toggle shuffle mode",
         icon: "shuffle",
     },
     {
         id: "repeat",
         label: "Repeat",
-        description: "Cycle repeat modes",
+        // description: "Cycle repeat modes",
         icon: "repeat",
     },
 ];
@@ -148,10 +148,7 @@ function useNormalizedLayout<T extends string>(
     layout: UIControlLayout<T>,
     definitions: ControlDefinition<T>[],
 ): NormalizedUIControlLayout<T> {
-    return useMemo(
-        () => normalizeLayout(layout, definitions),
-        [layout.shown, definitions],
-    );
+    return useMemo(() => normalizeLayout(layout, definitions), [layout.shown, definitions]);
 }
 
 function normalizeLayout<T extends string>(
@@ -224,7 +221,6 @@ function ControlLayoutEditor<T extends string>({ section, layout, definitions }:
             <ControlGroup
                 label="Shown"
                 items={shownItems}
-                emptyHint="Drag controls here to make them visible"
                 group="shown"
                 section={section}
                 definitions={definitions}
@@ -233,7 +229,6 @@ function ControlLayoutEditor<T extends string>({ section, layout, definitions }:
             <ControlGroup
                 label="Hidden"
                 items={hiddenItems}
-                emptyHint="No hidden controls"
                 group="hidden"
                 section={section}
                 definitions={definitions}
@@ -246,45 +241,42 @@ function ControlLayoutEditor<T extends string>({ section, layout, definitions }:
 interface ControlGroupProps<T extends string> {
     label: string;
     items: T[];
-    emptyHint: string;
     group: ControlGroup;
     section: ControlSectionType;
     definitions: Record<T, ControlDefinition<T>>;
     onMove: (params: MoveControlParams<T>) => void;
 }
 
-function ControlGroup<T extends string>({
-    label,
-    items,
-    emptyHint,
-    group,
-    section,
-    definitions,
-    onMove,
-}: ControlGroupProps<T>) {
+function ControlGroup<T extends string>({ label, items, group, section, definitions, onMove }: ControlGroupProps<T>) {
     const zoneId = section === "playback" ? PLAYBACK_DRAG_ZONE_ID : BOTTOM_BAR_DRAG_ZONE_ID;
+    const hasItems = items.length > 0;
 
     return (
         <View className="flex flex-col gap-3">
-            <Text className="text-sm font-semibold uppercase tracking-[0.2em] text-text-secondary">{label}</Text>
-            <View className="rounded-2xl border border-border-primary bg-white/5 px-4 py-4">
-                <ControlDropZone targetGroup={group} section={section} index={0} onMove={onMove} />
-                {items.map((controlId, index) => (
-                    <Fragment key={`${group}-${controlId}`}>
-                        <DraggableItem<ControlDragData<T>>
-                            id={`${section}-${controlId}`}
-                            zoneId={zoneId}
-                            data={() => ({ controlId, section, group })}
-                            className="w-full"
-                        >
-                            <ControlChip definition={definitions[controlId]} />
-                        </DraggableItem>
-                        <ControlDropZone targetGroup={group} section={section} index={index + 1} onMove={onMove} />
-                    </Fragment>
-                ))}
-                {items.length === 0 ? (
-                    <Text className="text-center text-xs text-text-tertiary py-2">{emptyHint}</Text>
-                ) : null}
+            <Text className="text-sm font-semibold text-text-secondary">{label}</Text>
+            <View className="rounded-2xl border border-border-primary bg-white/5 py-2">
+                <View className={cn("flex flex-row flex-wrap items-center", hasItems ? undefined : "justify-center")}>
+                    <ControlDropZone
+                        targetGroup={group}
+                        section={section}
+                        index={0}
+                        onMove={onMove}
+                        isExpanded={!hasItems}
+                    />
+                    {items.map((controlId, index) => (
+                        <Fragment key={`${group}-${controlId}`}>
+                            <DraggableItem<ControlDragData<T>>
+                                id={`${section}-${controlId}`}
+                                zoneId={zoneId}
+                                data={() => ({ controlId, section, group })}
+                                className="flex-shrink-0"
+                            >
+                                <ControlChip definition={definitions[controlId]} />
+                            </DraggableItem>
+                            <ControlDropZone targetGroup={group} section={section} index={index + 1} onMove={onMove} />
+                        </Fragment>
+                    ))}
+                </View>
             </View>
         </View>
     );
@@ -295,10 +287,21 @@ interface ControlDropZoneProps<T extends string> {
     targetGroup: ControlGroup;
     index: number;
     onMove: (params: MoveControlParams<T>) => void;
+    isExpanded?: boolean;
 }
 
-function ControlDropZone<T extends string>({ section, targetGroup, index, onMove }: ControlDropZoneProps<T>) {
+function ControlDropZone<T extends string>({
+    section,
+    targetGroup,
+    index,
+    onMove,
+    isExpanded = false,
+}: ControlDropZoneProps<T>) {
     const dropId = `${section}-${targetGroup}-drop-${index}`;
+    const baseClassName = isExpanded ? "px-2 h-20 w-full basis-full" : "h-10 w-2 flex-shrink-0";
+    const indicatorClass = isExpanded
+        ? "rounded-2xl border border-emerald-500/40 bg-emerald-500/10"
+        : "rounded-full bg-emerald-500/40";
 
     return (
         <DroppableZone
@@ -317,13 +320,14 @@ function ControlDropZone<T extends string>({ section, targetGroup, index, onMove
                     targetIndex: index,
                 });
             }}
-            className="my-1 h-4"
+            className={baseClassName}
             activeClassName="opacity-100"
         >
             {(isActive) => (
                 <View
                     className={cn(
-                        "h-full rounded-full bg-emerald-500/40 transition-opacity",
+                        "h-full w-full transition-opacity",
+                        indicatorClass,
                         isActive ? "opacity-100" : "opacity-0",
                     )}
                 />
@@ -342,9 +346,10 @@ function ControlChip<T extends string>({ definition }: ControlChipProps<T>) {
             <View className="rounded-lg bg-white/10 p-2">
                 <Icon name={definition.icon} size={14} color="#fff" />
             </View>
-            <View className="flex-1">
-                <Text className="text-sm font-semibold text-text-primary">{definition.label}</Text>
-                <Text className="text-xs text-text-secondary">{definition.description}</Text>
+            <View className="flex-col max-w-[160px]">
+                <Text className="text-xs font-semibold text-text-primary" numberOfLines={1} ellipsizeMode="tail">
+                    {definition.label}
+                </Text>
             </View>
         </View>
     );
@@ -371,9 +376,9 @@ function moveControl<T extends string>({
             : ((settings$.ui.bottomBar.get() as UIControlLayout<T>) ?? { shown: [] });
 
     const definitions =
-        (section === "playback"
+        section === "playback"
             ? (PLAYBACK_CONTROL_DEFINITIONS as ControlDefinition<T>[])
-            : (BOTTOM_BAR_CONTROL_DEFINITIONS as ControlDefinition<T>[]));
+            : (BOTTOM_BAR_CONTROL_DEFINITIONS as ControlDefinition<T>[]);
 
     const normalized = normalizeLayout(layout, definitions);
     const filteredShown = normalized.shown.filter((id) => id !== controlId);
