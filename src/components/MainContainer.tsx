@@ -4,6 +4,7 @@ import { PlaybackArea } from "@/components/PlaybackArea";
 import { Playlist } from "@/components/Playlist";
 import { PlaylistSelector } from "@/components/PlaylistSelector";
 import { Unregistered } from "@/components/Unregistered";
+import { SUPPORT_ACCOUNTS } from "@/systems/constants";
 import { useOnHotkeys } from "@/systems/keyboard/Keyboard";
 import { perfCount, perfLog } from "@/utils/perfLogger";
 
@@ -34,7 +35,7 @@ export function MainContainer() {
                 <PlaybackArea />
                 <Playlist />
                 <PlaylistSelector />
-                <Unregistered />
+                {SUPPORT_ACCOUNTS && <Unregistered />}
             </View>
             <LocalAudioPlayer />
         </View>

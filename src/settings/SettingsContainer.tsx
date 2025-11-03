@@ -11,20 +11,22 @@ import { GeneralSettings } from "@/settings/GeneralSettings";
 import { LibrarySettings } from "@/settings/LibrarySettings";
 import { OpenSourceSettings } from "@/settings/OpenSourceSettings";
 import { OverlaySettings } from "@/settings/OverlaySettings";
+import { SUPPORT_ACCOUNTS } from "@/systems/constants";
 import { state$ } from "@/systems/State";
 import { ThemeProvider } from "@/theme/ThemeProvider";
+import { ax } from "@/utils/ax";
 
 export type SettingsPage = "general" | "library" | "overlay" | "ui-customize" | "account" | "open-source";
 
 // Define the categories for settings
-const SETTING_PAGES: { id: SettingsPage; name: string }[] = [
+const SETTING_PAGES: { id: SettingsPage; name: string }[] = ax([
     { id: "general", name: "General" },
     { id: "library", name: "Library" },
     { id: "overlay", name: "Overlay" },
     { id: "ui-customize", name: "Customize UI" },
-    { id: "account", name: "Account" },
+    SUPPORT_ACCOUNTS && { id: "account", name: "Account" },
     { id: "open-source", name: "Open Source" },
-];
+]);
 
 export default function SettingsContainer() {
     const showSettingsPage = use$(state$.showSettingsPage);
