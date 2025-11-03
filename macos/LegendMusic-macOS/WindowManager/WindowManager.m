@@ -5,6 +5,15 @@
 #import <CoreImage/CoreImage.h>
 #import <QuartzCore/QuartzCore.h>
 
+static inline NSAppearance *LegendDarkAppearance() {
+  if (@available(macOS 10.14, *)) {
+    return [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua];
+  } else if (@available(macOS 10.10, *)) {
+    return [NSAppearance appearanceNamed:NSAppearanceNameVibrantDark];
+  }
+  return nil;
+}
+
 @interface WindowManager() <NSWindowDelegate>
 @property (nonatomic, strong) NSMutableDictionary<NSString *, NSWindow *> *windows;
 @property (nonatomic, strong) NSMutableDictionary<NSString *, RCTRootView *> *rootViews;
@@ -67,6 +76,7 @@ RCT_EXPORT_METHOD(openWindow:(NSDictionary *)options
                   rejecter:(RCTPromiseRejectBlock)reject) {
   NSString *identifier = options[@"identifier"];
   NSString *moduleName = options[@"moduleName"];
+  NSAppearance *darkAppearance = LegendDarkAppearance();
 
   if (![moduleName isKindOfClass:[NSString class]] || moduleName.length == 0) {
     moduleName = identifier;
@@ -157,6 +167,10 @@ RCT_EXPORT_METHOD(openWindow:(NSDictionary *)options
 
     existingWindow.title = title;
 
+    if (darkAppearance) {
+      existingWindow.appearance = darkAppearance;
+    }
+
     existingWindow.delegate = self;
 
     NSDictionary *initialProps = [self initialPropsFromOptions:options];
@@ -180,6 +194,10 @@ RCT_EXPORT_METHOD(openWindow:(NSDictionary *)options
                                                styleMask:styleMask
                                                  backing:NSBackingStoreBuffered
                                                    defer:NO];
+
+  if (darkAppearance) {
+    window.appearance = darkAppearance;
+  }
 
   [window setReleasedWhenClosed:NO];
   [window setTitle:title];

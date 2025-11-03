@@ -23,29 +23,6 @@ export const colors = {
             popup: "#4f4e4f",
         },
     },
-
-    light: {
-        background: {
-            primary: "#fff",
-            secondary: "#f5f5f5",
-            tertiary: "#eaeaea",
-            destructive: "#8b0000",
-            inverse: "#111",
-        },
-        text: {
-            primary: "#111",
-            secondary: "#555",
-            tertiary: "#999",
-        },
-        accent: {
-            primary: "#0066cc",
-            secondary: "#0088dd",
-        },
-        border: {
-            primary: "#ddd",
-            popup: "#ccc",
-        },
-    },
 };
 
 // Export color variables for tailwind config

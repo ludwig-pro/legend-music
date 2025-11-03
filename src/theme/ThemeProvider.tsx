@@ -7,17 +7,16 @@ import { createJSONManager } from "@/utils/JSONManager";
 import { colors } from "./colors";
 
 // Define theme types
-type ThemeType = "light" | "dark";
+type ThemeType = "dark";
 type ThemeContextType = {
     currentTheme: ThemeType;
-    setTheme: (theme: ThemeType) => void;
+    setTheme: () => void;
     resetTheme: () => void;
 };
 
 interface ThemeSettings {
     currentTheme: ThemeType;
     customColors: {
-        light: typeof colors.light;
         dark: typeof colors.dark;
     };
 }
@@ -38,22 +37,8 @@ export const themeState$ = createJSONManager<ThemeSettings>({
 
 // Create theme variables for each theme
 const getThemes = (theme$: typeof themeState$) => {
-    const { light, dark } = use$(theme$.customColors);
+    const { dark } = use$(theme$.customColors);
     return {
-        light: vars({
-            "--background-primary": light.background.primary,
-            "--background-secondary": light.background.secondary,
-            "--background-tertiary": light.background.tertiary,
-            "--background-destructive": light.background.destructive,
-            "--background-inverse": light.background.inverse,
-            "--text-primary": light.text.primary,
-            "--text-secondary": light.text.secondary,
-            "--text-tertiary": light.text.tertiary,
-            "--accent-primary": light.accent.primary,
-            "--accent-secondary": light.accent.secondary,
-            "--border-primary": light.border.primary,
-            "--border-popup": light.border.popup,
-        }),
         dark: vars({
             "--background-primary": dark.background.primary,
             "--background-secondary": dark.background.secondary,
@@ -78,8 +63,13 @@ const ThemeContext = createContext<ThemeContextType>(undefined as any);
 export const ThemeProvider = observer(({ children }: { children: ReactNode }) => {
     const theme$ = useObservable(themeState$);
 
-    const setTheme = (theme: ThemeType) => {
-        theme$.currentTheme.set(theme);
+    const currentTheme = theme$.currentTheme.get();
+    if (currentTheme !== "dark") {
+        theme$.currentTheme.set("dark");
+    }
+
+    const setTheme = () => {
+        theme$.currentTheme.set("dark");
     };
 
     const resetTheme = () => {
@@ -88,14 +78,14 @@ export const ThemeProvider = observer(({ children }: { children: ReactNode }) =>
 
     // Context value
     const contextValue: ThemeContextType = {
-        currentTheme: theme$.currentTheme.get(),
+        currentTheme: "dark",
         setTheme,
         resetTheme,
     };
 
     return (
         <ThemeContext.Provider value={contextValue}>
-            <View className="flex-1" style={getThemes(theme$)[theme$.currentTheme.get()]}>
+            <View className="flex-1" style={getThemes(theme$).dark}>
                 {children}
             </View>
         </ThemeContext.Provider>

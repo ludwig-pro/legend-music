@@ -5,15 +5,13 @@ import { ColorPicker } from "@/components/ColorPicker";
 import { SettingsPage, SettingsSection } from "@/settings/components";
 import { themeState$, useTheme } from "@/theme/ThemeProvider";
 
-type ThemeType = "light" | "dark";
-
 export const ThemeSettings = observer(() => {
-    const { currentTheme, resetTheme } = useTheme();
-    const colors$ = themeState$.customColors[currentTheme as ThemeType];
+    const { resetTheme } = useTheme();
+    const colors$ = themeState$.customColors.dark;
 
     return (
         <SettingsPage
-            title="Theme Settings"
+            title="Dark Theme Settings"
             scroll
             actions={
                 <Button onClick={resetTheme} variant="secondary" className="px-3 py-1.5 h-auto">

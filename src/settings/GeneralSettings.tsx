@@ -34,14 +34,6 @@ export const GeneralSettings = observer(function GeneralSettings() {
                     control={<Checkbox $checked={settings$.general.showHints} />}
                 />
             </SettingsSection>
-
-            <SettingsSection title="Playback">
-                <View className="opacity-50">
-                    <Text className="text-text-tertiary text-sm text-center py-4">
-                        Additional playback settings will be added in future updates
-                    </Text>
-                </View>
-            </SettingsSection>
         </SettingsPage>
     );
 });

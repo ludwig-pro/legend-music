@@ -12,6 +12,15 @@
 static NSString *const kMenuCommandTriggeredNotification = @"MenuCommandTriggered";
 static NSString *const kMenuCommandUpdateNotification = @"MenuCommandUpdate";
 
+static inline NSAppearance *LegendDarkAppearance() {
+  if (@available(macOS 10.14, *)) {
+    return [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua];
+  } else if (@available(macOS 10.10, *)) {
+    return [NSAppearance appearanceNamed:NSAppearanceNameVibrantDark];
+  }
+  return nil;
+}
+
 // Forward declaration for notification
 @interface NSNotificationCenter (MenuEvents)
 - (void)postNotificationName:(NSString *)name object:(id)object userInfo:(NSDictionary *)userInfo;
@@ -55,6 +64,11 @@ static NSString *const kMenuCommandUpdateNotification = @"MenuCommandUpdate";
 
   [super applicationDidFinishLaunching:notification];
 
+  NSAppearance *darkAppearance = LegendDarkAppearance();
+  if (darkAppearance) {
+    [NSApp setAppearance:darkAppearance];
+  }
+
 #if RCT_DEV_MENU
   RCTDevSettings *devSettings = self.bridge.devSettings;
   if (devSettings) {
@@ -76,6 +90,10 @@ static NSString *const kMenuCommandUpdateNotification = @"MenuCommandUpdate";
                                              backing:NSBackingStoreBuffered
                                                defer:NO];
   self.window.title = self.moduleName;
+  NSAppearance *darkAppearance = LegendDarkAppearance();
+  if (darkAppearance) {
+    self.window.appearance = darkAppearance;
+  }
   self.window.autorecalculatesKeyViewLoop = YES;
 
   // Set frame autosave name BEFORE making the window visible
@@ -190,7 +208,7 @@ static NSString *const kMenuCommandUpdateNotification = @"MenuCommandUpdate";
     if (iconName.length > 0) {
       NSImage *symbolImage = [NSImage imageWithSystemSymbolName:iconName accessibilityDescription:title];
       if (symbolImage) {
-        symbolImage.template = YES;
+        [symbolImage setTemplate:YES];
         item.image = symbolImage;
       }
     }
