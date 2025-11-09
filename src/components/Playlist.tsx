@@ -4,7 +4,12 @@ import { type ElementRef, useCallback, useEffect, useMemo, useRef, useState } fr
 import { findNodeHandle, type NativeSyntheticEvent, Platform, StyleSheet, Text, UIManager, View } from "react-native";
 import type { NativeMouseEvent } from "react-native-macos";
 import { Button } from "@/components/Button";
-import { localAudioControls, localPlayerState$, queue$ } from "@/components/LocalAudioPlayer";
+import {
+    localAudioControls,
+    localPlayerState$,
+    queue$,
+    type QueuedTrack,
+} from "@/components/LocalAudioPlayer";
 import { type TrackData, TrackItem } from "@/components/TrackItem";
 import { usePlaylistSelection } from "@/hooks/usePlaylistSelection";
 import {
@@ -62,6 +67,7 @@ export function Playlist() {
     const libraryPaths = use$(localMusicSettings$.libraryPaths);
     const queueTracks = use$(queue$.tracks);
     const currentTrackIndex = use$(localPlayerState$.currentIndex);
+    const currentTrack = use$(localPlayerState$.currentTrack);
     const isPlayerActive = use$(localPlayerState$.isPlaying);
     const playlistStyle = use$(settings$.general.playlistStyle);
     const queueLength = queueTracks.length;
@@ -78,7 +84,11 @@ export function Playlist() {
     const dropAreaRef = useRef<ElementRef<typeof DragDropView>>(null);
     const dropAreaWindowRectRef = useRef({ x: 0, y: 0, width: 0, height: 0 });
     const lastDropIndexRef = useRef<number>(queueLength);
-    const previousPlayedIndexRef = useRef<number>(typeof currentTrackIndex === "number" ? currentTrackIndex : -1);
+    const currentTrackQueueEntryId = (currentTrack as Partial<QueuedTrack> | null)?.queueEntryId ?? null;
+    const previousScrolledTrackRef = useRef<{ index: number; queueEntryId: string | null }>({
+        index: typeof currentTrackIndex === "number" ? currentTrackIndex : -1,
+        queueEntryId: currentTrackQueueEntryId,
+    });
     const wasPlayingRef = useRef<boolean>(isPlayerActive);
     const { draggedItem$, activeDropZone$, checkDropZones } = useDragDrop();
     const handleOpenLibrarySettings = useCallback(() => {
@@ -278,7 +288,16 @@ export function Playlist() {
 
     useEffect(() => {
         const nextIndex = typeof currentTrackIndex === "number" ? currentTrackIndex : -1;
-        if (nextIndex >= 0 && nextIndex !== previousPlayedIndexRef.current) {
+        const queueEntryId = currentTrackQueueEntryId;
+        const previous = previousScrolledTrackRef.current;
+        const trackChanged =
+            queueEntryId != null
+                ? queueEntryId !== previous.queueEntryId
+                : previous.queueEntryId != null
+                  ? true
+                  : nextIndex !== previous.index;
+
+        if (nextIndex >= 0 && trackChanged) {
             clearSelection();
             requestAnimationFrame(() => {
                 const list = listRef.current;
@@ -290,8 +309,11 @@ export function Playlist() {
                 }
             });
         }
-        previousPlayedIndexRef.current = nextIndex;
-    }, [clearSelection, currentTrackIndex]);
+
+        if (previous.index !== nextIndex || previous.queueEntryId !== queueEntryId) {
+            previousScrolledTrackRef.current = { index: nextIndex, queueEntryId };
+        }
+    }, [clearSelection, currentTrackIndex, currentTrackQueueEntryId]);
 
     useEffect(() => {
         if (isPlayerActive && !wasPlayingRef.current) {
