@@ -83,7 +83,7 @@ export const CurrentSongOverlayWindowManager = () => {
                     x = Math.max(screenWidth - DEFAULT_WIDTH - HORIZONTAL_MARGIN, 0);
                 }
 
-                const maxY = Math.max(screenHeight - DEFAULT_HEIGHT, 0);
+                const maxY = Math.max(screenHeight - windowHeight, 0);
                 const clampY = (value: number) => Math.min(Math.max(value, 0), maxY);
 
                 let y = clampY(maxY - TOP_MARGIN);
