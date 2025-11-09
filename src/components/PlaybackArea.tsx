@@ -2,14 +2,21 @@ import type { Observable } from "@legendapp/state";
 import { use$, useObservable } from "@legendapp/state/react";
 import { memo, useCallback, useEffect } from "react";
 import { type LayoutChangeEvent, Text, View } from "react-native";
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 import { AlbumArt } from "@/components/AlbumArt";
 import { Button } from "@/components/Button";
 import { CustomSlider } from "@/components/CustomSlider";
 import { localAudioControls, localPlayerState$ } from "@/components/LocalAudioPlayer";
 import { SkiaText } from "@/components/SkiaText";
 import { usePlaybackControlLayout } from "@/hooks/useUIControls";
-import { OVERLAY_WINDOW_WIDTH_COMPACT } from "@/overlay/OverlayConstants";
+import {
+    OVERLAY_CONTENT_SPRING_DAMPING,
+    OVERLAY_CONTENT_SPRING_MASS,
+    OVERLAY_CONTENT_SPRING_REST_DISPLACEMENT,
+    OVERLAY_CONTENT_SPRING_REST_SPEED,
+    OVERLAY_CONTENT_SPRING_STIFFNESS,
+    OVERLAY_WINDOW_WIDTH_COMPACT,
+} from "@/overlay/OverlayConstants";
 import { setIsScrubbing } from "@/systems/PlaybackInteractionState";
 import { type PlaybackControlId, settings$ } from "@/systems/Settings";
 import { cn } from "@/utils/cn";
@@ -102,22 +109,30 @@ export function PlaybackArea({ showBorder = true, overlayMode }: PlaybackAreaPro
             return;
         }
 
-        overlayControlsProgress.value = withTiming(overlayControlsVisible ? 1 : 0, {
-            duration: 220,
-            easing: Easing.out(Easing.cubic),
+        overlayControlsProgress.value = withSpring(overlayControlsVisible ? 1 : 0, {
+            damping: OVERLAY_CONTENT_SPRING_DAMPING,
+            stiffness: OVERLAY_CONTENT_SPRING_STIFFNESS,
+            mass: OVERLAY_CONTENT_SPRING_MASS,
+            restDisplacementThreshold: OVERLAY_CONTENT_SPRING_REST_DISPLACEMENT,
+            restSpeedThreshold: OVERLAY_CONTENT_SPRING_REST_SPEED,
         });
     }, [overlayControlsVisible, overlayModeEnabled, overlayControlsProgress]);
 
-    const controlsAnimatedStyle = useAnimatedStyle(() => ({
-        opacity: overlayControlsProgress.value,
-    }));
+    const controlsAnimatedStyle = useAnimatedStyle(() => {
+        const rawProgress = overlayModeEnabled ? overlayControlsProgress.value : 1;
+        const clampedProgress = Math.min(Math.max(rawProgress * 1.1, 0), 1);
+        return {
+            opacity: clampedProgress,
+        };
+    });
 
     const sliderAnimatedStyle = useAnimatedStyle(() => {
+        const rawProgress = overlayModeEnabled ? overlayControlsProgress.value : 1;
+        const clampedProgress = Math.min(Math.max(rawProgress * 1.1, 0), 1);
         const measuredHeight = sliderRowHeight.value;
         return {
-            opacity: overlayControlsProgress.value,
-            transform: [{ translateY: (1 - overlayControlsProgress.value) * 10 }],
-            height: measuredHeight === 0 ? undefined : measuredHeight * overlayControlsProgress.value,
+            opacity: clampedProgress,
+            height: measuredHeight === 0 ? undefined : measuredHeight * clampedProgress,
         };
     });
 
@@ -278,9 +293,9 @@ export function PlaybackArea({ showBorder = true, overlayMode }: PlaybackAreaPro
                 <View className="flex-row items-center">
                     {overlayModeEnabled ? (
                         <Animated.View
-                            className={cn(overlayModeEnabled && " absolute top-0 bottom-0")}
+                            className={cn(overlayModeEnabled && "absolute top-0 bottom-0")}
                             pointerEvents={overlayControlsVisible ? "auto" : "none"}
-                            style={[controlsAnimatedStyle, { right: -60 }]}
+                            style={[controlsAnimatedStyle, { right: -64 }]}
                         >
                             {playbackControlsNode}
                         </Animated.View>

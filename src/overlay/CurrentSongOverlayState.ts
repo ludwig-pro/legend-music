@@ -37,8 +37,6 @@ const getDisplayDurationMs = () => {
 };
 
 const scheduleHideTimer = (durationMs: number = getDisplayDurationMs()) => {
-    return;
-
     clearHideTimer();
     hideTimer = setTimeout(() => {
         requestCurrentSongOverlayDismissal();

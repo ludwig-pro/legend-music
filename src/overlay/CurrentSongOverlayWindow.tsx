@@ -4,7 +4,7 @@ import { PortalProvider } from "@gorhom/portal";
 import { useObserveEffect } from "@legendapp/state/react";
 import { useCallback, useEffect, useState } from "react";
 import { Platform, StyleSheet, View } from "react-native";
-import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
 
 import { PlaybackArea } from "@/components/PlaybackArea";
 import { TooltipProvider } from "@/components/TooltipProvider";
@@ -30,6 +30,11 @@ import {
     OVERLAY_WINDOW_ROOT_PADDING_BOTTOM,
     OVERLAY_WINDOW_ROOT_PADDING_TOP,
     OVERLAY_WINDOW_SHOW_DURATION_MS,
+    OVERLAY_WINDOW_SPRING_DAMPING,
+    OVERLAY_WINDOW_SPRING_MASS,
+    OVERLAY_WINDOW_SPRING_REST_DISPLACEMENT,
+    OVERLAY_WINDOW_SPRING_REST_SPEED,
+    OVERLAY_WINDOW_SPRING_STIFFNESS,
     OVERLAY_WINDOW_WIDTH_COMPACT,
     OVERLAY_WINDOW_WIDTH_EXPANDED,
 } from "./OverlayConstants";
@@ -76,6 +81,14 @@ const styles = StyleSheet.create({
 function CurrentSongOverlayWindow() {
     const opacity = useSharedValue(0);
     const scale = useSharedValue(OVERLAY_WINDOW_INITIAL_SCALE);
+
+    const springConfig = {
+        damping: OVERLAY_WINDOW_SPRING_DAMPING,
+        stiffness: OVERLAY_WINDOW_SPRING_STIFFNESS,
+        mass: OVERLAY_WINDOW_SPRING_MASS,
+        restDisplacementThreshold: OVERLAY_WINDOW_SPRING_REST_DISPLACEMENT,
+        restSpeedThreshold: OVERLAY_WINDOW_SPRING_REST_SPEED,
+    } as const;
     const [isHovered, setIsHovered] = useState(false);
 
     const animatedStyle = useAnimatedStyle(() => ({
@@ -135,10 +148,7 @@ function CurrentSongOverlayWindow() {
                 },
             );
 
-            scale.value = withTiming(OVERLAY_WINDOW_INITIAL_SCALE, {
-                duration: OVERLAY_WINDOW_HIDE_DURATION_MS,
-                easing: Easing.in(Easing.cubic),
-            });
+            scale.value = withSpring(OVERLAY_WINDOW_INITIAL_SCALE, springConfig);
 
             return;
         }
@@ -155,10 +165,7 @@ function CurrentSongOverlayWindow() {
             easing: Easing.out(Easing.cubic),
         });
 
-        scale.value = withTiming(1, {
-            duration: OVERLAY_WINDOW_SHOW_DURATION_MS,
-            easing: Easing.out(Easing.cubic),
-        });
+        scale.value = withSpring(1, springConfig);
 
         if (Platform.OS === "macos") {
             void (async () => {
