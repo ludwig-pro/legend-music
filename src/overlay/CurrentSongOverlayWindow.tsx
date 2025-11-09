@@ -17,6 +17,7 @@ import {
     finalizeCurrentSongOverlayDismissal,
     pauseCurrentSongOverlayDismissal,
     resetCurrentSongOverlayTimer,
+    setCurrentSongOverlayWindowHeight,
 } from "./CurrentSongOverlayState";
 
 const WINDOW_ID = "current-song-overlay";
@@ -24,16 +25,18 @@ const SHOW_DURATION_MS = 400;
 const HIDE_DURATION_MS = 300;
 const MAX_BLUR_RADIUS = 4;
 const SCALE = 0.9;
-const OVERLAY_EXPANDED_HEIGHT = 154;
-const OVERLAY_COMPACT_HEIGHT = 120;
+const ROOT_PADDING_TOP = 22;
+const ROOT_PADDING_BOTTOM = 36;
+const COMPACT_WINDOW_HEIGHT = 124;
+const EXPANDED_WINDOW_HEIGHT = 154;
 
 const styles = StyleSheet.create({
     root: {
         alignSelf: "stretch",
         flex: 1,
-        paddingTop: 22,
+        paddingTop: ROOT_PADDING_TOP,
         paddingHorizontal: 30,
-        paddingBottom: 36,
+        paddingBottom: ROOT_PADDING_BOTTOM,
         backgroundColor: "transparent",
     },
     shadowContainer: {
@@ -68,15 +71,10 @@ function CurrentSongOverlayWindow() {
     const opacity = useSharedValue(0);
     const scale = useSharedValue(SCALE);
     const [isHovered, setIsHovered] = useState(false);
-    const cardHeight = useSharedValue(OVERLAY_COMPACT_HEIGHT);
 
     const animatedStyle = useAnimatedStyle(() => ({
         opacity: opacity.value,
         transform: [{ scale: scale.value }],
-    }));
-
-    const heightAnimatedStyle = useAnimatedStyle(() => ({
-        height: cardHeight.value,
     }));
 
     const handleExitComplete = useCallback(() => {
@@ -97,11 +95,9 @@ function CurrentSongOverlayWindow() {
     }, []);
 
     useEffect(() => {
-        cardHeight.value = withTiming(isHovered ? OVERLAY_EXPANDED_HEIGHT : OVERLAY_COMPACT_HEIGHT, {
-            duration: 220,
-            easing: Easing.out(Easing.cubic),
-        });
-    }, [cardHeight, isHovered]);
+        const targetHeight = isHovered ? EXPANDED_WINDOW_HEIGHT : COMPACT_WINDOW_HEIGHT;
+        setCurrentSongOverlayWindowHeight(targetHeight);
+    }, [isHovered]);
 
     useObserveEffect(() => {
         const exiting = currentSongOverlay$.isExiting.get();
@@ -174,7 +170,7 @@ function CurrentSongOverlayWindow() {
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
         >
-            <Animated.View style={[styles.shadowContainer, heightAnimatedStyle]}>
+            <Animated.View style={styles.shadowContainer}>
                 <View style={styles.overlayWrapper}>
                     <VibrancyView
                         blendingMode="behindWindow"

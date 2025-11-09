@@ -8,6 +8,7 @@ import { perfCount, perfLog } from "@/utils/perfLogger";
 import { WindowsNavigator } from "@/windows";
 
 import {
+    DEFAULT_OVERLAY_WINDOW_HEIGHT,
     cancelCurrentSongOverlay,
     currentSongOverlay$,
     finalizeCurrentSongOverlayDismissal,
@@ -16,7 +17,7 @@ import {
 const OVERLAY_WINDOW_KEY = "CurrentSongOverlayWindow" as const;
 const OVERLAY_WINDOW_ID = WindowsNavigator.getIdentifier(OVERLAY_WINDOW_KEY);
 const DEFAULT_WIDTH = 400;
-const DEFAULT_HEIGHT = 154;
+const DEFAULT_HEIGHT = DEFAULT_OVERLAY_WINDOW_HEIGHT;
 const TOP_MARGIN = 48;
 const HORIZONTAL_MARGIN = 0;
 const BOTTOM_MARGIN = 0;
@@ -26,6 +27,7 @@ export const CurrentSongOverlayWindowManager = () => {
     const windowManager = useWindowManager();
     const isWindowOpen = use$(currentSongOverlay$.isWindowOpen);
     const overlayPosition = use$(settings$.overlay.position);
+    const windowHeight = use$(currentSongOverlay$.windowHeight) ?? DEFAULT_OVERLAY_WINDOW_HEIGHT;
     const horizontalPosition = overlayPosition?.horizontal ?? "center";
     const verticalPosition = overlayPosition?.vertical ?? "top";
 
@@ -96,7 +98,7 @@ export const CurrentSongOverlayWindowManager = () => {
                     y,
                     windowStyle: {
                         width: DEFAULT_WIDTH,
-                        height: DEFAULT_HEIGHT,
+                        height: windowHeight,
                         mask: [
                             WindowStyleMask.Borderless,
                             WindowStyleMask.NonactivatingPanel,
@@ -109,7 +111,7 @@ export const CurrentSongOverlayWindowManager = () => {
                 perfLog("CurrentSongOverlayWindowManager.openWindow.error", error);
             }
         })();
-    }, [isWindowOpen, horizontalPosition, verticalPosition]);
+    }, [isWindowOpen, horizontalPosition, verticalPosition, windowHeight]);
 
     return null;
 };
