@@ -92,12 +92,25 @@ float sampleAudioBin(int index) {
     return readAudioBin(clampIndex(index));
 }
 
+float shapeAudio(float value) {
+    float leveled = pow(clamp(value, 0.0, 1.0), 0.9);
+    float amplitudeBoost = clamp(0.7 + clamp(u_amplitude, 0.0, 1.2) * 0.6, 0.4, 1.4);
+    float boosted = clamp(leveled * amplitudeBoost, 0.0, 0.85);
+    return pow(boosted, 0.85);
+}
+
+float sampleAudioEnergy(float normalized) {
+    if (u_binCount <= 0) {
+        return 0.0;
+    }
+    float raw = sampleAudioNormalized(normalized);
+    return shapeAudio(raw);
+}
+
 float4 sampleChannel(int channel, float2 uv) {
     if (channel == CHANNEL_AUDIO) {
-        float value = sampleAudioNormalized(uv.x);
-        float boost = clampToUnit(u_amplitude * 1.5);
-        float adjusted = clamp(value * (1.0 + boost), 0.0, 1.2);
-        return float4(adjusted, adjusted, adjusted, 1.0);
+        float energy = sampleAudioEnergy(uv.x);
+        return float4(energy, energy, energy, 1.0);
     }
 
     float2 p = fract(uv);
@@ -156,10 +169,11 @@ float3 mapH(float2 pos) {
     f += freqs[2] * clamp(1.0 - abs(id - 0.60) / 0.30, 0.0, 1.0);
     f += freqs[3] * clamp(1.0 - abs(id - 0.80) / 0.30, 0.0, 1.0);
 
-    f = pow(clamp(f, 0.0, 1.0), 2.0);
-    float h = 2.5 * f;
+    float raw = clamp(f * 0.55, 0.0, 1.0);
+    float shaped = pow(raw, 1.35);
+    float h = 1.95 * shaped + 0.35 * raw;
 
-    return float3(h, id, f);
+    return float3(h, id, shaped);
 }
 
 float3 map(float3 pos) {
@@ -394,10 +408,10 @@ float4 mainImage(float2 fragCoord) {
         return float4(0.0, 0.0, 0.0, 1.0);
     }
 
-    freqs[0] = sampleChannel(CHANNEL_AUDIO, float2(0.01, 0.25)).x;
-    freqs[1] = sampleChannel(CHANNEL_AUDIO, float2(0.07, 0.25)).x;
-    freqs[2] = sampleChannel(CHANNEL_AUDIO, float2(0.15, 0.25)).x;
-    freqs[3] = sampleChannel(CHANNEL_AUDIO, float2(0.30, 0.25)).x;
+    freqs[0] = sampleAudioEnergy(0.01);
+    freqs[1] = sampleAudioEnergy(0.07);
+    freqs[2] = sampleAudioEnergy(0.15);
+    freqs[3] = sampleAudioEnergy(0.30);
 
     float time = 5.0 + 0.2 * u_time;
 
