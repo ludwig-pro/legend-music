@@ -1,8 +1,13 @@
 // Port of "Cubescape" by Inigo Quilez — https://www.shadertoy.com/view/Msl3Rr
 
+import { ImageShader, Skia, useImage } from "@shopify/react-native-skia";
+import { useMemo } from "react";
+
 import { type ShaderDefinition, ShaderSurface } from "@/visualizer/shaders/ShaderSurface";
 
 import type { VisualizerComponentProps, VisualizerPresetDefinition } from "./types";
+
+const woodTextureSource = require("./wood.png");
 
 const CUBESCAPE_SHADER = `
 // Shader Inputs
@@ -23,10 +28,13 @@ uniform float u_time;
 uniform float u_amplitude;
 uniform int u_binCount;
 uniform float u_bins[128];
+uniform shader u_woodTexture;
 
 const int CHANNEL_AUDIO = 0;
 const int CHANNEL_ENVIRONMENT = 1;
 const int AA = 2;
+const float WOOD_TILE_SCALE = 2.7;
+const float WOOD_GRAIN_STRENGTH = 0.14;
 
 float clampToUnit(float value) {
     return clamp(value, 0.0, 1.0);
@@ -100,14 +108,28 @@ float4 sampleChannel(int channel, float2 uv) {
     return float4(color, 1.0);
 }
 
+float4 sampleWoodTexture(float2 uv) {
+    float2 scaled = float2(uv.x * WOOD_TILE_SCALE, uv.y * (WOOD_TILE_SCALE * 0.65));
+    return float4(u_woodTexture.eval(scaled));
+}
+
 float3 sampleCube(float3 p, float3 n) {
-    float3 a = n * n;
-    float4 x = sampleChannel(CHANNEL_ENVIRONMENT, float2(p.y, p.z));
-    float4 y = sampleChannel(CHANNEL_ENVIRONMENT, float2(p.z, p.x));
-    float4 z = sampleChannel(CHANNEL_ENVIRONMENT, float2(p.y, p.x));
-    float denom = a.x + a.y + a.z + 1e-5;
-    float4 combined = (x * a.x + y * a.y + z * a.z) / denom;
-    return combined.xyz;
+    float3 weights = max(n * n, float3(1e-3, 1e-3, 1e-3));
+    float denom = weights.x + weights.y + weights.z;
+
+    float2 uvX = float2(p.y, p.z);
+    float2 uvY = float2(p.x, p.z);
+    float2 uvZ = float2(p.x, p.y);
+
+    float3 sampleX = sampleWoodTexture(uvX).xyz;
+    float3 sampleY = sampleWoodTexture(uvY).xyz;
+    float3 sampleZ = sampleWoodTexture(uvZ).xyz;
+
+    float3 combined = (sampleX * weights.x + sampleY * weights.y + sampleZ * weights.z) / denom;
+    float grain = sin(6.2831 * (p.y * 0.35 + p.x * 0.15));
+    combined *= 0.92 + WOOD_GRAIN_STRENGTH * grain;
+
+    return clamp(combined, float3(0.02, 0.02, 0.02), float3(1.2, 1.2, 1.2));
 }
 
 float hash(float n) {
@@ -328,11 +350,14 @@ float3 render(float3 ro, float3 rd) {
         float3 pos = ro + t * rd;
         float3 nor = calcNormal(pos, t);
 
-        col = 0.5 + 0.5 * cos(6.2831 * res.y + float3(0.0, 0.4, 0.8));
-        float3 ff = pow(sampleCube(0.21 * float3(pos.x, 4.0 * res.z - pos.y, pos.z), nor), float3(1.3)) * 1.1;
-        col *= ff.x;
+        float3 woodSample = sampleCube(0.24 * float3(pos.x, 4.0 * res.z - pos.y, pos.z), nor);
+        float3 accent = 0.55 + 0.45 * cos(6.2831 * (res.y + float3(0.0, 0.35, 0.7)));
+        col = mix(woodSample, woodSample * accent, 0.32);
 
-        col = doLighting(col, pow(ff.x, 3.0) * 2.0, pos, nor, rd);
+        float textureLuma = clamp(maxcomp(woodSample), 0.05, 1.2);
+        float ks = 1.1 + pow(textureLuma, 4.0) * 2.6;
+        col = doLighting(col, ks, pos, nor, rd);
+        col *= 0.9 + 0.3 * clamp(u_amplitude, 0.0, 1.0);
         col *= 1.0 - smoothstep(20.0, 40.0, t);
     }
     return col;
@@ -413,9 +438,52 @@ const CUBESCAPE_DEFINITION: ShaderDefinition = {
     },
 };
 
-const CubescapeVisualizer = ({ style, binCountOverride }: VisualizerComponentProps) => (
-    <ShaderSurface definition={CUBESCAPE_DEFINITION} style={style} binCountOverride={binCountOverride} />
-);
+const CubescapeVisualizer = ({ style, binCountOverride }: VisualizerComponentProps) => {
+    const woodTexture = useImage(woodTextureSource);
+    const fallbackTexture = useMemo(() => {
+        const surface = Skia.Surface.Make(4, 4);
+        if (!surface) {
+            return null;
+        }
+        const canvas = surface.getCanvas();
+        canvas.clear(Skia.Color("#8b5a3c"));
+        const paint = Skia.Paint();
+        paint.setColor(Skia.Color("#c7915c"));
+        paint.setStrokeWidth(1);
+        paint.setAntiAlias(true);
+        canvas.drawRect(Skia.XYWHRect(0, 1, 4, 1), paint);
+        canvas.drawRect(Skia.XYWHRect(0, 3, 4, 1), paint);
+        return surface.makeImageSnapshot();
+    }, []);
+    const resolvedTexture = woodTexture ?? fallbackTexture;
+
+    const shaderChildren = useMemo(
+        () =>
+            resolvedTexture ? (
+                <ImageShader
+                    image={resolvedTexture}
+                    fit="fill"
+                    tx="repeat"
+                    ty="repeat"
+                    rect={{ x: 0, y: 0, width: 1, height: 1 }}
+                />
+            ) : null,
+        [resolvedTexture],
+    );
+
+    if (!resolvedTexture) {
+        return null;
+    }
+
+    return (
+        <ShaderSurface
+            definition={CUBESCAPE_DEFINITION}
+            style={style}
+            binCountOverride={binCountOverride}
+            shaderChildren={shaderChildren}
+        />
+    );
+};
 
 export const cubescapePreset: VisualizerPresetDefinition = {
     id: "cubescape",

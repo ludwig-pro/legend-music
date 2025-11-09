@@ -1,5 +1,5 @@
 import { Canvas, Rect, Shader, Skia, type Uniforms } from "@shopify/react-native-skia";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { LayoutChangeEvent, StyleProp, ViewStyle } from "react-native";
 import { StyleSheet, Text, View } from "react-native";
 import type { SharedValue } from "react-native-reanimated";
@@ -59,9 +59,10 @@ interface ShaderSurfaceProps {
     definition: ShaderDefinition;
     style?: StyleProp<ViewStyle>;
     binCountOverride?: number;
+    shaderChildren?: ReactNode;
 }
 
-export function ShaderSurface({ definition, style, binCountOverride }: ShaderSurfaceProps) {
+export function ShaderSurface({ definition, style, binCountOverride, shaderChildren }: ShaderSurfaceProps) {
     const { shader, audioConfig, extendUniforms, backgroundColor = DEFAULT_BACKGROUND } = definition;
 
     const audioPlayer = useAudioPlayer();
@@ -311,7 +312,9 @@ const buildUniforms = useCallback((base: BaseUniformState): Uniforms => {
                 <Rect x={0} y={0} width={canvasSize.width} height={canvasSize.height} color={backgroundColor} />
                 {runtime.effect ? (
                     <Rect x={0} y={0} width={canvasSize.width} height={canvasSize.height}>
-                        <Shader source={runtime.effect} uniforms={uniformsValueRef.current} />
+                        <Shader source={runtime.effect} uniforms={uniformsValueRef.current}>
+                            {shaderChildren}
+                        </Shader>
                     </Rect>
                 ) : null}
             </Canvas>
