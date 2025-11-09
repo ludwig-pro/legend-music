@@ -1,7 +1,7 @@
 import type { Observable } from "@legendapp/state";
 import { use$, useObservable } from "@legendapp/state/react";
 import { memo, useCallback, useEffect } from "react";
-import { LayoutChangeEvent, Text, View } from "react-native";
+import { type LayoutChangeEvent, Text, View } from "react-native";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { AlbumArt } from "@/components/AlbumArt";
 import { Button } from "@/components/Button";

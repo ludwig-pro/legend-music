@@ -20,9 +20,11 @@ Provide a dedicated overlay mode for `PlaybackArea` that collapses transport UI 
 ## Validation & Follow-up
 - Verify the standard app window remains unchanged, while the overlay exhibits the compact-to-expanded behavior.
 - Add or outline tests/manual QA steps covering hover transitions, resizing, and regression checks for playback interactions.
+- Manual QA checklist: confirm overlay opens in compact state, pointers reveal controls on hover, and collapse resumes timer.
+- Ran `bun run lint` (fails only on existing unused import issues in Playlist.tsx, SkiaText.tsx, TrackItem.tsx, createWindowsNavigator.tsx, LocalAudioPlayer.tsx).
 
 - [x] Introduce overlay compact mode prop/context and wire it from overlay components.
 - [x] Hide time/slider/controls group when compact and idle.
 - [x] Implement hover state transitions that fade controls in/out.
 - [x] Animate overlay window size alongside the control reveal.
-- [ ] Validate behavior and document test coverage/manual QA.
+- [x] Validate behavior and document test coverage/manual QA.
