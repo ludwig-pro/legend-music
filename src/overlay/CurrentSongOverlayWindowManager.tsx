@@ -7,7 +7,11 @@ import { settings$ } from "@/systems/Settings";
 import { perfCount, perfLog } from "@/utils/perfLogger";
 import { WindowsNavigator } from "@/windows";
 
-import { cancelCurrentSongOverlay, currentSongOverlay$, finalizeCurrentSongOverlayDismissal } from "./CurrentSongOverlayState";
+import {
+    cancelCurrentSongOverlay,
+    currentSongOverlay$,
+    finalizeCurrentSongOverlayDismissal,
+} from "./CurrentSongOverlayState";
 
 import {
     OVERLAY_WINDOW_ANIMATION_DURATION_MS,
@@ -27,6 +31,7 @@ export const CurrentSongOverlayWindowManager = () => {
     perfCount("CurrentSongOverlayWindowManager.render");
     const windowManager = useWindowManager();
     const isWindowOpen = use$(currentSongOverlay$.isWindowOpen);
+    const isOverlayExiting = use$(currentSongOverlay$.isExiting);
     const overlayPosition = use$(settings$.overlay.position);
     const windowHeight = use$(currentSongOverlay$.windowHeight) ?? OVERLAY_WINDOW_HEIGHT_COMPACT;
     const windowWidth = use$(currentSongOverlay$.windowWidth) ?? OVERLAY_WINDOW_WIDTH_COMPACT;
@@ -47,7 +52,7 @@ export const CurrentSongOverlayWindowManager = () => {
     }, [windowManager]);
 
     useEffect(() => {
-        perfLog("CurrentSongOverlayWindowManager.isOpenEffect", { isWindowOpen });
+        perfLog("CurrentSongOverlayWindowManager.isOpenEffect", { isWindowOpen, isOverlayExiting });
         if (!isWindowOpen) {
             void (async () => {
                 try {
@@ -59,6 +64,10 @@ export const CurrentSongOverlayWindowManager = () => {
                 }
             })();
             previousDimensionsRef.current = null;
+            return;
+        }
+
+        if (isOverlayExiting) {
             return;
         }
 
@@ -122,7 +131,7 @@ export const CurrentSongOverlayWindowManager = () => {
                 perfLog("CurrentSongOverlayWindowManager.openWindow.error", error);
             }
         })();
-    }, [isWindowOpen, horizontalPosition, verticalPosition, windowHeight, windowWidth]);
+    }, [isWindowOpen, isOverlayExiting, horizontalPosition, verticalPosition, windowHeight, windowWidth]);
 
     return null;
 };

@@ -1,10 +1,17 @@
 import "@/../global.css";
 import { VibrancyView } from "@fluentui-react-native/vibrancy-view";
 import { PortalProvider } from "@gorhom/portal";
-import { useObserveEffect } from "@legendapp/state/react";
+import { use$, useObserveEffect } from "@legendapp/state/react";
 import { useCallback, useEffect, useState } from "react";
 import { Platform, StyleSheet, View } from "react-native";
-import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
+import Animated, {
+    Easing,
+    runOnJS,
+    useAnimatedStyle,
+    useSharedValue,
+    withSpring,
+    withTiming,
+} from "react-native-reanimated";
 
 import { PlaybackArea } from "@/components/PlaybackArea";
 import { TooltipProvider } from "@/components/TooltipProvider";
@@ -22,11 +29,11 @@ import {
 } from "./CurrentSongOverlayState";
 
 import {
-    OVERLAY_WINDOW_HIDE_DURATION_MS,
-    OVERLAY_WINDOW_MAX_BLUR_RADIUS,
     OVERLAY_WINDOW_HEIGHT_COMPACT,
     OVERLAY_WINDOW_HEIGHT_EXPANDED,
+    OVERLAY_WINDOW_HIDE_DURATION_MS,
     OVERLAY_WINDOW_INITIAL_SCALE,
+    OVERLAY_WINDOW_MAX_BLUR_RADIUS,
     OVERLAY_WINDOW_ROOT_PADDING_BOTTOM,
     OVERLAY_WINDOW_ROOT_PADDING_TOP,
     OVERLAY_WINDOW_SHOW_DURATION_MS,
@@ -80,7 +87,8 @@ const styles = StyleSheet.create({
 
 function CurrentSongOverlayWindow() {
     const opacity = useSharedValue(0);
-    const scale = useSharedValue(OVERLAY_WINDOW_INITIAL_SCALE);
+    const scale = useSharedValue(1);
+    const isOverlayExiting = use$(currentSongOverlay$.isExiting);
 
     const springConfig = {
         damping: OVERLAY_WINDOW_SPRING_DAMPING,
@@ -114,11 +122,15 @@ function CurrentSongOverlayWindow() {
     }, []);
 
     useEffect(() => {
+        if (isOverlayExiting) {
+            return;
+        }
+
         const targetHeight = isHovered ? OVERLAY_WINDOW_HEIGHT_EXPANDED : OVERLAY_WINDOW_HEIGHT_COMPACT;
         const targetWidth = isHovered ? OVERLAY_WINDOW_WIDTH_EXPANDED : OVERLAY_WINDOW_WIDTH_COMPACT;
         setCurrentSongOverlayWindowHeight(targetHeight);
         setCurrentSongOverlayWindowWidth(targetWidth);
-    }, [isHovered]);
+    }, [isHovered, isOverlayExiting]);
 
     useObserveEffect(() => {
         const exiting = currentSongOverlay$.isExiting.get();
@@ -148,7 +160,7 @@ function CurrentSongOverlayWindow() {
                 },
             );
 
-            scale.value = withSpring(OVERLAY_WINDOW_INITIAL_SCALE, springConfig);
+            scale.value = withSpring(1, springConfig);
 
             return;
         }
