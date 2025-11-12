@@ -3,6 +3,7 @@
     "version": "0.0.3",
     "private": true,
     "scripts": {
+        "bootstrap": "bun i && cd macos && pod install",
         "mac": "react-native run-macos",
         "start": "react-native start --client-logs",
         "test": "jest",

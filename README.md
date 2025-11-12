@@ -1,103 +1,130 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# Legend Music
 
-## Visualizer Window
+Legend Music is a macOS-first local music player built with React Native. It ingests folders of audio files, keeps the library in sync via native filesystem watchers, and exposes a multi-window experience with a Skia-driven visualizer, floating overlay, and pop-out settings surfaces. State is persisted with `@legendapp/state` + `expo-file-system`, so the queue, library, and preferences survive restarts.
 
-- Press `V` to open or hide the Skia-powered visualizer window.
-- The window mirrors the current track metadata, offers spectrum and waveform modes, and remembers your size and smoothing settings between sessions.
-- Enable or disable the auto-close toggle inside the window to keep the visualizer running when playback stops.
+## Highlights
 
-# Getting Started
+- Local-first ingestion: parse ID3/JS media tags, cache artwork, and rescan when Finder changes trigger the native watcher.
+- Multi-window UI: a composable main window plus dedicated Media Library, Settings, Visualizer, and Current Song overlay windows managed by `WindowManager`.
+- Native audio engine: the `AudioPlayer` module wraps `AVPlayer`, MediaRemote commands, Now Playing metadata, and streams FFT data to the Skia visualizer.
+- Drag-and-drop queue management with customizable playback/bottom-bar controls, tooltips, portals, and hotkeys.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+## Tech Stack & Tooling
 
-## Step 1: Start Metro
+- **Runtime:** React Native 0.78, `react-native-macos`, `@legendapp/state` for local state, `@legendapp/list` for high performance lists.
+- **Styling:** NativeWind + Tailwind tokens (`global.css`, `tailwind.config.js`), Fluent UI Vibrancy surfaces, shared primitives inside `src/legend-kit`.
+- **Native bridges:** Objective-C++ modules in `macos/LegendMusic-macOS` (AudioPlayer, WindowManager, DragDropView, FileDialog, FileSystemWatcher, SFSymbol) consumed through `src/native-modules`.
+- **Persistence:** JSON/msgpack stores under `~/Library/Caches/LegendMusic` driven by `createJSONManager`, plus `.m3u` queue exports for interoperability.
+- **Build/Test:** Bun (`bun.lock`) for dependency + script management, Jest (`bun run test`), Biome (`bun run lint`), and Xcode builds through `scripts/build.ts`/`scripts/package-app.ts`.
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+## Prerequisites
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+- macOS 13+ with Xcode 15+ CLI tools (required for `react-native-macos`, `xcodebuild`).
+- Node 18 or newer and [Bun](https://bun.sh/).
+- Ruby + Bundler + CocoaPods (`gem install bundler cocoapods`). Run `bundle install` once, then `bundle exec pod install` in `macos/` (and `ios/` if you touch that target).
+- Watchman (recommended for reliable Metro file watching): `brew install watchman`.
 
-```sh
-# Using npm
-npm start
+## Quick Start
 
-# OR using Yarn
-yarn start
-```
+1. Install dependencies and boostrap pods: `bun bootstrap`.
+2. In Terminal A, start Metro with logging: `bun run start`.
+3. In Terminal B, launch the macOS binary: `bun run mac`. The CLI wraps `react-native run-macos` and will open `LegendMusic.app`.
+4. Open **Settings → Library** to add one or more folders.
+5. Use the playlist + playback controls (drag files in, reorder, or double-click library items).
+7. Toggle auxiliary windows with hotkeys (e.g., `V` for the visualizer, `L` for the media library) or via the menus. Preferences persist under `~/Library/Caches/LegendMusic`.
 
-## Step 2: Build and run your app
+### Useful Scripts
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
+| Command | Purpose |
+| --- | --- |
+| `bun run start` | Start Metro with client logging. |
+| `bun run mac` | Launch the macOS target via `react-native run-macos`. |
+| `bun run test` | Run Jest with the React Native preset (`__tests__/` or `*.test.ts(x)`). |
+| `bun run lint` | Biome check + format (read-only). |
+| `bun run lint:fix` | Apply Biome lint + format fixes across `src/`. |
+| `bun run build` | Release build via `scripts/build.ts` (xcodebuild → `macos/build/Build/Products/Release/LegendMusic.app`). |
+| `bun run package` | Code-sign, notarize, and zip the release build via `scripts/package-app.ts` (writes artifacts to `dist/`). |
+| `bun run publish` | Convenience command that runs `build` followed by `package`. |
 
-### Android
+## Using the App
 
-```sh
-# Using npm
-npm run android
+### Managing your library
 
-# OR using Yarn
-yarn android
-```
+- Library folders live in `settings$.library` (managed through **Settings → Library**). Paths are persisted via `localMusicSettings.json`.
+- Adding or removing a folder triggers a rescan that parses tags with `id3js`/`jsmediatags`, caches thumbnails, and records playlists in `localMusicState`.
+- The `FileSystemWatcher` native module watches every configured directory. When files change, `scanLocalMusic()` reruns automatically after a short debounce.
+- If you need a manual reset, clear the cache directory at `~/Library/Caches/LegendMusic/data` and restart the app.
 
-### iOS
+### Playback, queue, and drag-and-drop
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
+- Playback runs through the `AudioPlayer` native module. It maintains Now Playing metadata, media key hooks, and emits FFT frames for the visualizer.
+- The queue (`queue$.tracks`) is persisted via `PlaylistCache` both as JSON and as an `.m3u` so the session survives restarts and can be exported.
+- Drag files or folders from Finder into the playlist region or onto the window chrome via `DragDropView`. Internal drag-and-drop uses `DraggableItem`/`DroppableZone` to reorder or send tracks to playlists.
+- Customize the playback toolbar and the bottom bar shortcuts under **Settings → Customize UI**. Layouts are stored in `settings$.ui`.
 
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
+### Windows & default hotkeys
 
-```sh
-bundle install
-```
+| Window/Action | Default hotkey | Notes |
+| --- | --- | --- |
+| Toggle Media Library window | `L` | Opens `MediaLibraryWindow` with the tree + track list. |
+| Toggle Visualizer | `V` | Shows `VisualizerWindow` (Skia preset picker + FFT). |
+| Search current list | `J` | Focuses the omnibox/search input. |
+| Play/Pause | Media key or `Space` | Media keys handled natively; space toggles when the playlist has no text focus. |
+| Next/Previous | Media keys | Falls back to queue navigation controls. |
+| Toggle Shuffle | `⌥ + S` | Uses `settings$.playback.shuffle`. |
+| Cycle Repeat | `⌥ + R` | Cycles `off → track → queue`. |
 
-Then, and every time you update your native dependencies, run:
+Hotkeys are defined in `src/systems/hotkeys.ts` and persisted to `Cache/hotkeys.json`. You can customize the hotkeys in the settings or edit that file while the app is closed.
 
-```sh
-bundle exec pod install
-```
+## Building & Packaging
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+### Release build (.app only)
 
-```sh
-# Using npm
-npm run ios
+1. Ensure pods are installed (`macos/`).
+2. Run `bun run build`. The script drops into `macos/` and executes `xcodebuild -scheme LegendMusic-macOS -configuration Release`.
+3. The resulting app lives at `macos/build/Build/Products/Release/LegendMusic.app`. You can copy it to `/Applications` for local testing.
 
-# OR using Yarn
-yarn ios
-```
+## Testing & Quality
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+- `bun run test` runs Jest with the React Native preset (`jest.config.js`). Keep specs in `__tests__/` or next to the code using `*.test.ts(x)`.
+- `bun run lint`/`bun run lint:fix` run Biome using the repo’s 4-space, double-quote, 120-character policy. Tailwind classNames should come from `global.css` tokens.
+- UI logic should be covered with focused unit tests (mock native modules when bridges are unavailable). Run tests before raising a PR.
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+## Project Layout
 
-## Step 3: Modify your app
+| Path | Description |
+| --- | --- |
+| `src/` | TypeScript sources, bundled via Metro. Entry point is `src/App.tsx`. |
+| `src/components/` | Shared UI (PlaybackArea, Playlist, Buttons, DnD, tooltips, TitleBar, etc.). |
+| `src/systems/` | Domain state (library scanning, queue/cache, settings, hotkeys, playback interaction). |
+| `src/overlay/` | Current song overlay windows, state, constants, animations. |
+| `src/visualizer/` | Visualizer windows, presets, shaders, stored preferences. |
+| `src/native-modules/` | JS faces for macOS native modules (`AudioPlayer`, `WindowManager`, `DragDropView`, `FileDialog`, `FileSystemWatcher`). |
+| `src/windows/` | Window management helpers (`WindowProvider`, `WindowsNavigator`). |
+| `legend-kit/` | Design system primitives shared across Legend apps. |
+| `app/`, `app.json` | Expo routing metadata. |
+| `macos/`, `ios/` | Native workspaces/projects (keep macOS-specific changes inside `macos/`). |
+| `scripts/` | Bun-powered automation (build, package, CI helpers). |
+| `patches/` | `patch-package` diffs applied after install—update when bumping dependencies. |
+| `global.css`, `tailwind.config.js`, `nativewind-env.d.ts` | Tailwind tokens + NativeWind setup. |
+| `assets/` | Static media (artwork, icons). |
+| `__tests__/` | Jest specs for shared logic. |
+| `plans/`, `claude-plans/`, `plan-queue.md` | Internal task tracking notes (update when following plan files). |
 
-Now that you have successfully run the app, let's make changes!
+## Persistence & caches
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+- All observable stores (`localMusicSettings`, `LibraryCache`, `PlaylistCache`, `settings$, hotkeys$, visualizer preferences`) write to `~/Library/Caches/LegendMusic/data/*.json/lgm`.
+- Queue exports and imports use M3U via `saveQueueToM3U`/`loadQueueFromM3U`. Clear `queue.m3u` if you need to reset the session.
+- Album art is cached under `~/Library/Caches/LegendMusic/artwork/<hash>.<ext>` with versioning handled in `LocalMusicState`.
+- Removing the cache directory is the fastest way to reset the app without touching Git.
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+## Troubleshooting
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+- **Metro won’t refresh:** stop `bun run start`, delete `node_modules/.cache`, and restart with `bun run start -- --reset-cache`.
+- **Pods/cocoapods errors:** run `brew install cocoapods`, then `cd macos && bundle exec pod install`. Clean build directories if Xcode complains.
+- **Library folders don’t scan:** ensure the app has Full Disk Access for the selected directories and that they’re not on a network share. Toggling the folder in Settings will re-register the watcher.
+- **Hotkeys not firing:** ensure the Legend Music window is focused. Delete `~/Library/Caches/LegendMusic/data/hotkeys.json` to restore defaults.
+- **Visualizer looks blank:** confirm playback is running and reopen the window. `AudioPlayer` only emits FFT data when tracks are actively decoding.
+- **Codesign/notarization fails:** double-check the `.env` credentials, make sure you’re using a Developer ID certificate, and that Xcode is signed into the same Apple ID.
 
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+Legend Music is still evolving—refer to the `plans/` directory for active tasks, keep lint/tests green, and prefer Bun-powered scripts for everything from installs to releases.
