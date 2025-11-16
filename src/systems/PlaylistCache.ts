@@ -1,33 +1,28 @@
 import { createJSONManager } from "@/utils/JSONManager";
 
-export interface SerializedQueuedTrack {
-    id: string;
+export interface PersistedQueuedTrack {
+    filePath: string;
     title: string;
     artist: string;
     album?: string;
     duration: string;
-    filePath: string;
-    fileName: string;
-    queueEntryId: string;
     thumbnail?: string;
 }
 
 export interface PlaylistSnapshot {
     version: number;
     updatedAt: number;
-    queue: SerializedQueuedTrack[];
-    currentQueueEntryId: string | null;
+    queue: PersistedQueuedTrack[];
     currentIndex: number;
     isPlaying: boolean;
 }
 
-const PLAYLIST_CACHE_VERSION = 1;
+const PLAYLIST_CACHE_VERSION = 2;
 
 const defaultSnapshot: PlaylistSnapshot = {
     version: PLAYLIST_CACHE_VERSION,
     updatedAt: 0,
     queue: [],
-    currentQueueEntryId: null,
     currentIndex: -1,
     isPlaying: false,
 };
@@ -37,22 +32,54 @@ const playlistCache$ = createJSONManager<PlaylistSnapshot>({
     initialValue: defaultSnapshot,
     format: "msgpack",
     saveTimeout: 0,
+    preload: false,
 });
 
-const sanitizeTrack = (input: SerializedQueuedTrack): SerializedQueuedTrack => ({
-    id: input.id,
-    title: input.title,
-    artist: input.artist,
-    album: input.album,
-    duration: input.duration,
-    filePath: input.filePath,
-    fileName: input.fileName,
-    queueEntryId: input.queueEntryId,
-    thumbnail: input.thumbnail,
-});
+type LegacyQueuedTrack = {
+    id?: string;
+    title?: string;
+    artist?: string;
+    album?: string;
+    duration?: string;
+    filePath?: string;
+    fileName?: string;
+    queueEntryId?: string;
+    thumbnail?: string;
+};
+
+const getFileName = (filePath: string): string => {
+    const lastSlash = filePath.lastIndexOf("/");
+    return lastSlash === -1 ? filePath : filePath.slice(lastSlash + 1);
+};
+
+const sanitizeTrack = (input: LegacyQueuedTrack | PersistedQueuedTrack): PersistedQueuedTrack | null => {
+    const filePath =
+        typeof input.filePath === "string" && input.filePath
+            ? input.filePath
+            : typeof input.id === "string"
+              ? input.id
+              : "";
+
+    if (!filePath) {
+        return null;
+    }
+
+    return {
+        filePath,
+        title: typeof input.title === "string" && input.title.length > 0 ? input.title : getFileName(filePath),
+        artist: typeof input.artist === "string" && input.artist.length > 0 ? input.artist : "Unknown Artist",
+        album: typeof input.album === "string" && input.album.length > 0 ? input.album : undefined,
+        duration: typeof input.duration === "string" && input.duration.length > 0 ? input.duration : "0:00",
+        thumbnail: typeof input.thumbnail === "string" && input.thumbnail.length > 0 ? input.thumbnail : undefined,
+    };
+};
 
 const sanitizeSnapshot = (input: Partial<PlaylistSnapshot>): PlaylistSnapshot => {
-    const queue = Array.isArray(input.queue) ? input.queue.map(sanitizeTrack) : [];
+    const queue = Array.isArray(input.queue)
+        ? input.queue
+              .map((track) => sanitizeTrack(track))
+              .filter((track): track is PersistedQueuedTrack => Boolean(track))
+        : [];
     const hasQueue = queue.length > 0;
 
     const currentIndex =
@@ -62,13 +89,10 @@ const sanitizeSnapshot = (input: Partial<PlaylistSnapshot>): PlaylistSnapshot =>
               ? Math.min(Math.max(input.currentIndex ?? 0, 0), queue.length - 1)
               : -1;
 
-    const currentQueueEntryId = currentIndex >= 0 ? queue[currentIndex]?.queueEntryId ?? null : null;
-
     return {
         version: PLAYLIST_CACHE_VERSION,
         updatedAt: typeof input.updatedAt === "number" ? input.updatedAt : Date.now(),
         queue,
-        currentQueueEntryId,
         currentIndex,
         isPlaying: Boolean(input.isPlaying && hasQueue),
     };

@@ -4,7 +4,7 @@ import { View } from "react-native";
 import { type NowPlayingInfoPayload, useAudioPlayer } from "@/native-modules/AudioPlayer";
 import type { LocalTrack } from "@/systems/LocalMusicState";
 import { ensureLocalTrackThumbnail } from "@/systems/LocalMusicState";
-import type { PlaylistSnapshot, SerializedQueuedTrack } from "@/systems/PlaylistCache";
+import type { PersistedQueuedTrack, PlaylistSnapshot } from "@/systems/PlaylistCache";
 import { getPlaylistCacheSnapshot, persistPlaylistSnapshot } from "@/systems/PlaylistCache";
 import { type RepeatMode, settings$ } from "@/systems/Settings";
 import { playbackInteractionState$ } from "@/systems/PlaybackInteractionState";
@@ -47,9 +47,27 @@ export const queue$ = observable<PlaybackQueueState>({
     tracks: [],
 });
 
-const deserializeQueuedTrack = (track: SerializedQueuedTrack): QueuedTrack => ({
-    ...track,
-});
+let queueEntryCounter = 0;
+
+function createQueueEntryId(seed: string): string {
+    queueEntryCounter += 1;
+    return `${seed}-${Date.now()}-${queueEntryCounter}`;
+}
+
+const createQueuedTrackFromPersisted = (track: PersistedQueuedTrack): QueuedTrack => {
+    const fileName = track.filePath.split("/").pop() || track.title || track.filePath;
+    return {
+        id: track.filePath,
+        title: track.title,
+        artist: track.artist,
+        album: track.album,
+        duration: track.duration,
+        filePath: track.filePath,
+        fileName,
+        thumbnail: track.thumbnail,
+        queueEntryId: createQueueEntryId(track.filePath),
+    };
+};
 
 const snapshotFromCache = getPlaylistCacheSnapshot();
 let queueHydratedFromSnapshot = false;
@@ -59,17 +77,16 @@ const playbackHistory: number[] = [];
 const MAX_HISTORY_LENGTH = 100;
 
 if (snapshotFromCache.queue.length > 0) {
-    const hydratedTracks = snapshotFromCache.queue.map(deserializeQueuedTrack);
+    const hydratedTracks = snapshotFromCache.queue.map(createQueuedTrackFromPersisted);
     queue$.tracks.set(hydratedTracks);
     perfLog("Queue.hydrateFromPlaylistCache", { tracks: hydratedTracks.length });
 
-    const cachedIndex =
-        snapshotFromCache.currentQueueEntryId != null
-            ? hydratedTracks.findIndex((track) => track.queueEntryId === snapshotFromCache.currentQueueEntryId)
-            : snapshotFromCache.currentIndex;
-
     const resolvedIndex =
-        cachedIndex != null && cachedIndex >= 0 && cachedIndex < hydratedTracks.length ? cachedIndex : -1;
+        snapshotFromCache.currentIndex != null &&
+        snapshotFromCache.currentIndex >= 0 &&
+        snapshotFromCache.currentIndex < hydratedTracks.length
+            ? snapshotFromCache.currentIndex
+            : -1;
 
     if (resolvedIndex >= 0) {
         const currentTrack = hydratedTracks[resolvedIndex];
@@ -90,15 +107,12 @@ if (snapshotFromCache.queue.length > 0) {
     queueHydratedFromSnapshot = true;
 }
 
-const serializeQueuedTrack = (track: QueuedTrack): SerializedQueuedTrack => ({
-    id: track.id,
+const serializeQueuedTrack = (track: QueuedTrack): PersistedQueuedTrack => ({
     title: track.title,
     artist: track.artist,
     album: track.album,
     duration: track.duration,
     filePath: track.filePath,
-    fileName: track.fileName,
-    queueEntryId: track.queueEntryId,
     thumbnail: track.thumbnail,
 });
 
@@ -106,25 +120,14 @@ type PlaylistSnapshotPayload = Omit<PlaylistSnapshot, "version" | "updatedAt">;
 
 const collectPlaylistSnapshot = (): PlaylistSnapshotPayload => {
     const queueTracks = queue$.tracks.peek().map(serializeQueuedTrack);
-    const currentTrack = localPlayerState$.currentTrack.peek();
-    const currentIndexFromState = localPlayerState$.currentIndex.peek();
-
-    let currentQueueEntryId: string | null = null;
-    if (currentTrack && typeof (currentTrack as Partial<QueuedTrack>).queueEntryId === "string") {
-        currentQueueEntryId = (currentTrack as QueuedTrack).queueEntryId;
-    }
-
-    let resolvedIndex = queueTracks.findIndex((track) => track.queueEntryId === currentQueueEntryId);
-    if (resolvedIndex === -1 && currentIndexFromState >= 0 && currentIndexFromState < queueTracks.length) {
-        resolvedIndex = currentIndexFromState;
-        currentQueueEntryId = queueTracks[currentIndexFromState]?.queueEntryId ?? currentQueueEntryId;
-    }
+    const currentIndexFromState = queueTracks.length
+        ? clampIndex(localPlayerState$.currentIndex.peek(), queueTracks.length)
+        : -1;
 
     return {
         queue: queueTracks,
-        currentQueueEntryId,
-        currentIndex: resolvedIndex,
-        isPlaying: localPlayerState$.isPlaying.peek(),
+        currentIndex: currentIndexFromState,
+        isPlaying: localPlayerState$.isPlaying.peek() && queueTracks.length > 0,
     };
 };
 
@@ -154,12 +157,6 @@ interface QueueUpdateOptions {
 type QueueInput = LocalTrack | LocalTrack[];
 
 let audioPlayer: ReturnType<typeof useAudioPlayer> | null = null;
-let queueEntryCounter = 0;
-
-function createQueueEntryId(seed: string): string {
-    queueEntryCounter += 1;
-    return `${seed}-${Date.now()}-${queueEntryCounter}`;
-}
 
 function createQueuedTrack(track: LocalTrack): QueuedTrack {
     return {
