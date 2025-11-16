@@ -191,7 +191,7 @@ jest.mock("id3js", () => ({
 jest.mock("@/native-modules/AudioPlayer", () => ({
     __esModule: true,
     default: {
-        getTrackInfo: jest.fn().mockResolvedValue({ durationSeconds: 180 }),
+        getMediaTags: jest.fn().mockResolvedValue({ durationSeconds: 180 }),
     },
 }));
 

@@ -40,6 +40,14 @@ export interface VisualizerFrame {
     timestamp: number;
 }
 
+export interface MediaTags {
+    title?: string;
+    artist?: string;
+    album?: string;
+    durationSeconds?: number;
+    artworkUri?: string;
+}
+
 export interface AudioPlayerEvents {
     onLoadSuccess: (data: { duration: number }) => void;
     onLoadError: (data: { error: string }) => void;
@@ -58,7 +66,7 @@ type AudioPlayerType = {
     seek: (seconds: number) => Promise<{ success: boolean; error?: string }>;
     setVolume: (volume: number) => Promise<{ success: boolean; error?: string }>;
     getCurrentState: () => Promise<AudioPlayerState>;
-    getTrackInfo: (filePath: string) => Promise<{ durationSeconds: number; sampleRate: number; frameCount: number }>;
+    getMediaTags: (filePath: string, cacheDir: string) => Promise<MediaTags>;
     updateNowPlayingInfo: (payload: NowPlayingInfoPayload) => void;
     clearNowPlayingInfo: () => void;
     configureVisualizer: (config: VisualizerConfig) => Promise<{ success: boolean }>;
@@ -79,7 +87,7 @@ const audioPlayerApi: AudioPlayerType & {
     seek: (seconds: number) => AudioPlayer.seek(seconds),
     setVolume: (volume: number) => AudioPlayer.setVolume(volume),
     getCurrentState: () => AudioPlayer.getCurrentState(),
-    getTrackInfo: (filePath: string) => AudioPlayer.getTrackInfo(filePath),
+    getMediaTags: (filePath: string, cacheDir: string) => AudioPlayer.getMediaTags(filePath, cacheDir),
     updateNowPlayingInfo: (payload: NowPlayingInfoPayload) => AudioPlayer.updateNowPlayingInfo(payload),
     clearNowPlayingInfo: () => AudioPlayer.clearNowPlayingInfo(),
     configureVisualizer: (config: VisualizerConfig) => AudioPlayer.configureVisualizer(config),

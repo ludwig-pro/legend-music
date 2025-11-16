@@ -1,7 +1,6 @@
 import { observable } from "@legendapp/state";
 import { Skia } from "@shopify/react-native-skia";
 import { Directory, File } from "expo-file-system/next";
-import * as ID3 from "id3js";
 import type { JsMediaTagsSuccess } from "jsmediatags/build2/jsmediatags";
 import jsmediatags from "jsmediatags/build2/jsmediatags";
 import AudioPlayer from "@/native-modules/AudioPlayer";
@@ -469,7 +468,7 @@ export async function ensureLocalTrackThumbnail(track: LocalTrack): Promise<stri
 async function extractId3Metadata(
     filePath: string,
     fileName: string,
-): Promise<{ title: string; artist: string; album?: string; duration?: string }> {
+): Promise<{ title: string; artist: string; album?: string; duration?: string; thumbnail?: string }> {
     perfCount("LocalMusic.extractId3Metadata");
 
     const fallback = parseFilenameOnly(fileName);
@@ -477,41 +476,72 @@ async function extractId3Metadata(
     let artist = fallback.artist;
     let album: string | undefined;
     let duration: string | undefined;
+    let thumbnail: string | undefined;
+
+    const thumbnailsDir = getCacheDirectory("thumbnails");
+    ensureCacheDirectory(thumbnailsDir);
+
+    const thumbnailsDirUri = thumbnailsDir.uri;
+
+    // console.log("extractId3Metadata", thumbnailsDirUri);
 
     try {
-        // First try to extract ID3 tags
-        const tags = await perfTime("LocalMusic.ID3.fromPath", () => ID3.fromPath(filePath));
-
-        if (tags) {
-            title = tags.title || title;
-            artist = tags.artist || artist;
-            album = tags.album || album;
-
-            const tagDurationSeconds = parseDurationFromTags(tags);
-            if (tagDurationSeconds !== null) {
-                duration = formatDuration(tagDurationSeconds);
+        const nativeTags = await AudioPlayer.getMediaTags(filePath, thumbnailsDirUri);
+        if (nativeTags) {
+            if (typeof nativeTags.title === "string" && nativeTags.title.trim().length > 0) {
+                title = nativeTags.title;
+            }
+            if (typeof nativeTags.artist === "string" && nativeTags.artist.trim().length > 0) {
+                artist = nativeTags.artist;
+            }
+            if (typeof nativeTags.album === "string" && nativeTags.album.trim().length > 0) {
+                album = nativeTags.album;
+            }
+            if (
+                typeof nativeTags.durationSeconds === "number" &&
+                Number.isFinite(nativeTags.durationSeconds) &&
+                nativeTags.durationSeconds > 0
+            ) {
+                duration = formatDuration(nativeTags.durationSeconds);
+            }
+            if (typeof nativeTags.artworkUri === "string" && nativeTags.artworkUri.length > 0) {
+                thumbnail = nativeTags.artworkUri;
             }
         }
     } catch (error) {
-        console.warn(`Failed to read ID3 tags from ${fileName}:`, error);
+        console.warn(`extractId3Metadata: Failed to read native metadata for ${fileName}:`, error);
     }
 
-    if (!duration) {
-        try {
-            const info = await AudioPlayer.getTrackInfo(filePath);
-            if (info && typeof info.durationSeconds === "number" && info.durationSeconds > 0) {
-                duration = formatDuration(info.durationSeconds);
-            }
-        } catch (error) {
-            console.warn(`Failed to read native metadata from ${fileName}:`, error);
-        }
-    }
+    // console.log("extractId3Metadata", title, artist, album, duration, thumbnail);
+
+    // if (title === undefined || artist === undefined || album === undefined) {
+    //     console.log('extractId3Metadata did not load title or artist or album')
+    // }
+
+    // try {
+    //     // First try to extract ID3 tags
+    //     const tags = await perfTime("LocalMusic.ID3.fromPath", () => ID3.fromPath(filePath));
+
+    //     if (tags) {
+    //         title = tags.title || title;
+    //         artist = tags.artist || artist;
+    //         album = tags.album || album;
+
+    //         const tagDurationSeconds = parseDurationFromTags(tags);
+    //         if (tagDurationSeconds !== null) {
+    //             duration = formatDuration(tagDurationSeconds);
+    //         }
+    //     }
+    // } catch (error) {
+    //     console.warn(`Failed to read ID3 tags from ${fileName}:`, error);
+    // }
 
     return {
         title,
         artist,
         album,
         duration,
+        thumbnail,
     };
 }
 
@@ -597,6 +627,7 @@ export async function createLocalTrackFromFile(filePath: string): Promise<LocalT
             artist: metadata.artist,
             album: metadata.album,
             duration: metadata.duration ?? "0:00",
+            thumbnail: metadata.thumbnail,
             filePath,
             fileName,
         };
@@ -673,6 +704,7 @@ async function scanDirectory(directoryPath: string): Promise<LocalTrack[]> {
                             artist: metadata.artist,
                             album: metadata.album,
                             duration: metadata.duration || "0:00",
+                            thumbnail: metadata.thumbnail,
                             filePath,
                             fileName: item.name,
                         };

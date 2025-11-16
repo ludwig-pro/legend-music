@@ -13,11 +13,7 @@ const mockAudioPlayer = {
         duration: 0,
         volume: 1,
     }),
-    getTrackInfo: jest.fn().mockResolvedValue({
-        durationSeconds: 0,
-        sampleRate: 44100,
-        frameCount: 0,
-    }),
+    getMediaTags: jest.fn().mockResolvedValue({}),
     updateNowPlayingInfo: jest.fn(),
     clearNowPlayingInfo: jest.fn(),
 };

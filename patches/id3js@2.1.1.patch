@@ -1,8 +1,8 @@
 diff --git a/lib/localReader.js b/lib/localReader.js
-index 016a0e1f30d5518f4ae2d04c11693ae786578882..2ef2aa27aebefc585a24b0c028f04a8720a6b2fe 100755
+index 016a0e1f30d5518f4ae2d04c11693ae786578882..cd7de41e42f4e8e8d50ed0c4073701c6e08576d9 100755
 --- a/lib/localReader.js
 +++ b/lib/localReader.js
-@@ -1,72 +1,78 @@
+@@ -1,72 +1,83 @@
 -import { Reader } from './reader.js';
 -import * as fs from 'fs';
 +import * as FileSystemNext from "expo-file-system/next";
@@ -104,7 +104,7 @@ index 016a0e1f30d5518f4ae2d04c11693ae786578882..2ef2aa27aebefc585a24b0c028f04a87
 +
 +			// Open file handle for reading
 +			this._fileHandle = this._file.open();
-+			this.size = this._fileHandle.size;
++			this.size = typeof this._fileHandle.size === "number" ? this._fileHandle.size : 0;
 +		} catch (err) {
 +			throw err;
 +		}
@@ -131,20 +131,25 @@ index 016a0e1f30d5518f4ae2d04c11693ae786578882..2ef2aa27aebefc585a24b0c028f04a87
 +		}
 +
 +		try {
-+			// Set the file handle offset to the desired position
-+			this._fileHandle.offset = position;
++			const size = typeof this._fileHandle.size === "number" ? this._fileHandle.size : 0;
++			const requestedLength = Math.max(0, length);
++			const start = Math.max(0, Math.min(position, size));
++			const available = Math.max(0, size - start);
++			const toRead = Math.min(requestedLength, available);
 +
-+			// Read the requested number of bytes from the current offset
-+			const bytes = this._fileHandle.readBytes(length);
++			// Always return the requested length so the parser can safely read.
++			const output = new Uint8Array(requestedLength);
 +
-+			// Convert Uint8Array to ArrayBuffer
-+			const arrayBuffer = new ArrayBuffer(bytes.length);
-+			const view = new Uint8Array(arrayBuffer);
-+			view.set(bytes);
++			this._fileHandle.offset = start;
++			if (toRead > 0) {
++				const bytes = this._fileHandle.readBytes(toRead);
++				output.set(bytes.subarray(0, requestedLength));
++			}
 +
-+			return arrayBuffer;
++			return output.buffer;
 +		} catch (err) {
-+			throw err;
++			// Fall back to a zeroed buffer to avoid throwing from callers that expect fixed-length reads.
++			return new ArrayBuffer(length);
 +		}
 +	}
  }

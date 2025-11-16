@@ -3,6 +3,9 @@
 #import <React/RCTLog.h>
 #import <AppKit/AppKit.h>
 #import <MediaToolbox/MediaToolbox.h>
+#import <ImageIO/ImageIO.h>
+#import <CoreServices/CoreServices.h>
+#import <CommonCrypto/CommonCrypto.h>
 #import <math.h>
 
 typedef struct {
@@ -17,6 +20,76 @@ static const float kVisualizerMinDecibels = -75.0f;
 static const float kVisualizerMaxDecibels = -12.0f;
 static const float kVisualizerHighFrequencyEmphasisExponent = 0.45f;
 static const float kVisualizerResponseGamma = 0.85f;
+
+static NSString *LMHashStringSHA256(NSString *input) {
+    if (!input) {
+        return @"";
+    }
+    NSData *data = [input dataUsingEncoding:NSUTF8StringEncoding];
+    uint8_t digest[CC_SHA256_DIGEST_LENGTH];
+    CC_SHA256(data.bytes, (CC_LONG)data.length, digest);
+    NSMutableString *hash = [NSMutableString stringWithCapacity:CC_SHA256_DIGEST_LENGTH * 2];
+    for (int i = 0; i < CC_SHA256_DIGEST_LENGTH; i++) {
+        [hash appendFormat:@"%02x", digest[i]];
+    }
+    return hash;
+}
+
+static NSData *LMCreateThumbnail(NSData *imageData, NSUInteger maxPixelSize) {
+    if (!imageData) {
+        return nil;
+    }
+
+    NSDictionary *options = @{
+        (id)kCGImageSourceCreateThumbnailFromImageAlways : @YES,
+        (id)kCGImageSourceThumbnailMaxPixelSize : @(maxPixelSize),
+        (id)kCGImageSourceCreateThumbnailWithTransform : @YES,
+    };
+
+    CGImageSourceRef source = CGImageSourceCreateWithData((__bridge CFDataRef)imageData, NULL);
+    if (!source) {
+        return nil;
+    }
+
+    CGImageRef thumbImage = CGImageSourceCreateThumbnailAtIndex(source, 0, (__bridge CFDictionaryRef)options);
+    CFRelease(source);
+
+    if (!thumbImage) {
+        return nil;
+    }
+
+    NSBitmapImageRep *bitmapRep = [[NSBitmapImageRep alloc] initWithCGImage:thumbImage];
+    CGImageRelease(thumbImage);
+    if (!bitmapRep) {
+        return nil;
+    }
+
+    return [bitmapRep representationUsingType:NSBitmapImageFileTypePNG properties:@{}];
+}
+
+static NSNumber *LMReadDurationSeconds(NSURL *fileURL) {
+    if (!fileURL) {
+        return nil;
+    }
+
+    NSError *error = nil;
+    AVAudioFile *audioFile = [[AVAudioFile alloc] initForReading:fileURL error:&error];
+    if (error || audioFile == nil) {
+        return nil;
+    }
+
+    double sampleRate = audioFile.processingFormat.sampleRate;
+    if (sampleRate <= 0) {
+        return nil;
+    }
+
+    double durationSeconds = (double)audioFile.length / sampleRate;
+    if (!isfinite(durationSeconds) || durationSeconds <= 0) {
+        return nil;
+    }
+
+    return @(durationSeconds);
+}
 
 @interface AudioPlayer ()
 
@@ -1049,7 +1122,8 @@ RCT_EXPORT_METHOD(loadTrack:(NSString *)filePath
     });
 }
 
-RCT_EXPORT_METHOD(getTrackInfo:(NSString *)filePath
+RCT_EXPORT_METHOD(getMediaTags:(NSString *)filePath
+                  cacheDir:(NSString *)cacheDir
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 {
@@ -1072,24 +1146,112 @@ RCT_EXPORT_METHOD(getTrackInfo:(NSString *)filePath
                 return;
             }
 
-            NSError *error = nil;
-            AVAudioFile *audioFile = [[AVAudioFile alloc] initForReading:fileURL error:&error];
-            if (error || audioFile == nil) {
-                reject(@"FILE_READ_ERROR", error.localizedDescription ?: @"Failed to read audio file", error);
-                return;
+            AVURLAsset *asset = [AVURLAsset URLAssetWithURL:fileURL options:nil];
+            NSArray<AVMetadataItem *> *commonMetadata = [asset commonMetadata];
+
+            NSString *title = nil;
+            NSString *artist = nil;
+            NSString *album = nil;
+            NSNumber *durationSeconds = nil;
+            NSString *artworkPath = nil;
+
+            // Metadata helpers
+            NSArray<AVMetadataItem *> *titleItems = [AVMetadataItem metadataItemsFromArray:commonMetadata withKey:AVMetadataCommonKeyTitle keySpace:AVMetadataKeySpaceCommon];
+            if (titleItems.count > 0) {
+                title = [titleItems.firstObject stringValue];
             }
 
-            double sampleRate = audioFile.processingFormat.sampleRate;
-            double durationSeconds = 0;
-            if (sampleRate > 0) {
-                durationSeconds = (double)audioFile.length / sampleRate;
+            NSArray<AVMetadataItem *> *artistItems = [AVMetadataItem metadataItemsFromArray:commonMetadata withKey:AVMetadataCommonKeyArtist keySpace:AVMetadataKeySpaceCommon];
+            if (artistItems.count > 0) {
+                artist = [artistItems.firstObject stringValue];
             }
 
-            resolve(@{
-                @"durationSeconds": @(durationSeconds),
-                @"sampleRate": @(sampleRate),
-                @"frameCount": @(audioFile.length)
-            });
+            NSArray<AVMetadataItem *> *albumItems = [AVMetadataItem metadataItemsFromArray:commonMetadata withKey:AVMetadataCommonKeyAlbumName keySpace:AVMetadataKeySpaceCommon];
+            if (albumItems.count > 0) {
+                album = [albumItems.firstObject stringValue];
+            }
+
+            CMTime duration = asset.duration;
+            if (CMTIME_IS_NUMERIC(duration)) {
+                Float64 seconds = CMTimeGetSeconds(duration);
+                if (isfinite(seconds) && seconds > 0) {
+                    durationSeconds = @(seconds);
+                }
+            }
+
+            if (!durationSeconds) {
+                durationSeconds = LMReadDurationSeconds(fileURL);
+            }
+
+            // Artwork: prefer common artwork, fallback to ID3 attached picture
+            NSData *artworkData = nil;
+            NSArray<AVMetadataItem *> *artworkItems = [AVMetadataItem metadataItemsFromArray:commonMetadata withKey:AVMetadataCommonKeyArtwork keySpace:AVMetadataKeySpaceCommon];
+            if (artworkItems.count > 0) {
+                artworkData = [artworkItems.firstObject dataValue];
+            }
+            if (!artworkData) {
+                NSArray<AVMetadataItem *> *id3ArtworkItems = [AVMetadataItem metadataItemsFromArray:[asset metadataForFormat:AVMetadataFormatiTunesMetadata] withKey:AVMetadataiTunesMetadataKeyCoverArt keySpace:AVMetadataKeySpaceiTunes];
+                if (id3ArtworkItems.count == 0) {
+                    id3ArtworkItems = [AVMetadataItem metadataItemsFromArray:[asset metadataForFormat:AVMetadataFormatiTunesMetadata] withKey:AVMetadataCommonKeyArtwork keySpace:AVMetadataKeySpaceCommon];
+                }
+                if (id3ArtworkItems.count > 0) {
+                    artworkData = [id3ArtworkItems.firstObject dataValue];
+                }
+            }
+            if (!artworkData) {
+                NSArray<AVMetadataItem *> *id3Attached = [AVMetadataItem metadataItemsFromArray:[asset metadataForFormat:AVMetadataFormatID3Metadata] withKey:AVMetadataID3MetadataKeyAttachedPicture keySpace:AVMetadataKeySpaceID3];
+                if (id3Attached.count > 0) {
+                    artworkData = [id3Attached.firstObject dataValue];
+                }
+            }
+
+            if (artworkData && cacheDir.length > 0) {
+                NSData *thumbnailData = LMCreateThumbnail(artworkData, 128);
+                if (thumbnailData) {
+                    NSString *hashKey = LMHashStringSHA256([NSString stringWithFormat:@"%@:%@", filePath, @"artwork"]);
+                    NSString *fileName = [NSString stringWithFormat:@"%@.png", hashKey];
+                    NSString *normalizedCacheDir = cacheDir;
+                    if ([normalizedCacheDir hasPrefix:@"file://"]) {
+                        normalizedCacheDir = [NSURL URLWithString:normalizedCacheDir].path;
+                    }
+
+                    NSError *dirError = nil;
+                    [[NSFileManager defaultManager] createDirectoryAtPath:normalizedCacheDir withIntermediateDirectories:YES attributes:nil error:&dirError];
+
+                    if (!dirError) {
+                        NSString *fullPath = [normalizedCacheDir stringByAppendingPathComponent:fileName];
+                        NSError *writeError = nil;
+                        BOOL wrote = [thumbnailData writeToFile:fullPath options:NSDataWritingAtomic error:&writeError];
+                        if (wrote && !writeError) {
+                            NSURL *uri = [NSURL fileURLWithPath:fullPath];
+                            artworkPath = uri.absoluteString;
+                        } else {
+                            RCTLogWarn(@"Failed to write artwork thumbnail for %@: %@", filePath, writeError.localizedDescription);
+                        }
+                    } else {
+                        RCTLogWarn(@"Failed to create cache dir %@: %@", normalizedCacheDir, dirError.localizedDescription);
+                    }
+                }
+            }
+
+            NSMutableDictionary *result = [NSMutableDictionary dictionary];
+            if (title.length > 0) {
+                result[@"title"] = title;
+            }
+            if (artist.length > 0) {
+                result[@"artist"] = artist;
+            }
+            if (album.length > 0) {
+                result[@"album"] = album;
+            }
+            if (durationSeconds) {
+                result[@"durationSeconds"] = durationSeconds;
+            }
+            if (artworkPath.length > 0) {
+                result[@"artworkUri"] = artworkPath;
+            }
+
+            resolve(result);
         }
     });
 }
