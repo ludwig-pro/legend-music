@@ -6,7 +6,7 @@ import type { JsMediaTagsSuccess } from "jsmediatags/build2/jsmediatags";
 import jsmediatags from "jsmediatags/build2/jsmediatags";
 import AudioPlayer from "@/native-modules/AudioPlayer";
 import { addChangeListener, setWatchedDirectories } from "@/native-modules/FileSystemWatcher";
-import { hasCachedLibraryData } from "@/systems/LibraryCache";
+import { clearLibraryCache, hasCachedLibraryData } from "@/systems/LibraryCache";
 import { hasCachedPlaylistData } from "@/systems/PlaylistCache";
 import { stateSaved$ } from "@/systems/State";
 import { ensureCacheDirectory, getCacheDirectory } from "@/utils/cacheDirectories";
@@ -78,6 +78,13 @@ const FILE_WATCH_DEBOUNCE_MS = 2000;
 let removeLibraryWatcher: (() => void) | undefined;
 let libraryWatcherTimeout: ReturnType<typeof setTimeout> | undefined;
 let hasSubscribedToLibraryPathChanges = false;
+let lastLibraryPaths: string[] = [];
+
+function clearCachedLibraryData(): void {
+    clearLibraryCache();
+    localMusicSettings$.lastScanTime.set(0);
+    localMusicState$.tracks.set([]);
+}
 
 function scheduleScanAfterFileChange(): void {
     if (libraryWatcherTimeout) {
@@ -829,12 +836,18 @@ export function initializeLocalMusic(): void {
 
     console.log("initializeLocalMusic", settings);
 
-    configureLibraryPathWatcher(settings.libraryPaths);
+    lastLibraryPaths = Array.isArray(settings.libraryPaths) ? [...settings.libraryPaths] : [];
+    configureLibraryPathWatcher(lastLibraryPaths);
 
     if (!hasSubscribedToLibraryPathChanges) {
         hasSubscribedToLibraryPathChanges = true;
         localMusicSettings$.libraryPaths.onChange(({ value }) => {
-            const nextPaths = Array.isArray(value) ? value : [];
+            const nextPaths = Array.isArray(value) ? [...value] : [];
+            const removedPaths = lastLibraryPaths.filter((path) => !nextPaths.includes(path));
+            if (removedPaths.length > 0) {
+                clearCachedLibraryData();
+            }
+            lastLibraryPaths = nextPaths;
             configureLibraryPathWatcher(nextPaths);
             scheduleScanAfterFileChange();
         });

@@ -115,3 +115,10 @@ export const persistLibrarySnapshot = (
 };
 
 export const hasCachedLibraryData = (): boolean => getLibrarySnapshot().tracks.length > 0;
+
+export const clearLibraryCache = (): void => {
+    libraryCache$.set({
+        ...defaultSnapshot,
+        updatedAt: Date.now(),
+    });
+};

@@ -1,5 +1,6 @@
 import type { LocalTrack } from "@/systems/LocalMusicState";
-import { localMusicSettings$, localMusicState$, scanLocalMusic } from "@/systems/LocalMusicState";
+import { initializeLocalMusic, localMusicSettings$, localMusicState$, scanLocalMusic } from "@/systems/LocalMusicState";
+import { clearLibraryCache } from "@/systems/LibraryCache";
 
 jest.mock("expo-file-system/next", () => {
     const mockFs = new Map<string, { files: string[]; directories: string[] }>();
@@ -77,6 +78,10 @@ jest.mock("expo-file-system/next", () => {
         text(): string {
             return "";
         }
+
+        bytes(): Uint8Array {
+            return new Uint8Array();
+        }
     }
 
     class MockDirectory {
@@ -149,6 +154,33 @@ jest.mock("@/utils/cacheDirectories", () => {
             return new FileSystem.Directory("/tmp/cache", "LegendMusic", subdirectory);
         },
         ensureCacheDirectory: jest.fn(),
+        deleteCacheFiles: jest.fn(),
+    };
+});
+
+jest.mock("@/utils/ExpoFSPersistPlugin", () => {
+    const tables: Record<string, any> = {};
+    const plugin = {
+        initialize: jest.fn(),
+        getTable: (table: string, init: object) => tables[table] ?? init ?? {},
+        getMetadata: (table: string) => tables[`${table}__m`] ?? {},
+        set: jest.fn(async (table: string) => {
+            tables[table] = tables[table] ?? {};
+        }),
+        setMetadata: jest.fn(async (table: string, value: any) => {
+            tables[`${table}__m`] = value;
+        }),
+        deleteTable: jest.fn((table: string) => {
+            delete tables[table];
+        }),
+        deleteMetadata: jest.fn((table: string) => {
+            delete tables[`${table}__m`];
+        }),
+    };
+
+    return {
+        __esModule: true,
+        observablePersistExpoFS: jest.fn(() => plugin),
     };
 });
 
@@ -160,6 +192,33 @@ jest.mock("@/native-modules/AudioPlayer", () => ({
     __esModule: true,
     default: {
         getTrackInfo: jest.fn().mockResolvedValue({ durationSeconds: 180 }),
+    },
+}));
+
+jest.mock("@/native-modules/FileSystemWatcher", () => ({
+    addChangeListener: jest.fn(() => jest.fn()),
+    setWatchedDirectories: jest.fn(),
+}));
+
+jest.mock("@/systems/LibraryCache", () => ({
+    __esModule: true,
+    clearLibraryCache: jest.fn(),
+    hasCachedLibraryData: jest.fn(() => false),
+}));
+
+jest.mock("@shopify/react-native-skia", () => ({
+    Skia: {
+        Image: {
+            MakeImageFromEncoded: jest.fn(() => null),
+        },
+        Surface: {
+            Make: jest.fn(() => null),
+        },
+        Data: {
+            fromBytes: jest.fn(() => null),
+        },
+        XYWHRect: jest.fn(() => ({})),
+        Paint: jest.fn(),
     },
 }));
 
@@ -207,5 +266,28 @@ describe("scanLocalMusic", () => {
         expect(filePaths).toEqual(expect.arrayContaining(["/music/root.mp3", "/music/sub/nested.mp3", "/music/sub/deeper/deep.mp3"]));
         expect(filePaths).not.toContain("/music/ignore.txt");
         expect(tracks).toHaveLength(3);
+    });
+
+    it("clears cached library data when a library path is removed", () => {
+        const clearLibraryCacheMock = clearLibraryCache as jest.Mock;
+        initializeLocalMusic();
+
+        localMusicState$.tracks.set([
+            {
+                id: "/music/root.mp3",
+                title: "Root",
+                artist: "Artist",
+                duration: "0:00",
+                filePath: "/music/root.mp3",
+                fileName: "root.mp3",
+            },
+        ]);
+        localMusicSettings$.lastScanTime.set(123);
+
+        localMusicSettings$.libraryPaths.set(() => []);
+
+        expect(clearLibraryCacheMock).toHaveBeenCalledTimes(1);
+        expect(localMusicState$.tracks.get()).toEqual([]);
+        expect(localMusicSettings$.lastScanTime.get()).toBe(0);
     });
 });
