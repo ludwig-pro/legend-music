@@ -13,7 +13,7 @@ import { ensureCacheDirectory, getCacheDirectory } from "@/utils/cacheDirectorie
 import { createJSONManager } from "@/utils/JSONManager";
 import { perfCount, perfDelta, perfLog, perfTime } from "@/utils/perfLogger";
 import { runAfterInteractions } from "@/utils/runAfterInteractions";
-import { DEFAULT_LOCAL_PLAYLIST_ID, DEFAULT_LOCAL_PLAYLIST_NAME } from "./localMusicConstants";
+import { DEFAULT_LOCAL_PLAYLIST_ID } from "./localMusicConstants";
 
 export interface LocalTrack {
     id: string;

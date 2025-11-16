@@ -1,13 +1,15 @@
 import { observer, use$ } from "@legendapp/state/react";
-import { Text, View } from "react-native";
+import { ActivityIndicator, Text, View } from "react-native";
 
 import { Button } from "@/components/Button";
 import { selectDirectory } from "@/native-modules/FileDialog";
 import { SettingsPage, SettingsSection } from "@/settings/components";
-import { localMusicSettings$ } from "@/systems/LocalMusicState";
+import { localMusicSettings$, localMusicState$ } from "@/systems/LocalMusicState";
+import { colors } from "@/theme/colors";
 
 export const LibrarySettings = observer(function LibrarySettings() {
     const localMusicSettings = use$(localMusicSettings$);
+    const localMusicState = use$(localMusicState$);
 
     const handleRemoveLibraryPath = (index: number) => {
         localMusicSettings$.libraryPaths.set((paths) => {
@@ -116,6 +118,17 @@ export const LibrarySettings = observer(function LibrarySettings() {
                 >
                     <Text className="text-text-primary font-medium text-sm">Add Library Folder</Text>
                 </Button>
+                {localMusicState.isScanning ? (
+                    <View className="flex-row items-center gap-3 mb-3">
+                        <ActivityIndicator size="small" color={colors.dark.accent.primary} />
+                        <View className="flex-1">
+                            <Text className="text-text-primary text-sm font-medium">Scanning your library…</Text>
+                            <Text className="text-text-tertiary text-xs">
+                                This can take a moment for large folders. You can keep using the app while we scan.
+                            </Text>
+                        </View>
+                    </View>
+                ) : null}
             </SettingsSection>
         </SettingsPage>
     );
