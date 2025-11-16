@@ -118,31 +118,50 @@ const serializeQueuedTrack = (track: QueuedTrack): PersistedQueuedTrack => ({
 
 type PlaylistSnapshotPayload = Omit<PlaylistSnapshot, "version" | "updatedAt">;
 
-const collectPlaylistSnapshot = (): PlaylistSnapshotPayload => {
-    const queueTracks = queue$.tracks.peek().map(serializeQueuedTrack);
-    const currentIndexFromState = queueTracks.length
-        ? clampIndex(localPlayerState$.currentIndex.peek(), queueTracks.length)
-        : -1;
+type PlaylistSnapshotSignature = {
+    queueRef: QueuedTrack[];
+    queueLength: number;
+    currentIndex: number;
+    isPlaying: boolean;
+};
+
+const makePlaylistSnapshotSignature = (): PlaylistSnapshotSignature => {
+    const queueRef = queue$.tracks.peek();
+    const queueLength = queueRef.length;
+    const currentIndex = queueLength ? clampIndex(localPlayerState$.currentIndex.peek(), queueLength) : -1;
 
     return {
-        queue: queueTracks,
-        currentIndex: currentIndexFromState,
-        isPlaying: localPlayerState$.isPlaying.peek() && queueTracks.length > 0,
+        queueRef,
+        queueLength,
+        currentIndex,
+        isPlaying: localPlayerState$.isPlaying.peek() && queueLength > 0,
     };
 };
 
-let lastPersistedSnapshotKey: string | null = null;
+const buildPlaylistSnapshot = (signature: PlaylistSnapshotSignature): PlaylistSnapshotPayload => ({
+    queue: signature.queueRef.map(serializeQueuedTrack),
+    currentIndex: signature.currentIndex,
+    isPlaying: signature.isPlaying,
+});
+
+let lastPlaylistSnapshotSignature: PlaylistSnapshotSignature | null = null;
 
 const schedulePlaylistSnapshotPersist = () => {
     runAfterInteractions(() => {
-        const snapshot = collectPlaylistSnapshot();
-        const snapshotKey = JSON.stringify(snapshot);
-        if (snapshotKey === lastPersistedSnapshotKey) {
+        const signature = makePlaylistSnapshotSignature();
+        if (
+            lastPlaylistSnapshotSignature &&
+            lastPlaylistSnapshotSignature.queueRef === signature.queueRef &&
+            lastPlaylistSnapshotSignature.queueLength === signature.queueLength &&
+            lastPlaylistSnapshotSignature.currentIndex === signature.currentIndex &&
+            lastPlaylistSnapshotSignature.isPlaying === signature.isPlaying
+        ) {
             return;
         }
 
+        const snapshot = buildPlaylistSnapshot(signature);
         persistPlaylistSnapshot(snapshot);
-        lastPersistedSnapshotKey = snapshotKey;
+        lastPlaylistSnapshotSignature = signature;
     });
 };
 

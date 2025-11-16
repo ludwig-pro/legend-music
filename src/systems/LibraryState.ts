@@ -59,24 +59,44 @@ const collectLibrarySnapshot = (): LibrarySnapshotPayload => {
     };
 };
 
-let lastLibrarySnapshotKey: string | null = null;
+type LibrarySnapshotSignature = {
+    tracksRef: LibraryTrack[];
+    tracksLength: number;
+    isScanning: boolean;
+    lastScanTime: number | null;
+};
+
+const makeLibrarySnapshotSignature = (snapshot: LibrarySnapshotPayload): LibrarySnapshotSignature => ({
+    tracksRef: snapshot.tracks,
+    tracksLength: snapshot.tracks.length,
+    isScanning: snapshot.isScanning,
+    lastScanTime: snapshot.lastScanTime,
+});
+
+let lastLibrarySnapshotSignature: LibrarySnapshotSignature | null = null;
 
 const scheduleLibrarySnapshotPersist = () => {
     runAfterInteractions(() => {
         const snapshot = collectLibrarySnapshot();
-        const snapshotKey = JSON.stringify(snapshot);
-        if (snapshotKey === lastLibrarySnapshotKey) {
+        const signature = makeLibrarySnapshotSignature(snapshot);
+        if (
+            lastLibrarySnapshotSignature &&
+            lastLibrarySnapshotSignature.tracksRef === signature.tracksRef &&
+            lastLibrarySnapshotSignature.tracksLength === signature.tracksLength &&
+            lastLibrarySnapshotSignature.isScanning === signature.isScanning &&
+            lastLibrarySnapshotSignature.lastScanTime === signature.lastScanTime
+        ) {
             return;
         }
 
         persistLibrarySnapshot(snapshot);
-        lastLibrarySnapshotKey = snapshotKey;
+        lastLibrarySnapshotSignature = signature;
     });
 };
 
 function normalizeTracks(localTracks: LocalTrack[]): LibraryTrack[] {
     perfCount("LibraryState.normalizeTracks");
-    return perfTime("LibraryState.normalizeTracks", () => localTracks.map((track) => ({ ...track })));
+    return perfTime("LibraryState.normalizeTracks", () => localTracks);
 }
 
 function buildArtistItems(tracks: LibraryTrack[]): LibraryItem[] {
@@ -168,7 +188,7 @@ syncLibraryFromLocalState();
 library$.isScanning.set(localMusicState$.isScanning.get());
 const initialLastScan = localMusicSettings$.lastScanTime.get();
 library$.lastScanTime.set(initialLastScan ? new Date(initialLastScan) : null);
-lastLibrarySnapshotKey = JSON.stringify(collectLibrarySnapshot());
+lastLibrarySnapshotSignature = makeLibrarySnapshotSignature(collectLibrarySnapshot());
 
 localMusicState$.tracks.onChange(syncLibraryFromLocalState);
 localMusicState$.isScanning.onChange(({ value }) => {
@@ -234,8 +254,8 @@ export const hydrateLibraryFromCache = (): boolean => {
     library$.isScanning.set(snapshot.isScanning);
     library$.lastScanTime.set(snapshot.lastScanTime ? new Date(snapshot.lastScanTime) : null);
 
-    lastLibrarySnapshotKey = JSON.stringify({
-        tracks: snapshot.tracks,
+    lastLibrarySnapshotSignature = makeLibrarySnapshotSignature({
+        tracks,
         isScanning: snapshot.isScanning,
         lastScanTime: snapshot.lastScanTime,
     });
