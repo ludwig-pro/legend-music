@@ -229,12 +229,9 @@ export function useVisualizerToggle() {
     const isVisualizerOpen = use$(visualizerWindowState$.isOpen);
     const toggleVisualizer = useCallback(toggleVisualizerWindow, [toggleVisualizerWindow]);
 
-    useOnHotkeys(
-        {
-            ToggleVisualizer: toggleVisualizer,
-        },
-        { global: true },
-    );
+    useOnHotkeys({
+        ToggleVisualizer: toggleVisualizer,
+    });
 
     return { isVisualizerOpen, toggleVisualizer };
 }
