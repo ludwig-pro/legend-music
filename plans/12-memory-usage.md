@@ -28,5 +28,5 @@ Reduce memory footprint and cache size for local library data by trimming serial
 - [x] Trim playlist cache schema (drop duplicate ids, avoid persisting queueEntryId where possible) and migrate snapshots.
 - [x] Simplify library cache to track-only essentials, rebuild derived collections on hydrate, and version the schema.
 - [x] Swap expensive JSON stringify diffing for lighter change detection and reduce duplicated arrays in observables.
-- [ ] Add cache/file cleanup and tuned persistence (msgpack/eviction/lazy preload) to keep disk/memory growth bounded.
+- [x] Add cache/file cleanup and tuned persistence (msgpack/eviction/lazy preload) to keep disk/memory growth bounded.
 - [ ] Validate migrations and measure memory/cache size improvements with profiling and regression tests.

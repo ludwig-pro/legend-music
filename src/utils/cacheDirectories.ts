@@ -21,3 +21,21 @@ export function ensureCacheDirectory(cacheDir: FileSystem.Directory): void {
         console.warn(`Failed to create cache directory ${cacheDir.uri}:`, error);
     }
 }
+
+/**
+ * Remove specific cache files within a subdirectory if they exist
+ */
+export function deleteCacheFiles(subdirectory: string, filenames: string[]): void {
+    const cacheDir = getCacheDirectory(subdirectory);
+
+    for (const filename of filenames) {
+        try {
+            const file = new FileSystem.File(cacheDir, filename);
+            if (file.exists) {
+                file.delete();
+            }
+        } catch (error) {
+            console.warn(`Failed to delete cache file ${filename} in ${cacheDir.uri}:`, error);
+        }
+    }
+}

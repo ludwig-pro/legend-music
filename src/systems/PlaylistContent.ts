@@ -5,6 +5,7 @@ import { type M3UPlaylist, parseM3U, writeM3U } from "@/utils/m3u";
 
 // Cache for playlist observables to avoid creating duplicates
 const playlistCache = new Map<string, Observable<M3UPlaylist>>();
+const PLAYLIST_CACHE_LIMIT = 8;
 
 // Transform for M3U format persistence
 const m3uTransform: SyncTransform<M3UPlaylist, string> = {
@@ -28,6 +29,22 @@ const m3uTransform: SyncTransform<M3UPlaylist, string> = {
     },
 };
 
+function touchPlaylistCache(playlistPath: string, playlist$: Observable<M3UPlaylist>): void {
+    // Refresh order for LRU behavior
+    playlistCache.delete(playlistPath);
+    playlistCache.set(playlistPath, playlist$);
+}
+
+function evictOldestPlaylists(): void {
+    while (playlistCache.size > PLAYLIST_CACHE_LIMIT) {
+        const oldest = playlistCache.keys().next().value as string | undefined;
+        if (!oldest) {
+            break;
+        }
+        playlistCache.delete(oldest);
+    }
+}
+
 /**
  * Get or create a synced observable for a playlist at the given path
  * The observable automatically persists in M3U format
@@ -35,7 +52,9 @@ const m3uTransform: SyncTransform<M3UPlaylist, string> = {
 export function getPlaylistContent(playlistPath: string): Observable<M3UPlaylist> {
     // Check cache first
     if (playlistCache.has(playlistPath)) {
-        return playlistCache.get(playlistPath)!;
+        const cached = playlistCache.get(playlistPath)!;
+        touchPlaylistCache(playlistPath, cached);
+        return cached;
     }
 
     // Create a cache key from the playlist path
@@ -65,7 +84,8 @@ export function getPlaylistContent(playlistPath: string): Observable<M3UPlaylist
     playlist$.get();
 
     // Cache it
-    playlistCache.set(playlistPath, playlist$);
+    touchPlaylistCache(playlistPath, playlist$);
+    evictOldestPlaylists();
 
     return playlist$;
 }

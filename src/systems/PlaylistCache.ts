@@ -1,4 +1,5 @@
 import { createJSONManager } from "@/utils/JSONManager";
+import { deleteCacheFiles } from "@/utils/cacheDirectories";
 
 export interface PersistedQueuedTrack {
     filePath: string;
@@ -34,6 +35,8 @@ const playlistCache$ = createJSONManager<PlaylistSnapshot>({
     saveTimeout: 0,
     preload: false,
 });
+
+deleteCacheFiles("data", ["playlistCache.json"]);
 
 type LegacyQueuedTrack = {
     id?: string;

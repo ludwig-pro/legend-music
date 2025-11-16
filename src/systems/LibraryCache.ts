@@ -1,4 +1,5 @@
 import { createJSONManager } from "@/utils/JSONManager";
+import { deleteCacheFiles } from "@/utils/cacheDirectories";
 
 export interface PersistedLibraryTrack {
     filePath: string;
@@ -34,6 +35,8 @@ const libraryCache$ = createJSONManager<LibrarySnapshot>({
     saveTimeout: 0,
     preload: false,
 });
+
+deleteCacheFiles("data", ["libraryCache.json"]);
 
 type LegacyLibraryTrack = {
     id?: string;
