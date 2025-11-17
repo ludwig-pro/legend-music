@@ -98,7 +98,7 @@ export interface AudioPlayerEvents {
     onMediaScanComplete: (data: MediaScanResult) => void;
 }
 
-type AudioPlayerType = {
+type AudioPlayerNativeType = {
     loadTrack: (filePath: string) => Promise<{ success: boolean; error?: string }>;
     play: () => Promise<{ success: boolean; error?: string }>;
     pause: () => Promise<{ success: boolean; error?: string }>;
@@ -115,7 +115,7 @@ type AudioPlayerType = {
 
 const audioPlayerEmitter = new NativeEventEmitter(AudioPlayer);
 
-const audioPlayerApi: AudioPlayerType & {
+const audioPlayerApi: AudioPlayerNativeType & {
     addListener: <T extends keyof AudioPlayerEvents>(
         eventType: T,
         listener: AudioPlayerEvents[T],
@@ -144,4 +144,6 @@ const audioPlayerApi: AudioPlayerType & {
 
 export const useAudioPlayer = (): typeof audioPlayerApi => audioPlayerApi;
 
-export default AudioPlayer as AudioPlayerType;
+export const audioPlayerNative: AudioPlayerNativeType = AudioPlayer as AudioPlayerNativeType;
+
+export default audioPlayerApi;
