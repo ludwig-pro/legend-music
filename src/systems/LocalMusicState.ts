@@ -540,9 +540,11 @@ export async function createLocalTrackFromFile(filePath: string): Promise<LocalT
     }
 }
 
-async function scanLibraryNative(paths: string[], thumbnailsDirUri: string): Promise<LocalTrack[]> {
+type NativeScanOutcome = { tracks: LocalTrack[]; scanResult: MediaScanResult | null; seenPaths: Set<string> };
+
+async function scanLibraryNative(paths: string[], thumbnailsDirUri: string): Promise<NativeScanOutcome> {
     if (paths.length === 0) {
-        return [];
+        return { tracks: [], scanResult: null, seenPaths: new Set() };
     }
 
     if (typeof AudioPlayer.scanMediaLibrary !== "function") {
@@ -653,13 +655,16 @@ async function scanLibraryNative(paths: string[], thumbnailsDirUri: string): Pro
         AudioPlayer.addListener("onMediaScanComplete", handleComplete),
     ];
 
+    let scanResult: MediaScanResult | null = null;
     try {
-        const result = await AudioPlayer.scanMediaLibrary(normalizedRoots, thumbnailsDirUri, { batchSize: 48 });
+        scanResult = await AudioPlayer.scanMediaLibrary(normalizedRoots, thumbnailsDirUri, { batchSize: 48 });
         const totalRoots =
-            typeof result.totalRoots === "number" && result.totalRoots > 0 ? result.totalRoots : normalizedRoots.length;
+            typeof scanResult.totalRoots === "number" && scanResult.totalRoots > 0
+                ? scanResult.totalRoots
+                : normalizedRoots.length;
         localMusicState$.scanTotal.set(totalRoots);
         localMusicState$.scanProgress.set(totalRoots);
-        return tracks;
+        return { tracks, scanResult, seenPaths };
     } finally {
         for (const subscription of subscriptions) {
             try {
@@ -671,14 +676,16 @@ async function scanLibraryNative(paths: string[], thumbnailsDirUri: string): Pro
     }
 }
 
-async function scanLibraryFallback(paths: string[]): Promise<LocalTrack[]> {
+async function scanLibraryFallback(paths: string[], seenPaths?: Set<string>): Promise<LocalTrack[]> {
     const tracks: LocalTrack[] = [];
 
     for (let i = 0; i < paths.length; i++) {
         const path = paths[i];
 
         try {
-            const directoryTracks = await perfTime("LocalMusic.scanDirectory.total", () => scanDirectory(path));
+            const directoryTracks = await perfTime("LocalMusic.scanDirectory.total", () =>
+                scanDirectory(path, seenPaths),
+            );
             tracks.push(...directoryTracks);
         } catch (error) {
             console.error(`Failed to scan ${path}:`, error);
@@ -691,7 +698,7 @@ async function scanLibraryFallback(paths: string[]): Promise<LocalTrack[]> {
 }
 
 // Scan directory for MP3 files
-async function scanDirectory(directoryPath: string): Promise<LocalTrack[]> {
+async function scanDirectory(directoryPath: string, seenPaths?: Set<string>): Promise<LocalTrack[]> {
     const tracks: LocalTrack[] = [];
     const visited = new Set<string>();
     const pending: string[] = [directoryPath];
@@ -733,6 +740,10 @@ async function scanDirectory(directoryPath: string): Promise<LocalTrack[]> {
 
                     const filePath = joinPath(currentPath, decodedFileName);
 
+                    if (seenPaths?.has(filePath)) {
+                        continue;
+                    }
+
                     try {
                         const id3Delta = perfDelta("LocalMusic.scanDirectory.id3Loop");
                         perfLog("LocalMusic.scanDirectory.processFile", {
@@ -755,6 +766,7 @@ async function scanDirectory(directoryPath: string): Promise<LocalTrack[]> {
                         };
 
                         tracks.push(track);
+                        seenPaths?.add(filePath);
                     } catch (error) {
                         console.error(`Failed to process MP3 file ${item.name}:`, error);
                         // Continue with other files
@@ -800,14 +812,31 @@ export async function scanLocalMusic(): Promise<void> {
 
     try {
         let collectedTracks: LocalTrack[] = [];
+        let nativeOutcome: NativeScanOutcome | null = null;
 
         try {
-            collectedTracks = await scanLibraryNative(paths, thumbnailsDir.uri);
+            nativeOutcome = await scanLibraryNative(paths, thumbnailsDir.uri);
+            collectedTracks = nativeOutcome.tracks;
         } catch (nativeError) {
             console.warn("Native scan failed, falling back to JS pipeline:", nativeError);
             localMusicState$.scanProgress.set(0);
             localMusicState$.scanTotal.set(paths.length);
             collectedTracks = await scanLibraryFallback(paths);
+        }
+
+        const hasNativeErrors = Boolean(nativeOutcome?.scanResult?.errors?.length);
+        const nativeReportedTracks = nativeOutcome?.scanResult?.totalTracks ?? nativeOutcome?.tracks.length ?? 0;
+        const nativeCollected = nativeOutcome?.tracks.length ?? 0;
+        const nativeMissing = nativeCollected < nativeReportedTracks;
+
+        if (nativeOutcome && (hasNativeErrors || nativeMissing)) {
+            console.warn("Native scan reported missing/errored files, running JS fallback to fill gaps", {
+                hasNativeErrors,
+                nativeReportedTracks,
+                nativeCollected,
+            });
+            const fallbackTracks = await scanLibraryFallback(paths, nativeOutcome.seenPaths);
+            collectedTracks.push(...fallbackTracks);
         }
 
         const dedupedTracks = Array.from(new Map(collectedTracks.map((track) => [track.id, track])).values());
