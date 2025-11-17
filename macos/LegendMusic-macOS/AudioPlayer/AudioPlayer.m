@@ -3,9 +3,11 @@
 #import <React/RCTLog.h>
 #import <AppKit/AppKit.h>
 #import <MediaToolbox/MediaToolbox.h>
+#import <AudioToolbox/AudioFile.h>
 #import <ImageIO/ImageIO.h>
 #import <CoreServices/CoreServices.h>
 #import <CommonCrypto/CommonCrypto.h>
+#import "LegendMusic-Swift.h"
 #import <math.h>
 
 typedef struct {
@@ -65,6 +67,44 @@ static NSData *LMCreateThumbnail(NSData *imageData, NSUInteger maxPixelSize) {
     }
 
     return [bitmapRep representationUsingType:NSBitmapImageFileTypePNG properties:@{}];
+}
+
+static BOOL LMIsMP3URL(NSURL *fileURL) {
+    if (!fileURL) {
+        return NO;
+    }
+    NSString *extension = [[fileURL pathExtension] lowercaseString];
+    return [extension isEqualToString:@"mp3"];
+}
+
+static NSNumber *LMMediaDurationProbe(NSURL *fileURL) {
+    if (!fileURL) {
+        return nil;
+    }
+
+    AudioFileID audioFile = NULL;
+    OSStatus openStatus = AudioFileOpenURL((__bridge CFURLRef)fileURL, kAudioFileReadPermission, 0, &audioFile);
+    if (openStatus == noErr && audioFile != NULL) {
+        Float64 estimatedDuration = 0;
+        UInt32 dataSize = sizeof(estimatedDuration);
+        OSStatus durationStatus = AudioFileGetProperty(audioFile, kAudioFilePropertyEstimatedDuration, &dataSize, &estimatedDuration);
+        AudioFileClose(audioFile);
+
+        if (durationStatus == noErr && isfinite(estimatedDuration) && estimatedDuration > 0) {
+            return @(estimatedDuration);
+        }
+    }
+
+    AVURLAsset *asset = [AVURLAsset URLAssetWithURL:fileURL options:@{ AVURLAssetPreferPreciseDurationAndTimingKey : @NO }];
+    CMTime duration = asset.duration;
+    if (CMTIME_IS_NUMERIC(duration)) {
+        Float64 seconds = CMTimeGetSeconds(duration);
+        if (isfinite(seconds) && seconds > 0) {
+            return @(seconds);
+        }
+    }
+
+    return nil;
 }
 
 static NSNumber *LMReadDurationSeconds(NSURL *fileURL) {
@@ -137,7 +177,45 @@ static NSString *LMRelativePathFromRoot(NSString *fullPath, NSString *rootPath) 
     return normalizedFullPath;
 }
 
-static NSDictionary *LMExtractMediaTags(NSURL *fileURL, NSString *cacheDirPath) {
+static void LMCacheArtworkThumbnail(NSData *artworkData, NSURL *fileURL, NSString *cacheDirPath, NSString *__autoreleasing *artworkUriOut, NSString *__autoreleasing *artworkKeyOut) {
+    if (!artworkData || cacheDirPath.length == 0 || !fileURL) {
+        return;
+    }
+
+    NSData *thumbnailData = LMCreateThumbnail(artworkData, 128);
+    if (!thumbnailData) {
+        return;
+    }
+
+    NSString *artworkKey = LMHashStringSHA256([NSString stringWithFormat:@"%@:%@", fileURL.path ?: @"", @"artwork"]);
+    NSString *fileName = [NSString stringWithFormat:@"%@.png", artworkKey];
+    NSString *normalizedCacheDir = LMNormalizePathString(cacheDirPath);
+
+    NSError *dirError = nil;
+    [[NSFileManager defaultManager] createDirectoryAtPath:normalizedCacheDir withIntermediateDirectories:YES attributes:nil error:&dirError];
+
+    if (dirError) {
+        RCTLogWarn(@"Failed to create cache dir %@: %@", normalizedCacheDir, dirError.localizedDescription);
+        return;
+    }
+
+    NSString *fullPath = [normalizedCacheDir stringByAppendingPathComponent:fileName];
+    NSError *writeError = nil;
+    BOOL wrote = [thumbnailData writeToFile:fullPath options:NSDataWritingAtomic error:&writeError];
+    if (wrote && !writeError) {
+        if (artworkKeyOut) {
+            *artworkKeyOut = artworkKey;
+        }
+        if (artworkUriOut) {
+            NSURL *uri = [NSURL fileURLWithPath:fullPath];
+            *artworkUriOut = uri.absoluteString;
+        }
+    } else {
+        RCTLogWarn(@"Failed to write artwork thumbnail for %@: %@", fileURL.path, writeError.localizedDescription);
+    }
+}
+
+static NSDictionary *LMExtractAVMediaTags(NSURL *fileURL, NSString *cacheDirPath) {
     if (!fileURL) {
         return @{};
     }
@@ -200,31 +278,7 @@ static NSDictionary *LMExtractMediaTags(NSURL *fileURL, NSString *cacheDirPath) 
         }
     }
 
-    if (artworkData && cacheDirPath.length > 0) {
-        NSData *thumbnailData = LMCreateThumbnail(artworkData, 128);
-        if (thumbnailData) {
-            artworkKey = LMHashStringSHA256([NSString stringWithFormat:@"%@:%@", fileURL.path ?: @"", @"artwork"]);
-            NSString *fileName = [NSString stringWithFormat:@"%@.png", artworkKey];
-            NSString *normalizedCacheDir = LMNormalizePathString(cacheDirPath);
-
-            NSError *dirError = nil;
-            [[NSFileManager defaultManager] createDirectoryAtPath:normalizedCacheDir withIntermediateDirectories:YES attributes:nil error:&dirError];
-
-            if (!dirError) {
-                NSString *fullPath = [normalizedCacheDir stringByAppendingPathComponent:fileName];
-                NSError *writeError = nil;
-                BOOL wrote = [thumbnailData writeToFile:fullPath options:NSDataWritingAtomic error:&writeError];
-                if (wrote && !writeError) {
-                    NSURL *uri = [NSURL fileURLWithPath:fullPath];
-                    artworkPath = uri.absoluteString;
-                } else {
-                    RCTLogWarn(@"Failed to write artwork thumbnail for %@: %@", fileURL.path, writeError.localizedDescription);
-                }
-            } else {
-                RCTLogWarn(@"Failed to create cache dir %@: %@", normalizedCacheDir, dirError.localizedDescription);
-            }
-        }
-    }
+    LMCacheArtworkThumbnail(artworkData, fileURL, cacheDirPath, &artworkPath, &artworkKey);
 
     NSMutableDictionary *result = [NSMutableDictionary dictionary];
     if (title.length > 0) {
@@ -247,6 +301,71 @@ static NSDictionary *LMExtractMediaTags(NSURL *fileURL, NSString *cacheDirPath) 
     }
 
     return result;
+}
+
+static NSDictionary *LMExtractID3MediaTags(NSURL *fileURL, NSString *cacheDirPath) {
+    NSError *error = nil;
+    LMID3TagsResult *tags = [LMID3TagEditorBridge readTagsForURL:fileURL error:&error];
+    if (!tags) {
+        if (error) {
+            RCTLogInfo(@"ID3TagEditor read failed for %@: %@", fileURL.path ?: @"", error.localizedDescription);
+        }
+        return nil;
+    }
+
+    NSString *title = tags.title.length > 0 ? tags.title : nil;
+    NSString *artist = tags.artist.length > 0 ? tags.artist : nil;
+    NSString *album = tags.album.length > 0 ? tags.album : nil;
+    NSNumber *durationSeconds = tags.durationSeconds;
+    NSString *artworkUri = nil;
+    NSString *artworkKey = nil;
+
+    if (!durationSeconds) {
+        durationSeconds = LMMediaDurationProbe(fileURL);
+    }
+    if (!durationSeconds) {
+        durationSeconds = LMReadDurationSeconds(fileURL);
+    }
+
+    LMCacheArtworkThumbnail(tags.artworkData, fileURL, cacheDirPath, &artworkUri, &artworkKey);
+
+    NSMutableDictionary *result = [NSMutableDictionary dictionary];
+    if (title) {
+        result[@"title"] = title;
+    }
+    if (artist) {
+        result[@"artist"] = artist;
+    }
+    if (album) {
+        result[@"album"] = album;
+    }
+    if (durationSeconds) {
+        result[@"durationSeconds"] = durationSeconds;
+    }
+    if (artworkUri) {
+        result[@"artworkUri"] = artworkUri;
+    }
+    if (artworkKey) {
+        result[@"artworkKey"] = artworkKey;
+    }
+
+    return result;
+}
+
+static NSDictionary *LMExtractMediaTags(NSURL *fileURL, NSString *cacheDirPath) {
+    if (!fileURL) {
+        return @{};
+    }
+
+    if (LMIsMP3URL(fileURL)) {
+        NSDictionary *id3Tags = LMExtractID3MediaTags(fileURL, cacheDirPath);
+        if (id3Tags) {
+            return id3Tags;
+        }
+    }
+
+    NSDictionary *fallback = LMExtractAVMediaTags(fileURL, cacheDirPath);
+    return fallback ?: @{};
 }
 
 @interface AudioPlayer ()
