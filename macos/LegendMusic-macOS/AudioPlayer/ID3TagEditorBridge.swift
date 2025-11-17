@@ -80,7 +80,7 @@ final class LMID3TagEditorBridge: NSObject {
     }
 
     @objc(writeTagsForURL:fields:error:)
-    static func writeTags(for url: NSURL, fields: NSDictionary, error: NSErrorPointer) -> NSNumber? {
+    static func writeTags(for url: NSURL, fields: NSDictionary, error errorPointer: NSErrorPointer) -> NSNumber? {
         do {
             guard url.isFileURL, let path = url.path else {
                 throw writerError(code: 1000, message: "Invalid file path")
@@ -132,10 +132,10 @@ final class LMID3TagEditorBridge: NSObject {
 
             return NSNumber(value: true)
         } catch let writeError as NSError {
-            error?.pointee = writeError
+            errorPointer?.pointee = writeError
             return nil
         } catch {
-            error?.pointee = writerError(code: 1999, message: "Unknown ID3 write error")
+            errorPointer?.pointee = writerError(code: 1999, message: "Unknown ID3 write error")
             return nil
         }
     }
