@@ -52,6 +52,8 @@ export interface LocalMusicState {
     isScanning: boolean;
     scanProgress: number;
     scanTotal: number;
+    scanTrackProgress: number;
+    scanTrackTotal: number;
     error: string | null;
     isLocalFilesSelected: boolean;
     playlists: LocalPlaylist[];
@@ -75,6 +77,8 @@ export const localMusicState$ = observable<LocalMusicState>({
     isScanning: false,
     scanProgress: 0,
     scanTotal: 0,
+    scanTrackProgress: 0,
+    scanTrackTotal: 0,
     error: null,
     isLocalFilesSelected: false,
     playlists: [],
@@ -91,6 +95,8 @@ function clearCachedLibraryData(): void {
     clearLibraryCache();
     localMusicSettings$.lastScanTime.set(0);
     localMusicState$.tracks.set([]);
+    localMusicState$.scanTrackProgress.set(0);
+    localMusicState$.scanTrackTotal.set(0);
 }
 
 function scheduleScanAfterFileChange(): void {
@@ -323,10 +329,13 @@ function buildCachedTrackIndex(
 ): {
     skipEntries: { rootIndex: number; relativePath: string }[];
     cachedTracksByRoot: Map<number, Map<string, PersistedLibraryTrack>>;
+    cachedTrackCount: number;
 } {
     const snapshot = getLibrarySnapshot();
-    if (!Array.isArray(snapshot.tracks) || snapshot.tracks.length === 0) {
-        return { skipEntries: [], cachedTracksByRoot: new Map() };
+    const snapshotTracks = Array.isArray(snapshot.tracks) ? snapshot.tracks : [];
+    const cachedTrackCount = snapshotTracks.length;
+    if (cachedTrackCount === 0) {
+        return { skipEntries: [], cachedTracksByRoot: new Map(), cachedTrackCount: 0 };
     }
 
     const snapshotRoots = Array.isArray(snapshot.roots)
@@ -343,7 +352,7 @@ function buildCachedTrackIndex(
             return;
         }
 
-        const tracksForRoot = snapshot.tracks.filter((track) => track.root === snapshotRootIndex);
+        const tracksForRoot = snapshotTracks.filter((track) => track.root === snapshotRootIndex);
         if (tracksForRoot.length === 0) {
             return;
         }
@@ -367,7 +376,7 @@ function buildCachedTrackIndex(
         }
     });
 
-    return { skipEntries, cachedTracksByRoot };
+    return { skipEntries, cachedTracksByRoot, cachedTrackCount };
 }
 
 function joinPath(parent: string, child: string): string {
@@ -634,7 +643,10 @@ async function scanLibraryNative(paths: string[], thumbnailsDirUri: string): Pro
     const normalizedRoots = paths.map((path) => normalizeRootPath(path));
     const tracks: LocalTrack[] = [];
     const seenPaths = new Set<string>();
-    const { skipEntries, cachedTracksByRoot } = buildCachedTrackIndex(normalizedRoots);
+    const { skipEntries, cachedTracksByRoot, cachedTrackCount } = buildCachedTrackIndex(normalizedRoots);
+    if (cachedTrackCount > 0) {
+        localMusicState$.scanTrackTotal.set((value) => Math.max(value, cachedTrackCount));
+    }
 
     const handleBatch = (event: MediaScanBatchEvent) => {
         if (!event || !Array.isArray(event.tracks)) {
@@ -723,6 +735,8 @@ async function scanLibraryNative(paths: string[], thumbnailsDirUri: string): Pro
 
             seenPaths.add(absolutePath);
         }
+
+        localMusicState$.scanTrackProgress.set(tracks.length);
     };
 
     const handleProgress = (event: MediaScanProgressEvent) => {
@@ -740,8 +754,15 @@ async function scanLibraryNative(paths: string[], thumbnailsDirUri: string): Pro
     const handleComplete = (event: MediaScanResult) => {
         const totalRoots =
             typeof event.totalRoots === "number" && event.totalRoots > 0 ? event.totalRoots : normalizedRoots.length;
+        const totalTracks =
+            typeof event.totalTracks === "number" && event.totalTracks >= 0
+                ? event.totalTracks
+                : localMusicState$.scanTrackTotal.get();
         localMusicState$.scanTotal.set(totalRoots);
         localMusicState$.scanProgress.set(totalRoots);
+        const finalTotal = Math.max(totalTracks ?? 0, cachedTrackCount, tracks.length);
+        localMusicState$.scanTrackTotal.set(finalTotal);
+        localMusicState$.scanTrackProgress.set(tracks.length);
     };
 
     const subscriptions = [
@@ -757,8 +778,14 @@ async function scanLibraryNative(paths: string[], thumbnailsDirUri: string): Pro
         });
         const totalRoots =
             typeof result.totalRoots === "number" && result.totalRoots > 0 ? result.totalRoots : normalizedRoots.length;
+        const totalTracks =
+            typeof result.totalTracks === "number" && result.totalTracks >= 0
+                ? result.totalTracks
+                : localMusicState$.scanTrackTotal.get();
         localMusicState$.scanTotal.set(totalRoots);
         localMusicState$.scanProgress.set(totalRoots);
+        localMusicState$.scanTrackTotal.set((value) => Math.max(value, totalTracks ?? 0, cachedTrackCount, tracks.length));
+        localMusicState$.scanTrackProgress.set(tracks.length);
         const errorCount = Array.isArray(result.errors) ? result.errors.length : 0;
         if (errorCount > 0) {
             console.warn("Native library scan completed with errors", {
@@ -883,6 +910,8 @@ export async function scanLocalMusic(): Promise<void> {
         .filter(Boolean);
 
     if (paths.length === 0) {
+        localMusicState$.scanTrackProgress.set(0);
+        localMusicState$.scanTrackTotal.set(0);
         localMusicState$.error.set("No library paths configured");
         return;
     }
@@ -895,6 +924,8 @@ export async function scanLocalMusic(): Promise<void> {
     localMusicState$.error.set(null);
     localMusicState$.scanProgress.set(0);
     localMusicState$.scanTotal.set(paths.length);
+    localMusicState$.scanTrackProgress.set(0);
+    localMusicState$.scanTrackTotal.set(localMusicState$.tracks.get().length);
 
     try {
         let collectedTracks: LocalTrack[] = [];
@@ -920,6 +951,8 @@ export async function scanLocalMusic(): Promise<void> {
         localMusicState$.tracks.set(dedupedTracks);
         localMusicSettings$.lastScanTime.set(Date.now());
         localMusicState$.scanProgress.set(localMusicState$.scanTotal.get());
+        localMusicState$.scanTrackProgress.set(dedupedTracks.length);
+        localMusicState$.scanTrackTotal.set(dedupedTracks.length);
 
         console.log(`Scan complete: Found ${dedupedTracks.length} total MP3 files`);
     } catch (error) {

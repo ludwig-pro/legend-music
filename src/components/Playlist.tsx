@@ -715,10 +715,17 @@ export function Playlist() {
             <>
                 <Text className="text-white font-medium text-base">Scanning your library…</Text>
                 <Text className="text-white/70 text-sm mt-2">
-                    {localMusicState.scanTotal > 0
-                        ? `${localMusicState.scanProgress}/${localMusicState.scanTotal}`
-                        : `${localMusicState.scanProgress} items processed`}
+                    {localMusicState.scanTrackTotal > 0 &&
+                    localMusicState.scanTrackTotal >= localMusicState.scanTrackProgress &&
+                    localMusicState.scanTrackProgress > 0
+                        ? `${localMusicState.scanTrackProgress}/${localMusicState.scanTrackTotal} tracks`
+                        : `${localMusicState.scanTrackProgress} tracks processed`}
                 </Text>
+                {localMusicState.scanTotal > 0 ? (
+                    <Text className="text-white/50 text-xs mt-1">
+                        Folders {localMusicState.scanProgress}/{localMusicState.scanTotal}
+                    </Text>
+                ) : null}
                 <Text className="text-white/50 text-xs mt-4 text-center max-w-sm">
                     You can still drag songs or folders here while we finish scanning.
                 </Text>

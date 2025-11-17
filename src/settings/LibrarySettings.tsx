@@ -11,6 +11,20 @@ export const LibrarySettings = observer(function LibrarySettings() {
     const localMusicSettings = use$(localMusicSettings$);
     const localMusicState = use$(localMusicState$);
 
+    const hasTrackEstimate =
+        localMusicState.scanTrackTotal > 0 && localMusicState.scanTrackTotal >= localMusicState.scanTrackProgress;
+    const trackProgressText =
+        hasTrackEstimate && localMusicState.scanTrackProgress > 0
+            ? `${localMusicState.scanTrackProgress}/${localMusicState.scanTrackTotal} tracks`
+            : localMusicState.scanTrackProgress > 0
+              ? `${localMusicState.scanTrackProgress} tracks processed`
+              : "Preparing track list…";
+
+    const folderProgressText =
+        localMusicState.scanTotal > 0
+            ? `${localMusicState.scanProgress}/${localMusicState.scanTotal} folders`
+            : null;
+
     const handleRemoveLibraryPath = (index: number) => {
         localMusicSettings$.libraryPaths.set((paths) => {
             if (index < 0 || index >= paths.length) {
@@ -121,8 +135,14 @@ export const LibrarySettings = observer(function LibrarySettings() {
                 {localMusicState.isScanning ? (
                     <View className="flex-row items-center gap-3 mb-3">
                         <ActivityIndicator size="small" color={colors.dark.accent.primary} />
-                        <View className="flex-1">
+                        <View className="flex-1 gap-1">
                             <Text className="text-text-primary text-sm font-medium">Scanning your library…</Text>
+                            <View className="flex-row items-center gap-2">
+                                <Text className="text-text-secondary text-xs font-medium">{trackProgressText}</Text>
+                                {folderProgressText ? (
+                                    <Text className="text-text-tertiary text-xs">{folderProgressText}</Text>
+                                ) : null}
+                            </View>
                             <Text className="text-text-tertiary text-xs">
                                 This can take a moment for large folders. You can keep using the app while we scan.
                             </Text>

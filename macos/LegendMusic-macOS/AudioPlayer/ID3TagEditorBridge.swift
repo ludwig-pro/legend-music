@@ -3,14 +3,16 @@ import Foundation
 import ID3TagEditor
 
 @objc(LMID3TagsResult)
-final class LMID3TagsResult: NSObject {
-    @objc let title: String?
-    @objc let artist: String?
-    @objc let album: String?
-    @objc let durationSeconds: NSNumber?
-    @objc let artworkData: NSData?
+@objcMembers
+public final class LMID3TagsResult: NSObject {
+    public let title: String?
+    public let artist: String?
+    public let album: String?
+    public let durationSeconds: NSNumber?
+    public let artworkData: NSData?
 
-    init(title: String?, artist: String?, album: String?, durationSeconds: NSNumber?, artworkData: NSData?) {
+    @objc
+    public init(title: String?, artist: String?, album: String?, durationSeconds: NSNumber?, artworkData: NSData?) {
         self.title = title
         self.artist = artist
         self.album = album
@@ -20,9 +22,10 @@ final class LMID3TagsResult: NSObject {
 }
 
 @objc(LMID3TagEditorBridge)
-final class LMID3TagEditorBridge: NSObject {
+@objcMembers
+public final class LMID3TagEditorBridge: NSObject {
     @objc(readTagsForURL:error:)
-    static func readTags(for url: NSURL, error: NSErrorPointer) -> LMID3TagsResult? {
+    public static func readTags(for url: NSURL, error: NSErrorPointer) -> LMID3TagsResult? {
         guard url.isFileURL, let path = url.path else {
             return nil
         }
@@ -80,7 +83,7 @@ final class LMID3TagEditorBridge: NSObject {
     }
 
     @objc(writeTagsForURL:fields:error:)
-    static func writeTags(for url: NSURL, fields: NSDictionary, error errorPointer: NSErrorPointer) -> NSNumber? {
+    public static func writeTags(for url: NSURL, fields: NSDictionary, error errorPointer: NSErrorPointer) -> NSNumber? {
         do {
             guard url.isFileURL, let path = url.path else {
                 throw writerError(code: 1000, message: "Invalid file path")
