@@ -1,5 +1,5 @@
-import { createJSONManager } from "@/utils/JSONManager";
 import { deleteCacheFiles } from "@/utils/cacheDirectories";
+import { createJSONManager } from "@/utils/JSONManager";
 
 export interface PersistedQueuedTrack {
     filePath: string;
@@ -56,11 +56,12 @@ const getFileName = (filePath: string): string => {
 };
 
 const sanitizeTrack = (input: LegacyQueuedTrack | PersistedQueuedTrack): PersistedQueuedTrack | null => {
+    const legacyInput = input as LegacyQueuedTrack;
     const filePath =
-        typeof input.filePath === "string" && input.filePath
-            ? input.filePath
-            : typeof input.id === "string"
-              ? input.id
+        typeof legacyInput.filePath === "string" && legacyInput.filePath
+            ? legacyInput.filePath
+            : "id" in legacyInput && typeof legacyInput.id === "string"
+              ? legacyInput.id
               : "";
 
     if (!filePath) {
@@ -102,12 +103,18 @@ const sanitizeSnapshot = (input: Partial<PlaylistSnapshot>): PlaylistSnapshot =>
 };
 
 export const getPlaylistCacheSnapshot = (): PlaylistSnapshot => {
-    const snapshot = playlistCache$.get();
-    if (!snapshot) {
+    try {
+        const snapshot = playlistCache$.get();
+        if (!snapshot) {
+            return defaultSnapshot;
+        }
+
+        return sanitizeSnapshot(snapshot);
+    } catch (error) {
+        console.error("Failed to read playlist cache; resetting to defaults", error);
+        playlistCache$.set(defaultSnapshot);
         return defaultSnapshot;
     }
-
-    return sanitizeSnapshot(snapshot);
 };
 
 export const persistPlaylistSnapshot = (snapshot: Omit<PlaylistSnapshot, "version" | "updatedAt">) => {
@@ -120,3 +127,10 @@ export const persistPlaylistSnapshot = (snapshot: Omit<PlaylistSnapshot, "versio
 };
 
 export const hasCachedPlaylistData = (): boolean => getPlaylistCacheSnapshot().queue.length > 0;
+
+export const clearPlaylistCache = (): void => {
+    playlistCache$.set({
+        ...defaultSnapshot,
+        updatedAt: Date.now(),
+    });
+};

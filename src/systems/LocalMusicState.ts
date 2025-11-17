@@ -1,5 +1,5 @@
 import { observable } from "@legendapp/state";
-import { Skia } from "@shopify/react-native-skia";
+import * as FileSystem from "expo-file-system";
 import { Directory, File } from "expo-file-system/next";
 import AudioPlayer, {
     type MediaScanBatchEvent,
@@ -13,7 +13,7 @@ import {
     hasCachedLibraryData,
     type PersistedLibraryTrack,
 } from "@/systems/LibraryCache";
-import { hasCachedPlaylistData } from "@/systems/PlaylistCache";
+import { clearPlaylistCache, hasCachedPlaylistData } from "@/systems/PlaylistCache";
 import { stateSaved$ } from "@/systems/State";
 import { ensureCacheDirectory, getCacheDirectory } from "@/utils/cacheDirectories";
 import { createJSONManager } from "@/utils/JSONManager";
@@ -105,19 +105,22 @@ function scheduleScanAfterFileChange(delayMs = FILE_WATCH_DEBOUNCE_MS): void {
         clearTimeout(libraryWatcherTimeout);
     }
 
-    libraryWatcherTimeout = setTimeout(() => {
-        libraryWatcherTimeout = undefined;
+    libraryWatcherTimeout = setTimeout(
+        () => {
+            libraryWatcherTimeout = undefined;
 
-        if (localMusicState$.isScanning.get()) {
-            scheduleScanAfterFileChange(delayMs);
-            return;
-        }
+            if (localMusicState$.isScanning.get()) {
+                scheduleScanAfterFileChange(delayMs);
+                return;
+            }
 
-        console.log("Rescanning local music after filesystem change");
-        scanLocalMusic().catch((error) => {
-            console.error("Failed to rescan local music after filesystem change:", error);
-        });
-    }, Math.max(0, delayMs));
+            console.log("Rescanning local music after filesystem change");
+            scanLocalMusic().catch((error) => {
+                console.error("Failed to rescan local music after filesystem change:", error);
+            });
+        },
+        Math.max(0, delayMs),
+    );
 }
 
 function configureLibraryPathWatcher(paths: string[]): void {
@@ -143,133 +146,6 @@ function configureLibraryPathWatcher(paths: string[]): void {
     }
 }
 
-const ARTWORK_CACHE_VERSION = "v2";
-
-type ArtworkBinary = ArrayBuffer | ArrayBufferView;
-
-interface ID3ImageValue {
-    type?: string | null;
-    mime?: string | null;
-    format?: string | null;
-    description?: string | null;
-    data: ArtworkBinary | number[] | null;
-}
-
-function isImageValue(value: unknown): value is ID3ImageValue {
-    if (!value || typeof value !== "object" || !("data" in value)) {
-        return false;
-    }
-
-    const data = (value as { data: unknown }).data;
-    if (!data) {
-        return false;
-    }
-
-    if (data instanceof ArrayBuffer || ArrayBuffer.isView(data)) {
-        return true;
-    }
-
-    if (Array.isArray(data)) {
-        return data.every((item) => typeof item === "number");
-    }
-
-    return false;
-}
-
-function imageDataToUint8Array(data: ID3ImageValue["data"]): Uint8Array | null {
-    if (!data) {
-        return null;
-    }
-
-    if (data instanceof ArrayBuffer) {
-        return new Uint8Array(data);
-    }
-
-    if (ArrayBuffer.isView(data)) {
-        return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
-    }
-
-    if (Array.isArray(data)) {
-        return Uint8Array.from(data);
-    }
-
-    return null;
-}
-
-function getThumbnailCacheKey(input: string): string {
-    let hash = 0;
-    if (input.length === 0) {
-        return hash.toString();
-    }
-
-    for (let i = 0; i < input.length; i++) {
-        const char = input.charCodeAt(i);
-        hash = (hash << 5) - hash + char;
-        hash |= 0; // Force 32-bit integer
-    }
-
-    return Math.abs(hash).toString(16);
-}
-
-function getExtensionForMime(mime: string | null): string {
-    if (!mime) {
-        return "jpg";
-    }
-
-    const normalized = mime.toLowerCase();
-    if (normalized.includes("png")) {
-        return "png";
-    }
-    if (normalized.includes("webp")) {
-        return "webp";
-    }
-    if (normalized.includes("gif")) {
-        return "gif";
-    }
-    return "jpg";
-}
-
-function downscaleArtworkToSquare(buffer: Uint8Array, targetSize = 128): Uint8Array | null {
-    try {
-        const image = Skia.Image.MakeImageFromEncoded(Skia.Data.fromBytes(buffer));
-        if (!image) {
-            return null;
-        }
-
-        const sourceWidth = image.width();
-        const sourceHeight = image.height();
-        if (sourceWidth === 0 || sourceHeight === 0) {
-            return null;
-        }
-
-        const cropSize = Math.min(sourceWidth, sourceHeight);
-        const srcX = Math.floor((sourceWidth - cropSize) / 2);
-        const srcY = Math.floor((sourceHeight - cropSize) / 2);
-
-        const surface = Skia.Surface.Make(targetSize, targetSize);
-        if (!surface) {
-            return null;
-        }
-
-        const canvas = surface.getCanvas();
-        const srcRect = Skia.XYWHRect(srcX, srcY, cropSize, cropSize);
-        const destRect = Skia.XYWHRect(0, 0, targetSize, targetSize);
-
-        canvas.drawImageRect(image, srcRect, destRect, Skia.Paint());
-
-        const snapshot = surface.makeImageSnapshot();
-        const encoded = snapshot.encodeToBytes();
-        if (!encoded || encoded.length === 0) {
-            return null;
-        }
-
-        return encoded;
-    } catch (error) {
-        console.warn("Failed to downscale artwork", error);
-        return null;
-    }
-}
-
 function fileNameFromPath(path: string): string {
     const lastSlash = path.lastIndexOf("/");
     return lastSlash === -1 ? path : path.slice(lastSlash + 1);
@@ -283,6 +159,55 @@ function normalizeRootPath(path: string): string {
     const withoutPrefix = path.startsWith("file://") ? path.replace("file://", "") : path;
     const trimmed = withoutPrefix.replace(/\/+$/, "");
     return trimmed.length > 0 ? trimmed : withoutPrefix;
+}
+
+async function validateLibraryPaths(paths: string[]): Promise<{ existing: string[]; missing: string[] }> {
+    if (paths.length === 0) {
+        return { existing: [], missing: [] };
+    }
+
+    const results = await Promise.all(
+        paths.map(async (path) => {
+            const target = path.startsWith("file://") ? path : `file://${path}`;
+            try {
+                const info = await FileSystem.getInfoAsync(target);
+                return { path, exists: !!info.exists };
+            } catch (error) {
+                console.warn(`validateLibraryPaths: failed to inspect ${path}`, error);
+                return { path, exists: false };
+            }
+        }),
+    );
+
+    return {
+        existing: results.filter((result) => result.exists).map((result) => result.path),
+        missing: results.filter((result) => !result.exists).map((result) => result.path),
+    };
+}
+
+function dedupeTracksByPath(tracks: LocalTrack[]): LocalTrack[] {
+    const unique = new Map<string, LocalTrack>();
+
+    for (const track of tracks) {
+        const normalizedPath = normalizeRootPath(track.filePath || track.id);
+        if (!normalizedPath) {
+            continue;
+        }
+
+        const key = normalizedPath.toLowerCase();
+        if (unique.has(key)) {
+            continue;
+        }
+
+        unique.set(key, {
+            ...track,
+            id: track.id || normalizedPath,
+            filePath: normalizedPath,
+            fileName: track.fileName ?? fileNameFromPath(normalizedPath),
+        });
+    }
+
+    return Array.from(unique.values());
 }
 
 function buildAbsolutePath(rootPath: string, relativePath: string): string {
@@ -325,9 +250,7 @@ function extractThumbnailKeyFromPersisted(track: PersistedLibraryTrack | undefin
     return undefined;
 }
 
-function buildCachedTrackIndex(
-    normalizedRoots: string[],
-): {
+function buildCachedTrackIndex(normalizedRoots: string[]): {
     skipEntries: { rootIndex: number; relativePath: string }[];
     cachedTracksByRoot: Map<number, Map<string, PersistedLibraryTrack>>;
     cachedTrackCount: number;
@@ -395,36 +318,6 @@ function decodeFSComponent(name: string, context: string): string {
         console.warn(`Failed to decode filesystem component ${name} in ${context}`, error);
         return name;
     }
-}
-
-function stripUnsynchronization(data: Uint8Array): Uint8Array {
-    let extraZeros = 0;
-    for (let i = 0; i < data.length - 1; i++) {
-        if (data[i] === 0xff && data[i + 1] === 0x00) {
-            extraZeros++;
-        }
-    }
-
-    if (extraZeros === 0) {
-        return data;
-    }
-
-    const output = new Uint8Array(data.length - extraZeros);
-    let writeIndex = 0;
-    for (let readIndex = 0; readIndex < data.length; readIndex++) {
-        const value = data[readIndex];
-        output[writeIndex++] = value;
-
-        if (value === 0xff && readIndex + 1 < data.length && data[readIndex + 1] === 0x00) {
-            readIndex++; // Skip the stuffed 0x00 byte
-        }
-    }
-
-    if (writeIndex !== output.length) {
-        return output.subarray(0, writeIndex);
-    }
-
-    return output;
 }
 
 export async function ensureLocalTrackThumbnail(track: LocalTrack): Promise<string | undefined> {
@@ -571,32 +464,6 @@ function formatDuration(seconds: number): string {
     return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
 }
 
-function parseDurationFromTags(tags: unknown): number | null {
-    if (!tags || typeof tags !== "object") {
-        return null;
-    }
-
-    const durationValue = (tags as { duration?: unknown }).duration;
-    if (typeof durationValue === "number" && durationValue > 0) {
-        return durationValue;
-    }
-
-    const lengthValue = (tags as { length?: unknown }).length;
-    if (typeof lengthValue === "number" && lengthValue > 0) {
-        return lengthValue / 1000;
-    }
-
-    if (typeof lengthValue === "string") {
-        const numeric = Number.parseFloat(lengthValue);
-        if (!Number.isNaN(numeric) && numeric > 0) {
-            // TLEN is defined in milliseconds, but we guard in case the value is already seconds
-            return numeric > 3600 ? numeric / 1000 : numeric;
-        }
-    }
-
-    return null;
-}
-
 /**
  * Creates a LocalTrack for an arbitrary audio file path by reusing the ID3 and native metadata pipeline.
  */
@@ -632,9 +499,12 @@ export async function createLocalTrackFromFile(filePath: string): Promise<LocalT
     }
 }
 
-async function scanLibraryNative(paths: string[], thumbnailsDirUri: string): Promise<LocalTrack[]> {
+async function scanLibraryNative(
+    paths: string[],
+    thumbnailsDirUri: string,
+): Promise<{ tracks: LocalTrack[]; errors: string[] }> {
     if (paths.length === 0) {
-        return [];
+        return { tracks: [], errors: [] };
     }
 
     if (typeof AudioPlayer.scanMediaLibrary !== "function") {
@@ -643,6 +513,7 @@ async function scanLibraryNative(paths: string[], thumbnailsDirUri: string): Pro
 
     const normalizedRoots = paths.map((path) => normalizeRootPath(path));
     const tracks: LocalTrack[] = [];
+    const scanErrors: string[] = [];
     const seenPaths = new Set<string>();
     const { skipEntries, cachedTracksByRoot, cachedTrackCount } = buildCachedTrackIndex(normalizedRoots);
     if (cachedTrackCount > 0) {
@@ -720,7 +591,9 @@ async function scanLibraryNative(paths: string[], thumbnailsDirUri: string): Pro
                     ? nativeTrack.artworkUri
                     : cachedTrack?.thumbnail);
             const duration =
-                typeof durationSeconds === "number" ? formatDuration(durationSeconds) : cachedTrack?.duration ?? "0:00";
+                typeof durationSeconds === "number"
+                    ? formatDuration(durationSeconds)
+                    : (cachedTrack?.duration ?? "0:00");
 
             tracks.push({
                 id: absolutePath,
@@ -764,6 +637,12 @@ async function scanLibraryNative(paths: string[], thumbnailsDirUri: string): Pro
         const finalTotal = Math.max(totalTracks ?? 0, cachedTrackCount, tracks.length);
         localMusicState$.scanTrackTotal.set(finalTotal);
         localMusicState$.scanTrackProgress.set(tracks.length);
+
+        if (Array.isArray(event.errors) && event.errors.length > 0) {
+            scanErrors.push(
+                ...event.errors.filter((error): error is string => typeof error === "string" && error.length > 0),
+            );
+        }
     };
 
     const subscriptions = [
@@ -785,18 +664,20 @@ async function scanLibraryNative(paths: string[], thumbnailsDirUri: string): Pro
                 : localMusicState$.scanTrackTotal.get();
         localMusicState$.scanTotal.set(totalRoots);
         localMusicState$.scanProgress.set(totalRoots);
-        localMusicState$.scanTrackTotal.set((value) => Math.max(value, totalTracks ?? 0, cachedTrackCount, tracks.length));
+        localMusicState$.scanTrackTotal.set((value) =>
+            Math.max(value, totalTracks ?? 0, cachedTrackCount, tracks.length),
+        );
         localMusicState$.scanTrackProgress.set(tracks.length);
-        const errorCount = Array.isArray(result.errors) ? result.errors.length : 0;
-        if (errorCount > 0) {
+        if (Array.isArray(result.errors) && result.errors.length > 0) {
+            scanErrors.push(...result.errors.filter((error): error is string => typeof error === "string"));
             console.warn("Native library scan completed with errors", {
-                errorCount,
+                errorCount: scanErrors.length,
                 totalTracks: result.totalTracks,
                 totalRoots,
-                sampleErrors: result.errors?.slice(0, 5),
+                sampleErrors: scanErrors.slice(0, 5),
             });
         }
-        return tracks;
+        return { tracks, errors: scanErrors };
     } finally {
         for (const subscription of subscriptions) {
             try {
@@ -905,10 +786,14 @@ async function scanDirectory(directoryPath: string, seenPaths?: Set<string>): Pr
 
 // Scan all configured library paths
 export async function scanLocalMusic(): Promise<void> {
-    const paths = localMusicSettings$.libraryPaths
-        .get()
-        .map((path) => normalizeRootPath(path))
-        .filter(Boolean);
+    const paths = Array.from(
+        new Set(
+            localMusicSettings$.libraryPaths
+                .get()
+                .map((path) => normalizeRootPath(path))
+                .filter(Boolean),
+        ),
+    );
 
     if (paths.length === 0) {
         localMusicState$.scanTrackProgress.set(0);
@@ -920,27 +805,51 @@ export async function scanLocalMusic(): Promise<void> {
     const thumbnailsDir = getCacheDirectory("thumbnails");
     ensureCacheDirectory(thumbnailsDir);
 
-    perfLog("LocalMusic.scanLocalMusic.start", { paths });
+    const { existing: availablePaths, missing: missingPaths } = await validateLibraryPaths(paths);
+    if (availablePaths.length === 0) {
+        localMusicState$.scanTrackProgress.set(0);
+        localMusicState$.scanTrackTotal.set(0);
+        localMusicState$.error.set("Library folders are unavailable. Please re-add them in Settings and try again.");
+        return;
+    }
+
+    perfLog("LocalMusic.scanLocalMusic.start", { paths: availablePaths, missingPaths });
     localMusicState$.isScanning.set(true);
-    localMusicState$.error.set(null);
+    localMusicState$.error.set(missingPaths.length > 0 ? `Skipping missing folders: ${missingPaths.join(", ")}` : null);
     localMusicState$.scanProgress.set(0);
-    localMusicState$.scanTotal.set(paths.length);
+    localMusicState$.scanTotal.set(availablePaths.length);
     localMusicState$.scanTrackProgress.set(0);
     localMusicState$.scanTrackTotal.set(localMusicState$.tracks.get().length);
 
     try {
         let collectedTracks: LocalTrack[] = [];
+        let scanErrors: string[] = [];
 
         try {
-            collectedTracks = await scanLibraryNative(paths, thumbnailsDir.uri);
-            console.log("collectedTracks native", collectedTracks.length);
+            const nativeResult = await scanLibraryNative(availablePaths, thumbnailsDir.uri);
+            collectedTracks = nativeResult.tracks;
+            scanErrors = nativeResult.errors;
         } catch (nativeError) {
             console.warn("Native scan failed, falling back to JS pipeline:", nativeError);
             localMusicState$.scanProgress.set(0);
-            localMusicState$.scanTotal.set(paths.length);
+            localMusicState$.scanTotal.set(availablePaths.length);
+            localMusicState$.error.set(
+                missingPaths.length > 0
+                    ? `Skipping missing folders: ${missingPaths.join(", ")}. Native scan failed; please retry.`
+                    : "Library scan failed. Please check folder permissions and try again.",
+            );
+
+            for (const path of availablePaths) {
+                try {
+                    const tracks = await scanDirectory(path);
+                    collectedTracks.push(...tracks);
+                } catch (directoryError) {
+                    console.error(`Failed to scan directory ${path}:`, directoryError);
+                }
+            }
         }
 
-        const dedupedTracks = Array.from(new Map(collectedTracks.map((track) => [track.id, track])).values());
+        const dedupedTracks = dedupeTracksByPath(collectedTracks);
 
         dedupedTracks.sort((a, b) => {
             const artistCompare = a.artist.localeCompare(b.artist);
@@ -955,6 +864,12 @@ export async function scanLocalMusic(): Promise<void> {
         localMusicState$.scanTrackProgress.set(dedupedTracks.length);
         localMusicState$.scanTrackTotal.set(dedupedTracks.length);
 
+        if (scanErrors.length > 0) {
+            localMusicState$.error.set(
+                `Scan completed with ${scanErrors.length} metadata errors. Try rescanning or check file permissions.`,
+            );
+        }
+
         console.log(`Scan complete: Found ${dedupedTracks.length} total MP3 files`);
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
@@ -967,6 +882,12 @@ export async function scanLocalMusic(): Promise<void> {
 
 export function markLibraryChangeUserInitiated(): void {
     pendingUserInitiatedLibraryChange = true;
+}
+
+export function resetLibraryCaches(): void {
+    clearCachedLibraryData();
+    clearPlaylistCache();
+    localMusicState$.error.set(null);
 }
 
 export async function loadLocalPlaylists(): Promise<void> {

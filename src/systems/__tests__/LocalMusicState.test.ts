@@ -1,6 +1,24 @@
+import { clearLibraryCache } from "@/systems/LibraryCache";
 import type { LocalTrack } from "@/systems/LocalMusicState";
 import { initializeLocalMusic, localMusicSettings$, localMusicState$, scanLocalMusic } from "@/systems/LocalMusicState";
-import { clearLibraryCache } from "@/systems/LibraryCache";
+
+jest.mock("expo-file-system", () => {
+    const pathExists = new Map<string, boolean>();
+    return {
+        __esModule: true,
+        getInfoAsync: jest.fn(async (uri: string) => {
+            const normalized = uri.startsWith("file://") ? uri.slice("file://".length) : uri;
+            const exists = pathExists.has(normalized) ? pathExists.get(normalized) : true;
+            return { exists: !!exists, uri };
+        }),
+        __setMockPathExists: (path: string, exists: boolean) => {
+            pathExists.set(path, exists);
+        },
+        __resetMockPaths: () => {
+            pathExists.clear();
+        },
+    };
+});
 
 jest.mock("expo-file-system/next", () => {
     const mockFs = new Map<string, { files: string[]; directories: string[] }>();
@@ -93,7 +111,7 @@ jest.mock("expo-file-system/next", () => {
 
         constructor(...segments: Array<string | MockDirectory | MockFile>) {
             this.path = resolvePath(segments);
-            this.name = this.path === "/" ? "/" : this.path.split("/").pop() ?? this.path;
+            this.name = this.path === "/" ? "/" : (this.path.split("/").pop() ?? this.path);
             this.exists = mockFs.has(this.path);
             this.uri = `file://${this.path}`;
         }
@@ -104,9 +122,7 @@ jest.mock("expo-file-system/next", () => {
                 return [];
             }
 
-            const directories = entry.directories.map(
-                (dir) => new MockDirectory(this, dir),
-            );
+            const directories = entry.directories.map((dir) => new MockDirectory(this, dir));
             const files = entry.files.map((file) => new MockFile(this, file));
             return [...directories, ...files];
         }
@@ -186,9 +202,32 @@ jest.mock("@/utils/ExpoFSPersistPlugin", () => {
 
 jest.mock("@/native-modules/AudioPlayer", () => ({
     __esModule: true,
-    default: {
-        getMediaTags: jest.fn().mockResolvedValue({ durationSeconds: 180 }),
-    },
+    default: (() => {
+        const listeners: Record<string, Set<(payload: any) => void>> = {};
+
+        const emit = (event: string, payload: any) => {
+            listeners[event]?.forEach((handler) => handler(payload));
+        };
+
+        const addListener = jest.fn((event: string, handler: (payload: any) => void) => {
+            listeners[event] = listeners[event] ?? new Set();
+            listeners[event]?.add(handler);
+            return {
+                remove: () => listeners[event]?.delete(handler),
+            };
+        });
+
+        const scanMediaLibrary = jest.fn(async () => {
+            throw new Error("native scan unavailable in tests");
+        });
+
+        return {
+            getMediaTags: jest.fn().mockResolvedValue({ durationSeconds: 180 }),
+            scanMediaLibrary,
+            addListener,
+            __emit: emit,
+        };
+    })(),
 }));
 
 jest.mock("@/native-modules/FileSystemWatcher", () => ({
@@ -200,6 +239,13 @@ jest.mock("@/systems/LibraryCache", () => ({
     __esModule: true,
     clearLibraryCache: jest.fn(),
     hasCachedLibraryData: jest.fn(() => false),
+    getLibrarySnapshot: jest.fn(() => ({
+        version: 1,
+        updatedAt: Date.now(),
+        tracks: [],
+        lastScanTime: null,
+        roots: [],
+    })),
 }));
 
 jest.mock("@shopify/react-native-skia", () => ({
@@ -225,8 +271,25 @@ describe("scanLocalMusic", () => {
         return module.__setMockFileSystem as (data: Record<string, { files: string[]; directories: string[] }>) => void;
     };
 
+    const setPathExists = (path: string, exists: boolean) => {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-explicit-any
+        const module: any = require("expo-file-system");
+        if (typeof module.__setMockPathExists === "function") {
+            module.__setMockPathExists(path, exists);
+        }
+    };
+
+    const resetPathExists = () => {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-explicit-any
+        const module: any = require("expo-file-system");
+        if (typeof module.__resetMockPaths === "function") {
+            module.__resetMockPaths();
+        }
+    };
+
     beforeEach(() => {
         jest.useFakeTimers();
+        resetPathExists();
         getMockFsSetter()({
             "/music": {
                 files: ["root.mp3", "ignore.txt"],
@@ -259,7 +322,9 @@ describe("scanLocalMusic", () => {
         const tracks: LocalTrack[] = localMusicState$.tracks.get();
         const filePaths = tracks.map((track) => track.filePath);
 
-        expect(filePaths).toEqual(expect.arrayContaining(["/music/root.mp3", "/music/sub/nested.mp3", "/music/sub/deeper/deep.mp3"]));
+        expect(filePaths).toEqual(
+            expect.arrayContaining(["/music/root.mp3", "/music/sub/nested.mp3", "/music/sub/deeper/deep.mp3"]),
+        );
         expect(filePaths).not.toContain("/music/ignore.txt");
         expect(tracks).toHaveLength(3);
     });
@@ -285,5 +350,59 @@ describe("scanLocalMusic", () => {
         expect(clearLibraryCacheMock).toHaveBeenCalledTimes(1);
         expect(localMusicState$.tracks.get()).toEqual([]);
         expect(localMusicSettings$.lastScanTime.get()).toBe(0);
+    });
+
+    it("skips missing library folders without crashing", async () => {
+        const setFs = getMockFsSetter();
+        setFs({
+            "/music": {
+                files: ["root.mp3"],
+                directories: [],
+            },
+            "/other": {
+                files: ["alt.mp3"],
+                directories: [],
+            },
+        });
+        setPathExists("/music", false);
+        setPathExists("/other", true);
+        localMusicSettings$.libraryPaths.set(() => ["/music", "/other"]);
+
+        await scanLocalMusic();
+        jest.runOnlyPendingTimers();
+        await Promise.resolve();
+
+        const tracks: LocalTrack[] = localMusicState$.tracks.get();
+        expect(tracks).toHaveLength(1);
+        expect(tracks[0]?.filePath).toContain("/other/alt.mp3");
+        expect(localMusicState$.error.get()).toContain("Skipping missing folders");
+    });
+
+    it("deduplicates duplicate native scan results by path", async () => {
+        const audioPlayer = require("@/native-modules/AudioPlayer").default as {
+            scanMediaLibrary: jest.Mock;
+            addListener: jest.Mock;
+            __emit: (event: string, payload: any) => void;
+        };
+
+        audioPlayer.scanMediaLibrary.mockImplementationOnce(async () => {
+            audioPlayer.__emit("onMediaScanBatch", {
+                rootIndex: 0,
+                tracks: [
+                    { relativePath: "dup.mp3", fileName: "dup.mp3" },
+                    { relativePath: "dup.mp3", fileName: "dup.mp3" },
+                ],
+            });
+            audioPlayer.__emit("onMediaScanComplete", { totalTracks: 2, totalRoots: 1, errors: [] });
+            return { totalTracks: 2, totalRoots: 1, errors: [] };
+        });
+
+        await scanLocalMusic();
+        jest.runOnlyPendingTimers();
+        await Promise.resolve();
+
+        const tracks: LocalTrack[] = localMusicState$.tracks.get();
+        expect(tracks).toHaveLength(1);
+        expect(tracks[0]?.fileName).toBe("dup.mp3");
     });
 });

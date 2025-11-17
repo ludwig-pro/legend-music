@@ -130,12 +130,18 @@ const sanitizeSnapshot = (input: RawLibrarySnapshot): LibrarySnapshot => {
 };
 
 export const getLibrarySnapshot = (): LibrarySnapshot => {
-    const snapshot = libraryCache$.get();
-    if (!snapshot) {
+    try {
+        const snapshot = libraryCache$.get();
+        if (!snapshot) {
+            return defaultSnapshot;
+        }
+
+        return sanitizeSnapshot(snapshot);
+    } catch (error) {
+        console.error("Failed to read library cache; resetting to defaults", error);
+        libraryCache$.set(defaultSnapshot);
         return defaultSnapshot;
     }
-
-    return sanitizeSnapshot(snapshot);
 };
 
 export const persistLibrarySnapshot = (

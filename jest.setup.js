@@ -28,6 +28,7 @@ NativeModules.KeyboardManager = {
     addListener: jest.fn(() => ({ remove: jest.fn() })),
     removeListeners: jest.fn(),
     removeAllListeners: jest.fn(),
+    removeListener: jest.fn(),
 };
 NativeModules.WindowControls = {
     minimize: jest.fn(),
@@ -60,6 +61,11 @@ jest.mock("@/native-modules/WindowControls", () => ({
 jest.mock("@/native-modules/WindowManager", () => ({
     __esModule: true,
     default: mockWindowManager,
+}));
+
+jest.mock("expo-file-system", () => ({
+    __esModule: true,
+    getInfoAsync: jest.fn(async () => ({ exists: true })),
 }));
 
 jest.mock("expo-file-system/next", () => {

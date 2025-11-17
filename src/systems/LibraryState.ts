@@ -304,7 +304,7 @@ const initialTracks = library$.tracks.peek();
 lastLibrarySnapshotSignature = makeLibrarySnapshotSignature(collectLibrarySnapshot(initialTracks), initialTracks);
 
 localMusicState$.tracks.onChange(syncLibraryFromLocalState);
-localMusicState$.isScanning.onChange(({ value }) => {
+localMusicState$.isScanning.onChange(() => {
     scheduleLibrarySnapshotPersist();
 });
 
