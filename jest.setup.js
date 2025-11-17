@@ -111,10 +111,6 @@ jest.mock("expo-file-system/next", () => {
     };
 });
 
-jest.mock("id3js", () => ({
-    __esModule: true,
-    fromPath: jest.fn(() => Promise.reject(new Error("ID3 parsing not available in tests"))),
-}));
 
 jest.mock("msgpackr", () => {
     class MockPackr {

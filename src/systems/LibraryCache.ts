@@ -1,5 +1,5 @@
-import { createJSONManager } from "@/utils/JSONManager";
 import { deleteCacheFiles } from "@/utils/cacheDirectories";
+import { createJSONManager } from "@/utils/JSONManager";
 
 export interface PersistedLibraryTrack {
     filePath: string;
@@ -57,12 +57,7 @@ type LegacyLibrarySnapshot = Partial<LibrarySnapshot> & {
 };
 
 const sanitizeTrack = (track: LegacyLibraryTrack | PersistedLibraryTrack): PersistedLibraryTrack | null => {
-    const filePath =
-        typeof track.filePath === "string" && track.filePath
-            ? track.filePath
-            : typeof track.id === "string"
-              ? track.id
-              : "";
+    const filePath = typeof track.filePath === "string" && track.filePath ? track.filePath : "";
 
     if (!filePath) {
         return null;

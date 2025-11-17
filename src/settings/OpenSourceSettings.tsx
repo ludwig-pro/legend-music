@@ -41,11 +41,6 @@ const libraries: Library[] = [
         url: "https://github.com/tailwindlabs/tailwindcss",
     },
     {
-        name: "id3js",
-        description: "JavaScript library for reading ID3 tags",
-        url: "https://github.com/43081j/id3",
-    },
-    {
         name: "Gorhom Portal",
         description: "React Native portal implementation",
         url: "https://github.com/gorhom/react-native-portal",

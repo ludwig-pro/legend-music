@@ -53,7 +53,7 @@ https://github.com/user-attachments/assets/061cae41-c47a-4977-b095-27d007b9d0e9
 ### Managing your library
 
 - Library folders live in `settings$.library` (managed through **Settings → Library**). Paths are persisted via `localMusicSettings.json`.
-- Adding or removing a folder triggers a rescan that parses tags with `id3js`/`jsmediatags`, caches thumbnails, and records playlists in `localMusicState`.
+- Adding or removing a folder triggers a rescan that reads tags natively, caches thumbnails, and records playlists in `localMusicState`.
 - The `FileSystemWatcher` native module watches every configured directory. When files change, `scanLocalMusic()` reruns automatically after a short debounce.
 - If you need a manual reset, clear the cache directory at `~/Library/Caches/LegendMusic/data` and restart the app.
 

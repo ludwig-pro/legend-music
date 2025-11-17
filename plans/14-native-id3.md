@@ -12,6 +12,10 @@ Move ID3 parsing and artwork extraction into a native module to reduce JS CPU an
 - Wire LocalMusicState to call the native reader first (passing the shared cache directory) and fall back to filename parsing if needed.
 - Treat returned artworkUri as the cached thumbnail; avoid base64 handling in JS.
 - Keep JS error handling quiet and continue scanning on failures.
+- Plan native-first scanning: move directory traversal + metadata/artwork extraction fully into native, batching results back to JS to reduce bridge overhead.
+- Update library cache data shape to store only file name (not full path) where possible, adjusting consumers accordingly.
+- Store thumbnail keys as deterministic hashes (no full path in cache) and reconstruct full thumbnail URIs (thumbs root + hash + .png) in code.
+- Add library roots array to cache and store relative paths with a root index to shrink stored paths and speed loading.
 
 ## Validation
 - Scan a library with varied MP3s (with/without artwork) and confirm titles/artist/album/duration populate correctly.
@@ -21,4 +25,6 @@ Move ID3 parsing and artwork extraction into a native module to reduce JS CPU an
 ## Steps
 - [x] Add native metadata reader (metadata + artwork) using AVAsset/AudioToolbox.
 - [x] Bridge to JS and integrate into LocalMusicState scanning pipeline.
-- [ ] Cache artwork thumbs and verify scan flow is stable without RangeErrors.
+- [x] Cache artwork thumbs and verify scan flow is stable without RangeErrors.
+- [ ] Move directory traversal + metadata extraction fully native with batched results back to JS.
+- [ ] Update library cache to store only file names (not full paths) and adjust consumers, including library roots + relative paths and hashed thumbnail keys with reconstructed URIs.

@@ -184,10 +184,6 @@ jest.mock("@/utils/ExpoFSPersistPlugin", () => {
     };
 });
 
-jest.mock("id3js", () => ({
-    fromPath: jest.fn().mockResolvedValue(null),
-}));
-
 jest.mock("@/native-modules/AudioPlayer", () => ({
     __esModule: true,
     default: {

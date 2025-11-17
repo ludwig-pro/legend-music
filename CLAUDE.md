@@ -30,12 +30,11 @@ LegendMusic is a React Native macOS application for local music library manageme
 
 ### Music Library Management
 - Scans local directories for audio files using `expo-file-system/next`
-- Extracts metadata from audio files using `id3js`
 - Supports common audio formats and metadata extraction
 - Persistent storage using JSON managers for settings and library data
 
 ### Audio Processing
-- Uses `id3js` library for metadata extraction (patched version)
+- Extracts metadata from audio files using native modules (AVAsset/AudioToolbox)
 - Audio playback components handle local file streaming
 - Custom slider component for playback controls
 
