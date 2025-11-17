@@ -66,8 +66,12 @@ class ThumbnailCache {
         return null;
     }
 
+    isRemoteThumbnail(url: string) {
+        return url?.startsWith("http");
+    }
+
     async downloadThumbnail(url: string): Promise<string | null> {
-        if (!url || !url.startsWith("http")) {
+        if (!this.isRemoteThumbnail(url)) {
             return null;
         }
 
@@ -164,7 +168,8 @@ export function AlbumArt({ uri, size = "medium", fallbackIcon = "♪", className
             setHasError(false);
 
             try {
-                const downloadedUri = await thumbnailCache.downloadThumbnail(uri);
+                const downloadedUri =
+                    thumbnailCache.isRemoteThumbnail(uri) && (await thumbnailCache.downloadThumbnail(uri));
 
                 if (isMounted) {
                     if (downloadedUri) {

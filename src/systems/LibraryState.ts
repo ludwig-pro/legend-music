@@ -202,20 +202,24 @@ function normalizeTracks(localTracks: LocalTrack[]): LibraryTrack[] {
 
 function buildArtistItems(tracks: LibraryTrack[]): LibraryItem[] {
     perfCount("LibraryState.buildArtistItems");
-    const artistMap = new Map<string, { count: number }>();
+    const artistMap = new Map<string, { name: string; count: number }>();
 
     for (const track of tracks) {
-        const entry = artistMap.get(track.artist);
+        const { key, name } = normalizeArtistName(track.artist);
+        const entry = artistMap.get(key);
         if (entry) {
             entry.count += 1;
+            if (entry.name === "Unknown Artist" && name !== "Unknown Artist") {
+                entry.name = name;
+            }
         } else {
-            artistMap.set(track.artist, { count: 1 });
+            artistMap.set(key, { name, count: 1 });
         }
     }
 
     return Array.from(artistMap.entries())
-        .map(([name, { count }]) => ({
-            id: `artist-${slugify(name)}`,
+        .map(([key, { name, count }]) => ({
+            id: `artist-${key}`,
             type: "artist" as const,
             name,
             trackCount: count,
@@ -271,6 +275,14 @@ function slugify(value: string): string {
         .replace(/^-+|-+$/g, "");
 
     return slug || "unknown";
+}
+
+function normalizeArtistName(name: string): { key: string; name: string } {
+    const trimmedName = name?.trim() || "";
+    const displayName = trimmedName.length > 0 ? trimmedName : "Unknown Artist";
+    const key = slugify(displayName);
+
+    return { key, name: displayName };
 }
 
 function syncLibraryFromLocalState(): void {
