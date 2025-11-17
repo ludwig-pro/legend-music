@@ -11,6 +11,21 @@
 #import "LegendMusic_macOS-Swift.h"
 #elif __has_include("LegendMusic-Swift.h")
 #import "LegendMusic-Swift.h"
+#else
+// Fallback declarations so the compiler sees the Swift-exposed APIs even if the generated
+// Swift header is not yet available in the include path.
+@interface LMID3TagsResult : NSObject
+@property(nonatomic, readonly, nullable) NSString *title;
+@property(nonatomic, readonly, nullable) NSString *artist;
+@property(nonatomic, readonly, nullable) NSString *album;
+@property(nonatomic, readonly, nullable) NSNumber *durationSeconds;
+@property(nonatomic, readonly, nullable) NSData *artworkData;
+@end
+
+@interface LMID3TagEditorBridge : NSObject
++ (nullable LMID3TagsResult *)readTagsForURL:(NSURL *)url error:(NSError * _Nullable * _Nullable)error;
++ (nullable NSNumber *)writeTagsForURL:(NSURL *)url fields:(NSDictionary *)fields error:(NSError * _Nullable * _Nullable)error;
+@end
 #endif
 #import <math.h>
 
