@@ -148,7 +148,6 @@ const collectLibrarySnapshot = (sourceTracks: LibraryTrack[]): LibrarySnapshotPa
     return {
         tracks,
         roots,
-        isScanning: library$.isScanning.peek(),
         lastScanTime: lastScan instanceof Date ? lastScan.getTime() : null,
     };
 };
@@ -156,7 +155,6 @@ const collectLibrarySnapshot = (sourceTracks: LibraryTrack[]): LibrarySnapshotPa
 type LibrarySnapshotSignature = {
     tracksRef: PersistedLibraryTrack[];
     tracksLength: number;
-    isScanning: boolean;
     lastScanTime: number | null;
     rootsHash: string;
     sourceTracksRef: LibraryTrack[];
@@ -168,7 +166,6 @@ const makeLibrarySnapshotSignature = (
 ): LibrarySnapshotSignature => ({
     tracksRef: snapshot.tracks,
     tracksLength: snapshot.tracks.length,
-    isScanning: snapshot.isScanning,
     lastScanTime: snapshot.lastScanTime,
     rootsHash: snapshot.roots.join("|"),
     sourceTracksRef,
@@ -185,7 +182,6 @@ const scheduleLibrarySnapshotPersist = () => {
             lastLibrarySnapshotSignature &&
             lastLibrarySnapshotSignature.sourceTracksRef === signature.sourceTracksRef &&
             lastLibrarySnapshotSignature.tracksLength === signature.tracksLength &&
-            lastLibrarySnapshotSignature.isScanning === signature.isScanning &&
             lastLibrarySnapshotSignature.lastScanTime === signature.lastScanTime &&
             lastLibrarySnapshotSignature.rootsHash === signature.rootsHash
         ) {
@@ -321,10 +317,6 @@ library$.tracks.onChange(() => {
     scheduleLibrarySnapshotPersist();
 });
 
-library$.isScanning.onChange(() => {
-    scheduleLibrarySnapshotPersist();
-});
-
 library$.lastScanTime.onChange(() => {
     scheduleLibrarySnapshotPersist();
 });
@@ -364,14 +356,12 @@ export const hydrateLibraryFromCache = (): boolean => {
     library$.tracks.set(tracks);
     library$.artists.set(buildArtistItems(tracks));
     library$.albums.set(buildAlbumItems(tracks));
-    library$.isScanning.set(snapshot.isScanning);
     library$.lastScanTime.set(snapshot.lastScanTime ? new Date(snapshot.lastScanTime) : null);
 
     lastLibrarySnapshotSignature = makeLibrarySnapshotSignature(
         {
             tracks: snapshot.tracks,
             roots,
-            isScanning: snapshot.isScanning,
             lastScanTime: snapshot.lastScanTime,
         },
         tracks,
