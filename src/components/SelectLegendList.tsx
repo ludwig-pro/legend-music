@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { useMemo } from "react";
 import { Text, View, type ViewStyle } from "react-native";
 import { DropdownMenu } from "@/components/DropdownMenu";
-import { LegendList, type LegendListRenderItemProps } from "@/components/LegendList";
+import { LegendList, type LegendListRenderItemProps } from "@legendapp/list";
 import { WithCheckbox } from "@/components/WithCheckbox";
 import { cn } from "@/utils/cn";
 import { equals } from "@/utils/equals";

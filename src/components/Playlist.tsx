@@ -3,7 +3,7 @@ import { type ElementRef, useCallback, useEffect, useMemo, useRef, useState } fr
 import { findNodeHandle, type NativeSyntheticEvent, Platform, StyleSheet, Text, UIManager, View } from "react-native";
 import type { NativeMouseEvent } from "react-native-macos";
 import { Button } from "@/components/Button";
-import { LegendList } from "@/components/LegendList";
+import { LegendList } from "@legendapp/list";
 import { localAudioControls, localPlayerState$, type QueuedTrack, queue$ } from "@/components/LocalAudioPlayer";
 import { type TrackData, TrackItem } from "@/components/TrackItem";
 import { usePlaylistSelection } from "@/hooks/usePlaylistSelection";

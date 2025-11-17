@@ -4,7 +4,7 @@ import { Text, View } from "react-native";
 import type { NativeMouseEvent } from "react-native-macos";
 
 import { Button } from "@/components/Button";
-import { LegendList } from "@/components/LegendList";
+import { LegendList } from "@legendapp/list";
 import { localAudioControls } from "@/components/LocalAudioPlayer";
 import { useListItemStyles } from "@/hooks/useListItemStyles";
 import { type ContextMenuItem, showContextMenu } from "@/native-modules/ContextMenu";
