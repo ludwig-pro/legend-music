@@ -29,6 +29,9 @@
 #endif
 #import <math.h>
 
+@class LMID3TagsResult;
+@class LMID3TagEditorBridge;
+
 typedef struct {
     __unsafe_unretained AudioPlayer *audioPlayer;
 } VisualizerTapContext;
