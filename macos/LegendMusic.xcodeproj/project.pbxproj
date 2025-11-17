@@ -33,6 +33,7 @@
 		69EDA8112DC910FA00CCB7F7 /* MenuEvents.m in Sources */ = {isa = PBXBuildFile; fileRef = 69EDA80F2DC910FA00CCB7F7 /* MenuEvents.m */; };
 		69EDB1012DCA10FA00CCB7F7 /* ContextMenuManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 69EDB0FF2DCA10FA00CCB7F7 /* ContextMenuManager.m */; };
 		69F4D1012F0A123400CCB7F7 /* FileDialog.m in Sources */ = {isa = PBXBuildFile; fileRef = 69F4D0FF2F0A123400CCB7F7 /* FileDialog.m */; };
+		B3C4A1412FF0A8B500A2C1E9 /* ID3TagEditor in Frameworks */ = {isa = PBXBuildFile; productRef = B3C4A1422FF0A8B500A2C1E9 /* ID3TagEditor */; };
 		A1B2C3D4E5F607801234567 /* AudioPlayer.m in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D6E5F607801234567 /* AudioPlayer.m */; };
 		BEF2DD5FAECBF3C737045F10 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = E3812CA0776629430D89D5DA /* PrivacyInfo.xcprivacy */; };
 		DD7A5E943F53F74817727672 /* libPods-LegendMusic-macOS.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D923D34EAC788A5DE1EAAF00 /* libPods-LegendMusic-macOS.a */; };
@@ -93,14 +94,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		514201462437B4B30078DB4F /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				DD7A5E943F53F74817727672 /* libPods-LegendMusic-macOS.a in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
+			514201462437B4B30078DB4F /* Frameworks */ = {
+				isa = PBXFrameworksBuildPhase;
+				buildActionMask = 2147483647;
+				files = (
+					B3C4A1412FF0A8B500A2C1E9 /* ID3TagEditor in Frameworks */,
+					DD7A5E943F53F74817727672 /* libPods-LegendMusic-macOS.a in Frameworks */,
+				);
+				runOnlyForDeploymentPostprocessing = 0;
+			};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -343,15 +345,18 @@
 				9D2E5C3B52545030432B324A /* [CP] Copy Pods Resources */,
 				D40307B9B1EF7419C22DAC6E /* [CP] Embed Pods Frameworks */,
 			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = "LegendMusic-macOS";
-			productName = LegendMusic;
-			productReference = 514201492437B4B30078DB4F /* LegendMusic.app */;
-			productType = "com.apple.product-type.application";
-		};
+				buildRules = (
+				);
+				dependencies = (
+				);
+				name = "LegendMusic-macOS";
+				packageProductDependencies = (
+					B3C4A1422FF0A8B500A2C1E9 /* ID3TagEditor */,
+				);
+				productName = LegendMusic;
+				productReference = 514201492437B4B30078DB4F /* LegendMusic.app */;
+				productType = "com.apple.product-type.application";
+			};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -373,16 +378,19 @@
 			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
-			knownRegions = (
-				en,
-				Base,
-			);
-			mainGroup = 83CBB9F61A601CBA00E9B192;
-			productRefGroup = 83CBBA001A601CBA00E9B192 /* Products */;
-			projectDirPath = "";
-			projectRoot = "";
-			targets = (
-				13B07F861A680F5B00A75B9A /* LegendMusic-iOS */,
+				knownRegions = (
+					en,
+					Base,
+				);
+				mainGroup = 83CBB9F61A601CBA00E9B192;
+				packageReferences = (
+					B3C4A1432FF0A8B500A2C1E9 /* ID3TagEditor */,
+				);
+				productRefGroup = 83CBBA001A601CBA00E9B192 /* Products */;
+				projectDirPath = "";
+				projectRoot = "";
+				targets = (
+					13B07F861A680F5B00A75B9A /* LegendMusic-iOS */,
 				514201482437B4B30078DB4F /* LegendMusic-macOS */,
 			);
 		};
@@ -833,6 +841,25 @@
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		B3C4A1432FF0A8B500A2C1E9 /* ID3TagEditor */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/chicio/ID3TagEditor.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.4.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		B3C4A1422FF0A8B500A2C1E9 /* ID3TagEditor */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B3C4A1432FF0A8B500A2C1E9 /* ID3TagEditor */;
+			productName = ID3TagEditor;
+		};
+/* End XCSwiftPackageProductDependency section */
 
 /* Begin XCConfigurationList section */
 		13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "LegendMusic-iOS" */ = {

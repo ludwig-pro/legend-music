@@ -26,7 +26,7 @@ Assuming the native-first scanning from plans/14-native-id3.md is complete, use 
 - Add/extend tests where feasible (fixtures) for read/write paths; run lint/tests if possible before shipping.
 
 ## Steps
-- [ ] Add ID3TagEditor to the macOS target with minimal build/config overhead.
+- [x] Add ID3TagEditor to the macOS target with minimal build/config overhead.
 - [ ] Implement the native reader using ID3TagEditor + minimal duration probe inside the existing native scan pipeline and expose it via the AudioPlayer bridge.
 - [ ] Keep non-MP3 formats on the current native path, preserving artwork caching and batched results to JS.
 - [ ] Implement a native ID3 write API for basic fields and bridge it to JS with clear error handling for unsupported cases.
