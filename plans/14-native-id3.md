@@ -31,5 +31,5 @@ Move ID3 parsing and artwork extraction into a native module to reduce JS CPU an
     - [x] Wire JS scan flow to consume native batches and update state/progress.
 - [ ] Update library cache to store only file names (not full paths) and adjust consumers.
     - [x] Persist library roots array and store relative paths with root index.
-    - [ ] Persist thumbnail hash/key (no full path) and reconstruct thumbnail URIs in code.
+    - [x] Persist thumbnail hash/key (no full path) and reconstruct thumbnail URIs in code.
     - [ ] Update load/save/hydration to use the new schema and drop full paths from cache.

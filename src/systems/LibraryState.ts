@@ -3,6 +3,7 @@ import type { LibrarySnapshot, PersistedLibraryTrack } from "@/systems/LibraryCa
 import { getLibrarySnapshot, hasCachedLibraryData, persistLibrarySnapshot } from "@/systems/LibraryCache";
 import { type LocalTrack, localMusicSettings$, localMusicState$ } from "@/systems/LocalMusicState";
 import { createJSONManager } from "@/utils/JSONManager";
+import { getCacheDirectory } from "@/utils/cacheDirectories";
 import { perfCount, perfLog, perfTime } from "@/utils/perfLogger";
 import { runAfterInteractions } from "@/utils/runAfterInteractions";
 
@@ -64,6 +65,17 @@ const fileNameFromPath = (path: string): string => {
     return lastSlash === -1 ? path : path.slice(lastSlash + 1);
 };
 
+const deriveThumbnailKey = (thumbnail: string | undefined): string | undefined => {
+    if (!thumbnail) {
+        return undefined;
+    }
+
+    const lastSlash = thumbnail.lastIndexOf("/");
+    const fileName = lastSlash === -1 ? thumbnail : thumbnail.slice(lastSlash + 1);
+    const [baseName] = fileName.split(".");
+    return baseName && baseName.length > 0 ? baseName : undefined;
+};
+
 const resolveRelativePathForTrack = (
     track: LocalTrack,
     roots: string[],
@@ -89,6 +101,7 @@ const resolveRelativePathForTrack = (
 
 const buildPersistedTrack = (track: LocalTrack, roots: string[]): PersistedLibraryTrack => {
     const { rootIndex, relativePath } = resolveRelativePathForTrack(track, roots);
+    const thumbnailKey = track.thumbnailKey ?? deriveThumbnailKey(track.thumbnail);
 
     return {
         rootIndex,
@@ -98,7 +111,7 @@ const buildPersistedTrack = (track: LocalTrack, roots: string[]): PersistedLibra
         artist: track.artist,
         album: track.album,
         duration: track.duration,
-        thumbnail: track.thumbnail,
+        thumbnailKey,
     };
 };
 
@@ -117,6 +130,15 @@ const buildFilePathFromPersisted = (track: PersistedLibraryTrack, roots: string[
     }
 
     return track.relativePath;
+};
+
+const buildThumbnailUri = (baseUri: string, key: string | undefined): string | undefined => {
+    if (!key || !baseUri) {
+        return undefined;
+    }
+
+    const normalizedBase = baseUri.endsWith("/") ? baseUri.slice(0, -1) : baseUri;
+    return `${normalizedBase}/${key}.png`;
 };
 
 const collectLibrarySnapshot = (sourceTracks: LibraryTrack[]): LibrarySnapshotPayload => {
@@ -320,6 +342,8 @@ export const hydrateLibraryFromCache = (): boolean => {
         return false;
     }
 
+    const thumbnailsDir = getCacheDirectory("thumbnails");
+    const thumbnailBaseUri = thumbnailsDir.uri;
     const roots = Array.isArray(snapshot.roots) ? snapshot.roots.map((root) => normalizeRootPath(root)) : [];
 
     const tracks = snapshot.tracks.map((track) => {
@@ -333,7 +357,8 @@ export const hydrateLibraryFromCache = (): boolean => {
             duration: track.duration,
             filePath,
             fileName: track.fileName ?? fileNameFromPath(filePath),
-            thumbnail: track.thumbnail,
+            thumbnailKey: track.thumbnailKey,
+            thumbnail: buildThumbnailUri(thumbnailBaseUri, track.thumbnailKey) ?? track.thumbnail,
         };
     });
 

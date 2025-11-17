@@ -10,6 +10,7 @@ export interface PersistedLibraryTrack {
     album?: string;
     duration: string;
     thumbnail?: string;
+    thumbnailKey?: string;
 }
 
 export interface LibrarySnapshot {
@@ -53,6 +54,7 @@ type LegacyLibraryTrack = {
     filePath?: string;
     fileName?: string;
     thumbnail?: string;
+    thumbnailKey?: string;
 };
 
 type LegacyLibrarySnapshot = Partial<LibrarySnapshot> & {
@@ -76,6 +78,17 @@ const normalizeRootPath = (path: string): string => {
 const fileNameFromPath = (path: string): string => {
     const lastSlash = path.lastIndexOf("/");
     return lastSlash === -1 ? path : path.slice(lastSlash + 1);
+};
+
+const deriveThumbnailKey = (thumbnail: unknown): string | undefined => {
+    if (typeof thumbnail !== "string" || thumbnail.length === 0) {
+        return undefined;
+    }
+
+    const lastSlash = thumbnail.lastIndexOf("/");
+    const fileName = lastSlash === -1 ? thumbnail : thumbnail.slice(lastSlash + 1);
+    const [baseName] = fileName.split(".");
+    return baseName && baseName.length > 0 ? baseName : undefined;
 };
 
 const deriveRelativePath = (
@@ -121,6 +134,15 @@ const sanitizeTrack = (
     const fileName =
         typeof track.fileName === "string" && track.fileName.length > 0 ? track.fileName : fileNameFromPath(relativePath);
 
+    const thumbnailKey =
+        typeof track.thumbnailKey === "string" && track.thumbnailKey.length > 0
+            ? track.thumbnailKey
+            : deriveThumbnailKey(track.thumbnail);
+    const thumbnail =
+        thumbnailKey === undefined && typeof track.thumbnail === "string" && track.thumbnail.length > 0
+            ? track.thumbnail
+            : undefined;
+
     return {
         rootIndex: rootIndex >= 0 ? rootIndex : 0,
         relativePath,
@@ -129,7 +151,8 @@ const sanitizeTrack = (
         artist: typeof track.artist === "string" && track.artist.length > 0 ? track.artist : "Unknown Artist",
         album: typeof track.album === "string" && track.album.length > 0 ? track.album : undefined,
         duration: typeof track.duration === "string" && track.duration.length > 0 ? track.duration : "0:00",
-        thumbnail: typeof track.thumbnail === "string" && track.thumbnail.length > 0 ? track.thumbnail : undefined,
+        thumbnail,
+        thumbnailKey,
     };
 };
 
