@@ -43,25 +43,13 @@ const libraryCache$ = createJSONManager<LibrarySnapshot>({
 
 deleteCacheFiles("data", ["libraryCache.json"]);
 
-type LegacyLibraryTrack = {
-    rootIndex?: number;
-    relativePath?: string;
-    id?: string;
-    title?: string;
-    artist?: string;
-    album?: string;
-    duration?: string;
-    filePath?: string;
-    fileName?: string;
-    thumbnail?: string;
-    thumbnailKey?: string;
-};
+type RawLibraryTrack = Partial<PersistedLibraryTrack>;
 
-type LegacyLibrarySnapshot = Partial<LibrarySnapshot> & {
+type RawLibrarySnapshot = Partial<LibrarySnapshot> & {
     artists?: unknown;
     albums?: unknown;
     playlists?: unknown;
-    tracks?: LegacyLibraryTrack[] | PersistedLibraryTrack[];
+    tracks?: RawLibraryTrack[] | PersistedLibraryTrack[];
     roots?: unknown;
 };
 
@@ -91,43 +79,19 @@ const deriveThumbnailKey = (thumbnail: unknown): string | undefined => {
     return baseName && baseName.length > 0 ? baseName : undefined;
 };
 
-const deriveRelativePath = (
-    track: LegacyLibraryTrack | PersistedLibraryTrack,
+const sanitizeTrack = (
+    track: RawLibraryTrack | PersistedLibraryTrack,
     roots: string[],
-): { rootIndex: number; relativePath: string } => {
-    const preferredRootIndex =
+): PersistedLibraryTrack | null => {
+    const rootIndex =
         typeof track.rootIndex === "number" && track.rootIndex >= 0 && track.rootIndex < roots.length
             ? track.rootIndex
             : 0;
 
-    if (typeof (track as PersistedLibraryTrack).relativePath === "string") {
-        return { rootIndex: preferredRootIndex, relativePath: (track as PersistedLibraryTrack).relativePath };
-    }
+    const relativePath =
+        typeof track.relativePath === "string" && track.relativePath.length > 0 ? track.relativePath : "";
 
-    const filePath = typeof track.filePath === "string" && track.filePath ? track.filePath : "";
-
-    if (!filePath) {
-        return { rootIndex: preferredRootIndex, relativePath: "" };
-    }
-
-    for (let i = 0; i < roots.length; i++) {
-        const root = roots[i];
-        if (root && filePath.startsWith(root)) {
-            const relative = filePath.slice(root.length).replace(/^\/+/, "");
-            return { rootIndex: i, relativePath: relative.length > 0 ? relative : fileNameFromPath(filePath) };
-        }
-    }
-
-    return { rootIndex: preferredRootIndex, relativePath: filePath };
-};
-
-const sanitizeTrack = (
-    track: LegacyLibraryTrack | PersistedLibraryTrack,
-    roots: string[],
-): PersistedLibraryTrack | null => {
-    const { rootIndex, relativePath } = deriveRelativePath(track, roots);
-
-    if (!relativePath) {
+    if (relativePath.length === 0) {
         return null;
     }
 
@@ -156,7 +120,7 @@ const sanitizeTrack = (
     };
 };
 
-const sanitizeSnapshot = (input: LegacyLibrarySnapshot): LibrarySnapshot => {
+const sanitizeSnapshot = (input: RawLibrarySnapshot): LibrarySnapshot => {
     const roots = Array.isArray(input.roots)
         ? input.roots
               .map((root) => (typeof root === "string" ? normalizeRootPath(root) : ""))
