@@ -1384,10 +1384,11 @@ RCT_EXPORT_METHOD(scanMediaLibrary:(NSArray<NSString *> *)paths
                     return;
                 }
 
+                NSArray<NSDictionary *> *payload = [tracks copy];
                 dispatch_async(dispatch_get_main_queue(), ^{
                     [self sendEventWithName:@"onMediaScanBatch"
                                        body:@{
-                            @"tracks": tracks,
+                            @"tracks": payload,
                             @"rootIndex": @(rootIndex),
                             @"completedRoots": @(completedRoots),
                             @"totalRoots": @(totalRoots)
@@ -1426,11 +1427,13 @@ RCT_EXPORT_METHOD(scanMediaLibrary:(NSArray<NSString *> *)paths
                         @synchronized(errors) {
                             [errors addObject:[NSString stringWithFormat:@"%@", error.localizedDescription ?: @"Unknown error"]];
                         }
+                        RCTLogWarn(@"Media scan: error enumerating %@: %@", url.path, error.localizedDescription);
                         return YES; // Continue enumeration
                     }];
 
                     if (!enumerator) {
                         [errors addObject:[NSString stringWithFormat:@"Failed to enumerate: %@", rootPath]];
+                        RCTLogWarn(@"Media scan: failed to enumerate root %@", rootPath);
                         completedRoots += 1;
                         emitProgress(rootIndex);
                         continue;
@@ -1510,6 +1513,11 @@ RCT_EXPORT_METHOD(scanMediaLibrary:(NSArray<NSString *> *)paths
             }
 
             NSDictionary *result = @{ @"totalTracks": @(totalTracks), @"totalRoots": @(totalRoots), @"errors": errors };
+            if (errors.count > 0) {
+                RCTLogWarn(@"Media scan completed with %lu errors, totalTracks=%lu", (unsigned long)errors.count, (unsigned long)totalTracks);
+            } else {
+                RCTLogInfo(@"Media scan completed, totalTracks=%lu", (unsigned long)totalTracks);
+            }
 
             dispatch_async(dispatch_get_main_queue(), ^{
                 [self sendEventWithName:@"onMediaScanComplete" body:result];

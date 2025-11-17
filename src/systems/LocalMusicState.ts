@@ -540,11 +540,9 @@ export async function createLocalTrackFromFile(filePath: string): Promise<LocalT
     }
 }
 
-type NativeScanOutcome = { tracks: LocalTrack[]; scanResult: MediaScanResult | null; seenPaths: Set<string> };
-
-async function scanLibraryNative(paths: string[], thumbnailsDirUri: string): Promise<NativeScanOutcome> {
+async function scanLibraryNative(paths: string[], thumbnailsDirUri: string): Promise<LocalTrack[]> {
     if (paths.length === 0) {
-        return { tracks: [], scanResult: null, seenPaths: new Set() };
+        return [];
     }
 
     if (typeof AudioPlayer.scanMediaLibrary !== "function") {
@@ -655,16 +653,22 @@ async function scanLibraryNative(paths: string[], thumbnailsDirUri: string): Pro
         AudioPlayer.addListener("onMediaScanComplete", handleComplete),
     ];
 
-    let scanResult: MediaScanResult | null = null;
     try {
-        scanResult = await AudioPlayer.scanMediaLibrary(normalizedRoots, thumbnailsDirUri, { batchSize: 48 });
+        const result = await AudioPlayer.scanMediaLibrary(normalizedRoots, thumbnailsDirUri, { batchSize: 48 });
         const totalRoots =
-            typeof scanResult.totalRoots === "number" && scanResult.totalRoots > 0
-                ? scanResult.totalRoots
-                : normalizedRoots.length;
+            typeof result.totalRoots === "number" && result.totalRoots > 0 ? result.totalRoots : normalizedRoots.length;
         localMusicState$.scanTotal.set(totalRoots);
         localMusicState$.scanProgress.set(totalRoots);
-        return { tracks, scanResult, seenPaths };
+        const errorCount = Array.isArray(result.errors) ? result.errors.length : 0;
+        if (errorCount > 0) {
+            console.warn("Native library scan completed with errors", {
+                errorCount,
+                totalTracks: result.totalTracks,
+                totalRoots,
+                sampleErrors: result.errors?.slice(0, 5),
+            });
+        }
+        return tracks;
     } finally {
         for (const subscription of subscriptions) {
             try {
@@ -674,27 +678,6 @@ async function scanLibraryNative(paths: string[], thumbnailsDirUri: string): Pro
             }
         }
     }
-}
-
-async function scanLibraryFallback(paths: string[], seenPaths?: Set<string>): Promise<LocalTrack[]> {
-    const tracks: LocalTrack[] = [];
-
-    for (let i = 0; i < paths.length; i++) {
-        const path = paths[i];
-
-        try {
-            const directoryTracks = await perfTime("LocalMusic.scanDirectory.total", () =>
-                scanDirectory(path, seenPaths),
-            );
-            tracks.push(...directoryTracks);
-        } catch (error) {
-            console.error(`Failed to scan ${path}:`, error);
-        }
-
-        localMusicState$.scanProgress.set(i + 1);
-    }
-
-    return tracks;
 }
 
 // Scan directory for MP3 files
@@ -812,31 +795,14 @@ export async function scanLocalMusic(): Promise<void> {
 
     try {
         let collectedTracks: LocalTrack[] = [];
-        let nativeOutcome: NativeScanOutcome | null = null;
 
         try {
-            nativeOutcome = await scanLibraryNative(paths, thumbnailsDir.uri);
-            collectedTracks = nativeOutcome.tracks;
+            collectedTracks = await scanLibraryNative(paths, thumbnailsDir.uri);
         } catch (nativeError) {
             console.warn("Native scan failed, falling back to JS pipeline:", nativeError);
             localMusicState$.scanProgress.set(0);
             localMusicState$.scanTotal.set(paths.length);
             collectedTracks = await scanLibraryFallback(paths);
-        }
-
-        const hasNativeErrors = Boolean(nativeOutcome?.scanResult?.errors?.length);
-        const nativeReportedTracks = nativeOutcome?.scanResult?.totalTracks ?? nativeOutcome?.tracks.length ?? 0;
-        const nativeCollected = nativeOutcome?.tracks.length ?? 0;
-        const nativeMissing = nativeCollected < nativeReportedTracks;
-
-        if (nativeOutcome && (hasNativeErrors || nativeMissing)) {
-            console.warn("Native scan reported missing/errored files, running JS fallback to fill gaps", {
-                hasNativeErrors,
-                nativeReportedTracks,
-                nativeCollected,
-            });
-            const fallbackTracks = await scanLibraryFallback(paths, nativeOutcome.seenPaths);
-            collectedTracks.push(...fallbackTracks);
         }
 
         const dedupedTracks = Array.from(new Map(collectedTracks.map((track) => [track.id, track])).values());

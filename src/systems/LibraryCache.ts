@@ -96,7 +96,9 @@ const sanitizeTrack = (
     }
 
     const fileName =
-        typeof track.fileName === "string" && track.fileName.length > 0 ? track.fileName : fileNameFromPath(relativePath);
+        typeof track.fileName === "string" && track.fileName.length > 0
+            ? track.fileName
+            : fileNameFromPath(relativePath);
 
     const thumbnailKey =
         typeof track.thumbnailKey === "string" && track.thumbnailKey.length > 0
