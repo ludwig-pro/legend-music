@@ -19,7 +19,7 @@ export interface LibrarySnapshot {
     roots: string[];
 }
 
-const LIBRARY_CACHE_VERSION = 5;
+const LIBRARY_CACHE_VERSION = 1;
 
 const defaultSnapshot: LibrarySnapshot = {
     version: LIBRARY_CACHE_VERSION,

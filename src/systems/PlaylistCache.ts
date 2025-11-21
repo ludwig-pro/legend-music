@@ -1,5 +1,5 @@
-import { createJSONManager } from "@/utils/JSONManager";
 import { ensureCacheDirectory, getCacheDirectory } from "@/utils/cacheDirectories";
+import { createJSONManager } from "@/utils/JSONManager";
 
 export interface PersistedQueuedTrack {
     filePath: string;
@@ -19,7 +19,7 @@ export interface PlaylistSnapshot {
     isPlaying: boolean;
 }
 
-const PLAYLIST_CACHE_VERSION = 3;
+const PLAYLIST_CACHE_VERSION = 1;
 
 const defaultSnapshot: PlaylistSnapshot = {
     version: PLAYLIST_CACHE_VERSION,
