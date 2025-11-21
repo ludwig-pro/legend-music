@@ -8,6 +8,7 @@ import { playbackInteractionState$ } from "@/systems/PlaybackInteractionState";
 import type { PersistedQueuedTrack, PlaylistSnapshot } from "@/systems/PlaylistCache";
 import { getPlaylistCacheSnapshot, persistPlaylistSnapshot } from "@/systems/PlaylistCache";
 import { type RepeatMode, settings$ } from "@/systems/Settings";
+import { getCacheDirectory } from "@/utils/cacheDirectories";
 import { clearQueueM3U, loadQueueFromM3U, saveQueueToM3U } from "@/utils/m3uManager";
 import { perfCount, perfDelta, perfLog } from "@/utils/perfLogger";
 import { runAfterInteractions } from "@/utils/runAfterInteractions";
@@ -47,6 +48,38 @@ export const queue$ = observable<PlaybackQueueState>({
     tracks: [],
 });
 
+const thumbnailsDirUri = getCacheDirectory("thumbnails").uri;
+
+const buildThumbnailUri = (key?: string): string | undefined => {
+    if (!key) {
+        return undefined;
+    }
+
+    const normalizedBase = thumbnailsDirUri.endsWith("/") ? thumbnailsDirUri.slice(0, -1) : thumbnailsDirUri;
+    return `${normalizedBase}/${key}.png`;
+};
+
+const deriveThumbnailKey = (value?: string): string | undefined => {
+    if (!value || typeof value !== "string" || value.length === 0) {
+        return undefined;
+    }
+
+    const fileName = value.split("/").pop() ?? value;
+    const [baseName] = fileName.split(".");
+    return baseName && baseName.length > 0 ? baseName : undefined;
+};
+
+const resolvePersistedThumbnail = (track: PersistedQueuedTrack): { thumbnail?: string; thumbnailKey?: string } => {
+    const persistedKey =
+        typeof track.thumbnailKey === "string" && track.thumbnailKey.length > 0 ? track.thumbnailKey : undefined;
+    const thumbnailKey = persistedKey ?? deriveThumbnailKey(track.thumbnail);
+
+    return {
+        thumbnail: track.thumbnail ?? buildThumbnailUri(thumbnailKey),
+        thumbnailKey: thumbnailKey ?? undefined,
+    };
+};
+
 let queueEntryCounter = 0;
 
 function createQueueEntryId(seed: string): string {
@@ -55,6 +88,7 @@ function createQueueEntryId(seed: string): string {
 }
 
 const createQueuedTrackFromPersisted = (track: PersistedQueuedTrack): QueuedTrack => {
+    const { thumbnail, thumbnailKey } = resolvePersistedThumbnail(track);
     const fileName = track.filePath.split("/").pop() || track.title || track.filePath;
     return {
         id: track.filePath,
@@ -64,7 +98,8 @@ const createQueuedTrackFromPersisted = (track: PersistedQueuedTrack): QueuedTrac
         duration: track.duration,
         filePath: track.filePath,
         fileName,
-        thumbnail: track.thumbnail,
+        thumbnail,
+        thumbnailKey,
         queueEntryId: createQueueEntryId(track.filePath),
     };
 };
@@ -114,6 +149,7 @@ const serializeQueuedTrack = (track: QueuedTrack): PersistedQueuedTrack => ({
     duration: track.duration,
     filePath: track.filePath,
     thumbnail: track.thumbnail,
+    thumbnailKey: track.thumbnailKey,
 });
 
 type PlaylistSnapshotPayload = Omit<PlaylistSnapshot, "version" | "updatedAt">;
@@ -336,13 +372,21 @@ async function loadTrackInternal(track: LocalTrack, autoPlay: boolean): Promise<
             return;
         }
 
+        const thumbnailKey = track.thumbnailKey;
+        const updates: Partial<QueuedTrack> = thumbnailKey ? { thumbnail, thumbnailKey } : { thumbnail };
+
         if (queueEntryId) {
-            updateQueueEntry(queueEntryId, { thumbnail });
+            updateQueueEntry(queueEntryId, updates);
         }
 
         const current = localPlayerState$.currentTrack.peek();
-        if (current && current.id === track.id && current.thumbnail !== thumbnail) {
-            localPlayerState$.currentTrack.set({ ...current, thumbnail });
+        const isCurrentTrack = current && current.id === track.id;
+        const hasNewThumbnail =
+            current &&
+            (current.thumbnail !== thumbnail || (thumbnailKey && current.thumbnailKey !== thumbnailKey));
+
+        if (isCurrentTrack && hasNewThumbnail) {
+            localPlayerState$.currentTrack.set({ ...current, ...updates });
         }
 
         if (audioPlayer) {

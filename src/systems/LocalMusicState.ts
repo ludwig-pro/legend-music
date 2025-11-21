@@ -320,8 +320,32 @@ function decodeFSComponent(name: string, context: string): string {
 }
 
 export async function ensureLocalTrackThumbnail(track: LocalTrack): Promise<string | undefined> {
-    // Thumbnails are now provided via native getMediaTags; nothing to do here.
-    return track.thumbnail;
+    if (typeof track.thumbnail === "string" && track.thumbnail.length > 0) {
+        return track.thumbnail;
+    }
+
+    const thumbnailsDir = getCacheDirectory("thumbnails");
+    ensureCacheDirectory(thumbnailsDir);
+
+    const fromKey = buildThumbnailUri(thumbnailsDir.uri, track.thumbnailKey);
+    if (fromKey) {
+        track.thumbnail = fromKey;
+        return fromKey;
+    }
+
+    try {
+        const metadata = await extractId3Metadata(track.filePath, track.fileName);
+        if (metadata.thumbnailKey && !track.thumbnailKey) {
+            track.thumbnailKey = metadata.thumbnailKey;
+        }
+        if (metadata.thumbnail) {
+            track.thumbnail = metadata.thumbnail;
+        }
+        return metadata.thumbnail;
+    } catch (error) {
+        console.warn(`ensureLocalTrackThumbnail: Failed to resolve thumbnail for ${track.fileName}:`, error);
+        return undefined;
+    }
 }
 
 // Extract metadata from ID3 tags with filename fallback

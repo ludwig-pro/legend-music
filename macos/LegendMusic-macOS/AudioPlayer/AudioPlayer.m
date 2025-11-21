@@ -60,6 +60,7 @@ static NSString *LMHashStringSHA256(NSString *input) {
 }
 
 static NSData *LMCreateThumbnail(NSData *imageData, NSUInteger maxPixelSize) {
+    // Build a square, center-cropped thumbnail to avoid stretched artwork.
     if (!imageData) {
         return nil;
     }
@@ -82,8 +83,20 @@ static NSData *LMCreateThumbnail(NSData *imageData, NSUInteger maxPixelSize) {
         return nil;
     }
 
-    NSBitmapImageRep *bitmapRep = [[NSBitmapImageRep alloc] initWithCGImage:thumbImage];
+    size_t width = CGImageGetWidth(thumbImage);
+    size_t height = CGImageGetHeight(thumbImage);
+    size_t squareSize = MIN(width, height);
+    CGRect cropRect = CGRectMake((width - squareSize) / 2.0, (height - squareSize) / 2.0, squareSize, squareSize);
+
+    CGImageRef cropped = CGImageCreateWithImageInRect(thumbImage, cropRect);
     CGImageRelease(thumbImage);
+
+    if (!cropped) {
+        return nil;
+    }
+
+    NSBitmapImageRep *bitmapRep = [[NSBitmapImageRep alloc] initWithCGImage:cropped];
+    CGImageRelease(cropped);
     if (!bitmapRep) {
         return nil;
     }
@@ -204,7 +217,7 @@ static void LMCacheArtworkThumbnail(NSData *artworkData, NSURL *fileURL, NSStrin
         return;
     }
 
-    NSData *thumbnailData = LMCreateThumbnail(artworkData, 128);
+    NSData *thumbnailData = LMCreateThumbnail(artworkData, 256);
     if (!thumbnailData) {
         return;
     }

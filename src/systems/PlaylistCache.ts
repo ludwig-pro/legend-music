@@ -1,4 +1,5 @@
 import { createJSONManager } from "@/utils/JSONManager";
+import { ensureCacheDirectory, getCacheDirectory } from "@/utils/cacheDirectories";
 
 export interface PersistedQueuedTrack {
     filePath: string;
@@ -7,6 +8,7 @@ export interface PersistedQueuedTrack {
     album?: string;
     duration: string;
     thumbnail?: string;
+    thumbnailKey?: string;
 }
 
 export interface PlaylistSnapshot {
@@ -17,7 +19,7 @@ export interface PlaylistSnapshot {
     isPlaying: boolean;
 }
 
-const PLAYLIST_CACHE_VERSION = 2;
+const PLAYLIST_CACHE_VERSION = 3;
 
 const defaultSnapshot: PlaylistSnapshot = {
     version: PLAYLIST_CACHE_VERSION,
@@ -45,11 +47,36 @@ type LegacyQueuedTrack = {
     fileName?: string;
     queueEntryId?: string;
     thumbnail?: string;
+    thumbnailKey?: string;
+    thumb?: string;
 };
 
 const getFileName = (filePath: string): string => {
     const lastSlash = filePath.lastIndexOf("/");
     return lastSlash === -1 ? filePath : filePath.slice(lastSlash + 1);
+};
+
+const thumbnailsDir = getCacheDirectory("thumbnails");
+ensureCacheDirectory(thumbnailsDir);
+const thumbnailsDirUri = thumbnailsDir.uri;
+
+const buildThumbnailUri = (key?: string): string | undefined => {
+    if (!key) {
+        return undefined;
+    }
+
+    const normalizedBase = thumbnailsDirUri.endsWith("/") ? thumbnailsDirUri.slice(0, -1) : thumbnailsDirUri;
+    return `${normalizedBase}/${key}.png`;
+};
+
+const deriveThumbnailKey = (value?: string): string | undefined => {
+    if (!value || typeof value !== "string" || value.length === 0) {
+        return undefined;
+    }
+
+    const fileName = value.split("/").pop() ?? value;
+    const [baseName] = fileName.split(".");
+    return baseName && baseName.length > 0 ? baseName : undefined;
 };
 
 const sanitizeTrack = (input: LegacyQueuedTrack | PersistedQueuedTrack): PersistedQueuedTrack | null => {
@@ -71,7 +98,24 @@ const sanitizeTrack = (input: LegacyQueuedTrack | PersistedQueuedTrack): Persist
         artist: typeof input.artist === "string" && input.artist.length > 0 ? input.artist : "Unknown Artist",
         album: typeof input.album === "string" && input.album.length > 0 ? input.album : undefined,
         duration: typeof input.duration === "string" && input.duration.length > 0 ? input.duration : "0:00",
-        thumbnail: typeof input.thumbnail === "string" && input.thumbnail.length > 0 ? input.thumbnail : undefined,
+        thumbnail:
+            typeof input.thumbnail === "string" && input.thumbnail.length > 0
+                ? input.thumbnail
+                : buildThumbnailUri(
+                      deriveThumbnailKey(
+                          typeof legacyInput.thumbnailKey === "string" && legacyInput.thumbnailKey.length > 0
+                              ? legacyInput.thumbnailKey
+                              : typeof legacyInput.thumb === "string" && legacyInput.thumb.length > 0
+                                ? legacyInput.thumb
+                                : legacyInput.thumbnail,
+                      ),
+                  ),
+        thumbnailKey:
+            typeof legacyInput.thumbnailKey === "string" && legacyInput.thumbnailKey.length > 0
+                ? legacyInput.thumbnailKey
+                : typeof legacyInput.thumb === "string" && legacyInput.thumb.length > 0
+                  ? legacyInput.thumb
+                  : deriveThumbnailKey(legacyInput.thumbnail),
     };
 };
 
