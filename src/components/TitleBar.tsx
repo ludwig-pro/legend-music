@@ -38,12 +38,7 @@ export function TitleBar() {
                     exit={{ opacity: 0 }}
                     transition={{ type: "tween", duration: 100 }}
                 >
-                    <VibrancyView
-                        blendingMode="withinWindow"
-                        state="active"
-                        material="popover"
-                        style={styles.vibrancy}
-                    />
+                    <VibrancyView blendingMode="withinWindow" state="active" material="popover" style={styles.vibrancy} />
                 </MotionView>
             </Show>
         </Pressable>

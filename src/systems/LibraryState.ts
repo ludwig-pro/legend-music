@@ -1,6 +1,6 @@
 import { observable } from "@legendapp/state";
 import type { LibrarySnapshot, PersistedLibraryTrack } from "@/systems/LibraryCache";
-import { getLibrarySnapshot, hasCachedLibraryData, persistLibrarySnapshot } from "@/systems/LibraryCache";
+import { getLibrarySnapshot, persistLibrarySnapshot } from "@/systems/LibraryCache";
 import { type LocalTrack, localMusicSettings$, localMusicState$ } from "@/systems/LocalMusicState";
 import { getCacheDirectory } from "@/utils/cacheDirectories";
 import { createJSONManager } from "@/utils/JSONManager";
@@ -31,11 +31,6 @@ export const libraryUI$ = createJSONManager({
         searchQuery: "",
         selectedCollection: "artists" as "artists" | "albums" | "playlists",
     },
-});
-
-// Non-persistent UI state
-export const libraryUIState$ = observable({
-    // Add any non-persistent state here if needed
 });
 
 // Library data derived from local music state
@@ -334,8 +329,6 @@ library$.lastScanTime.onChange(() => {
 });
 
 export let libraryHydratedFromCache = false;
-
-export const isLibraryCacheAvailable = (): boolean => hasCachedLibraryData();
 
 export const hydrateLibraryFromCache = (): boolean => {
     const snapshot = getLibrarySnapshot();

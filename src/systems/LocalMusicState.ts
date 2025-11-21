@@ -1,5 +1,4 @@
 import { observable } from "@legendapp/state";
-import * as FileSystem from "expo-file-system";
 import { Directory, File } from "expo-file-system/next";
 import AudioPlayer, {
     type MediaScanBatchEvent,
@@ -13,11 +12,11 @@ import {
     hasCachedLibraryData,
     type PersistedLibraryTrack,
 } from "@/systems/LibraryCache";
-import { clearPlaylistCache, hasCachedPlaylistData } from "@/systems/PlaylistCache";
+import { hasCachedPlaylistData } from "@/systems/PlaylistCache";
 import { stateSaved$ } from "@/systems/State";
 import { ensureCacheDirectory, getCacheDirectory } from "@/utils/cacheDirectories";
 import { createJSONManager } from "@/utils/JSONManager";
-import { perfCount, perfDelta, perfLog, perfTime } from "@/utils/perfLogger";
+import { perfCount, perfLog } from "@/utils/perfLogger";
 import { runAfterInteractions } from "@/utils/runAfterInteractions";
 import { DEFAULT_LOCAL_PLAYLIST_ID } from "./localMusicConstants";
 
@@ -91,6 +90,12 @@ let removeLibraryWatcher: (() => void) | undefined;
 let libraryWatcherTimeout: ReturnType<typeof setTimeout> | undefined;
 let hasSubscribedToLibraryPathChanges = false;
 let lastLibraryPaths: string[] = [];
+const DEBUG_LOCAL_MUSIC_LOGS = false;
+const debugLocalMusicLog = (...args: unknown[]) => {
+    if (DEBUG_LOCAL_MUSIC_LOGS) {
+        console.log(...args);
+    }
+};
 
 function clearCachedLibraryData(): void {
     clearLibraryCache();
@@ -114,7 +119,7 @@ function scheduleScanAfterFileChange(delayMs = FILE_WATCH_DEBOUNCE_MS): void {
                 return;
             }
 
-            console.log("Rescanning local music after filesystem change");
+            debugLocalMusicLog("Rescanning local music after filesystem change");
             scanLocalMusic().catch((error) => {
                 console.error("Failed to rescan local music after filesystem change:", error);
             });
@@ -168,10 +173,10 @@ async function validateLibraryPaths(paths: string[]): Promise<{ existing: string
 
     const results = await Promise.all(
         paths.map(async (path) => {
-            const target = path.startsWith("file://") ? path : `file://${path}`;
             try {
-                const info = await FileSystem.getInfoAsync(target);
-                return { path, exists: !!info.exists };
+                const directory = new Directory(path);
+                const exists = directory.exists;
+                return { path, exists };
             } catch (error) {
                 console.warn(`validateLibraryPaths: failed to inspect ${path}`, error);
                 return { path, exists: false };
@@ -237,11 +242,11 @@ function extractThumbnailKeyFromPersisted(track: PersistedLibraryTrack | undefin
         return undefined;
     }
 
-    if (typeof track.thumb === "string" && track.thumb.length > 0) {
+    if (track.thumb?.length) {
         return track.thumb;
     }
 
-    if (typeof track.thumbnail === "string" && track.thumbnail.length > 0) {
+    if (track.thumbnail?.length) {
         const fileName = track.thumbnail.split("/").pop() ?? track.thumbnail;
         const [baseName] = fileName.split(".");
         return baseName && baseName.length > 0 ? baseName : undefined;
@@ -283,7 +288,7 @@ function buildCachedTrackIndex(normalizedRoots: string[]): {
 
         const map = new Map<string, PersistedLibraryTrack>();
         for (const track of tracksForRoot) {
-            const relativePath = typeof track.rel === "string" && track.rel.length > 0 ? track.rel : "";
+            const relativePath = track.rel ?? "";
             if (!relativePath) {
                 continue;
             }
@@ -303,26 +308,33 @@ function buildCachedTrackIndex(normalizedRoots: string[]): {
     return { skipEntries, cachedTracksByRoot, cachedTrackCount };
 }
 
-function joinPath(parent: string, child: string): string {
-    const trimmedChild = child.startsWith("/") ? child.replace(/^\/+/, "") : child;
-    if (parent.endsWith("/")) {
-        return `${parent}${trimmedChild}`;
-    }
-    return `${parent}/${trimmedChild}`;
-}
-
-function decodeFSComponent(name: string, context: string): string {
-    try {
-        return decodeURIComponent(name);
-    } catch (error) {
-        console.warn(`Failed to decode filesystem component ${name} in ${context}`, error);
-        return name;
-    }
-}
-
 export async function ensureLocalTrackThumbnail(track: LocalTrack): Promise<string | undefined> {
-    // Thumbnails are now provided via native getMediaTags; nothing to do here.
-    return track.thumbnail;
+    if (track.thumbnail?.length) {
+        return track.thumbnail;
+    }
+
+    const thumbnailsDir = getCacheDirectory("thumbnails");
+    ensureCacheDirectory(thumbnailsDir);
+
+    const fromKey = buildThumbnailUri(thumbnailsDir.uri, track.thumbnailKey);
+    if (fromKey) {
+        track.thumbnail = fromKey;
+        return fromKey;
+    }
+
+    try {
+        const metadata = await extractId3Metadata(track.filePath, track.fileName);
+        if (metadata.thumbnailKey && !track.thumbnailKey) {
+            track.thumbnailKey = metadata.thumbnailKey;
+        }
+        if (metadata.thumbnail) {
+            track.thumbnail = metadata.thumbnail;
+        }
+        return metadata.thumbnail;
+    } catch (error) {
+        console.warn(`ensureLocalTrackThumbnail: Failed to resolve thumbnail for ${track.fileName}:`, error);
+        return undefined;
+    }
 }
 
 // Extract metadata from ID3 tags with filename fallback
@@ -357,61 +369,30 @@ async function extractId3Metadata(
     try {
         const nativeTags = await AudioPlayer.getMediaTags(filePath, thumbnailsDirUri);
         if (nativeTags) {
-            if (typeof nativeTags.title === "string" && nativeTags.title.trim().length > 0) {
+            if (nativeTags.title?.trim()) {
                 title = nativeTags.title;
             }
-            if (typeof nativeTags.artist === "string" && nativeTags.artist.trim().length > 0) {
+            if (nativeTags.artist?.trim()) {
                 artist = nativeTags.artist;
             }
-            if (typeof nativeTags.album === "string" && nativeTags.album.trim().length > 0) {
+            if (nativeTags.album?.trim()) {
                 album = nativeTags.album;
             }
-            if (
-                typeof nativeTags.durationSeconds === "number" &&
-                Number.isFinite(nativeTags.durationSeconds) &&
-                nativeTags.durationSeconds > 0
-            ) {
+            if (Number.isFinite(nativeTags.durationSeconds) && nativeTags.durationSeconds > 0) {
                 duration = formatDuration(nativeTags.durationSeconds);
             }
-            const nativeThumbnailKey =
-                typeof nativeTags.artworkKey === "string" && nativeTags.artworkKey.length > 0
-                    ? nativeTags.artworkKey
-                    : undefined;
+            const nativeThumbnailKey = nativeTags.artworkKey?.length ? nativeTags.artworkKey : undefined;
             if (nativeThumbnailKey) {
                 thumbnailKey = nativeThumbnailKey;
                 thumbnail = buildThumbnailUri(thumbnailsDirUri, nativeThumbnailKey) ?? thumbnail;
             }
-            if (!thumbnail && typeof nativeTags.artworkUri === "string" && nativeTags.artworkUri.length > 0) {
+            if (!thumbnail && nativeTags.artworkUri?.length) {
                 thumbnail = nativeTags.artworkUri;
             }
         }
     } catch (error) {
         console.warn(`extractId3Metadata: Failed to read native metadata for ${fileName}:`, error);
     }
-
-    // console.log("extractId3Metadata", title, artist, album, duration, thumbnail);
-
-    // if (title === undefined || artist === undefined || album === undefined) {
-    //     console.log('extractId3Metadata did not load title or artist or album')
-    // }
-
-    // try {
-    //     // First try to extract ID3 tags
-    //     const tags = await perfTime("LocalMusic.ID3.fromPath", () => ID3.fromPath(filePath));
-
-    //     if (tags) {
-    //         title = tags.title || title;
-    //         artist = tags.artist || artist;
-    //         album = tags.album || album;
-
-    //         const tagDurationSeconds = parseDurationFromTags(tags);
-    //         if (tagDurationSeconds !== null) {
-    //             duration = formatDuration(tagDurationSeconds);
-    //         }
-    //     }
-    // } catch (error) {
-    //     console.warn(`Failed to read ID3 tags from ${fileName}:`, error);
-    // }
 
     return {
         title,
@@ -507,10 +488,6 @@ async function scanLibraryNative(
         return { tracks: [], errors: [] };
     }
 
-    if (typeof AudioPlayer.scanMediaLibrary !== "function") {
-        throw new Error("Native scan is not available");
-    }
-
     const normalizedRoots = paths.map((path) => normalizeRootPath(path));
     const tracks: LocalTrack[] = [];
     const scanErrors: string[] = [];
@@ -525,7 +502,7 @@ async function scanLibraryNative(
             return;
         }
 
-        const rootIndex = typeof event.rootIndex === "number" ? event.rootIndex : -1;
+        const rootIndex = event.rootIndex ?? -1;
         const rootPath = normalizedRoots[rootIndex];
         const cachedTracks = cachedTracksByRoot.get(rootIndex);
         if (!rootPath) {
@@ -533,12 +510,7 @@ async function scanLibraryNative(
         }
 
         for (const nativeTrack of event.tracks) {
-            const relativePath =
-                typeof nativeTrack.relativePath === "string" && nativeTrack.relativePath.length > 0
-                    ? nativeTrack.relativePath
-                    : typeof nativeTrack.fileName === "string"
-                      ? nativeTrack.fileName
-                      : "";
+            const relativePath = nativeTrack.relativePath?.length ? nativeTrack.relativePath : nativeTrack.fileName ?? "";
 
             if (!relativePath) {
                 continue;
@@ -557,43 +529,21 @@ async function scanLibraryNative(
 
             const cachedTrack = cachedTracks?.get(relativePath);
 
-            const title =
-                (typeof nativeTrack.title === "string" && nativeTrack.title.trim().length > 0
-                    ? nativeTrack.title
-                    : undefined) ??
-                (cachedTrack?.title && cachedTrack.title.length > 0 ? cachedTrack.title : undefined) ??
-                fallback.title;
-            const artist =
-                (typeof nativeTrack.artist === "string" && nativeTrack.artist.trim().length > 0
-                    ? nativeTrack.artist
-                    : undefined) ??
-                (cachedTrack?.artist && cachedTrack.artist.length > 0 ? cachedTrack.artist : undefined) ??
-                fallback.artist;
-            const album =
-                (typeof nativeTrack.album === "string" && nativeTrack.album.trim().length > 0
-                    ? nativeTrack.album
-                    : undefined) ??
-                (cachedTrack?.album && cachedTrack.album.length > 0 ? cachedTrack.album : undefined) ??
-                undefined;
+            const title = nativeTrack.title?.trim() || cachedTrack?.title || fallback.title;
+            const artist = nativeTrack.artist?.trim() || cachedTrack?.artist || fallback.artist;
+            const album = nativeTrack.album?.trim() || cachedTrack?.album || undefined;
 
             const durationSeconds =
-                typeof nativeTrack.durationSeconds === "number" && Number.isFinite(nativeTrack.durationSeconds)
+                Number.isFinite(nativeTrack.durationSeconds) && nativeTrack.durationSeconds != null
                     ? nativeTrack.durationSeconds
                     : undefined;
 
             const thumbnailKey =
-                typeof nativeTrack.artworkKey === "string" && nativeTrack.artworkKey.length > 0
-                    ? nativeTrack.artworkKey
-                    : extractThumbnailKeyFromPersisted(cachedTrack);
+                nativeTrack.artworkKey?.length ? nativeTrack.artworkKey : extractThumbnailKeyFromPersisted(cachedTrack);
             const thumbnailUri =
                 buildThumbnailUri(thumbnailsDirUri, thumbnailKey) ??
-                (typeof nativeTrack.artworkUri === "string" && nativeTrack.artworkUri.length > 0
-                    ? nativeTrack.artworkUri
-                    : cachedTrack?.thumbnail);
-            const duration =
-                typeof durationSeconds === "number"
-                    ? formatDuration(durationSeconds)
-                    : (cachedTrack?.duration ?? "0:00");
+                (nativeTrack.artworkUri?.length ? nativeTrack.artworkUri : cachedTrack?.thumbnail);
+            const duration = durationSeconds != null ? formatDuration(durationSeconds) : cachedTrack?.duration ?? "0:00";
 
             tracks.push({
                 id: absolutePath,
@@ -614,24 +564,16 @@ async function scanLibraryNative(
     };
 
     const handleProgress = (event: MediaScanProgressEvent) => {
-        const totalRoots =
-            typeof event.totalRoots === "number" && event.totalRoots > 0 ? event.totalRoots : normalizedRoots.length;
-        const completedRoots = Math.min(
-            totalRoots,
-            typeof event.completedRoots === "number" ? event.completedRoots : event.rootIndex + 1,
-        );
+        const totalRoots = event.totalRoots && event.totalRoots > 0 ? event.totalRoots : normalizedRoots.length;
+        const completedRoots = Math.min(totalRoots, event.completedRoots ?? event.rootIndex + 1);
 
         localMusicState$.scanTotal.set(totalRoots);
         localMusicState$.scanProgress.set(completedRoots);
     };
 
     const handleComplete = (event: MediaScanResult) => {
-        const totalRoots =
-            typeof event.totalRoots === "number" && event.totalRoots > 0 ? event.totalRoots : normalizedRoots.length;
-        const totalTracks =
-            typeof event.totalTracks === "number" && event.totalTracks >= 0
-                ? event.totalTracks
-                : localMusicState$.scanTrackTotal.get();
+        const totalRoots = event.totalRoots && event.totalRoots > 0 ? event.totalRoots : normalizedRoots.length;
+        const totalTracks = event.totalTracks ?? localMusicState$.scanTrackTotal.get();
         localMusicState$.scanTotal.set(totalRoots);
         localMusicState$.scanProgress.set(totalRoots);
         const finalTotal = Math.max(totalTracks ?? 0, cachedTrackCount, tracks.length);
@@ -639,9 +581,7 @@ async function scanLibraryNative(
         localMusicState$.scanTrackProgress.set(tracks.length);
 
         if (Array.isArray(event.errors) && event.errors.length > 0) {
-            scanErrors.push(
-                ...event.errors.filter((error): error is string => typeof error === "string" && error.length > 0),
-            );
+            scanErrors.push(...(event.errors as string[]));
         }
     };
 
@@ -656,12 +596,8 @@ async function scanLibraryNative(
             batchSize: 48,
             skip: skipEntries,
         });
-        const totalRoots =
-            typeof result.totalRoots === "number" && result.totalRoots > 0 ? result.totalRoots : normalizedRoots.length;
-        const totalTracks =
-            typeof result.totalTracks === "number" && result.totalTracks >= 0
-                ? result.totalTracks
-                : localMusicState$.scanTrackTotal.get();
+        const totalRoots = result.totalRoots && result.totalRoots > 0 ? result.totalRoots : normalizedRoots.length;
+        const totalTracks = result.totalTracks ?? localMusicState$.scanTrackTotal.get();
         localMusicState$.scanTotal.set(totalRoots);
         localMusicState$.scanProgress.set(totalRoots);
         localMusicState$.scanTrackTotal.set((value) =>
@@ -669,7 +605,7 @@ async function scanLibraryNative(
         );
         localMusicState$.scanTrackProgress.set(tracks.length);
         if (Array.isArray(result.errors) && result.errors.length > 0) {
-            scanErrors.push(...result.errors.filter((error): error is string => typeof error === "string"));
+            scanErrors.push(...(result.errors as string[]));
             console.warn("Native library scan completed with errors", {
                 errorCount: scanErrors.length,
                 totalTracks: result.totalTracks,
@@ -686,101 +622,6 @@ async function scanLibraryNative(
                 console.warn("Failed to remove media scan listener", error);
             }
         }
-    }
-}
-
-// Scan directory for MP3 files
-async function scanDirectory(directoryPath: string, seenPaths?: Set<string>): Promise<LocalTrack[]> {
-    const tracks: LocalTrack[] = [];
-    const visited = new Set<string>();
-    const pending: string[] = [directoryPath];
-
-    try {
-        perfLog("LocalMusic.scanDirectory.start", { directoryPath });
-        while (pending.length > 0) {
-            const currentPath = pending.pop();
-            if (!currentPath || visited.has(currentPath)) {
-                continue;
-            }
-
-            visited.add(currentPath);
-
-            const directory = new Directory(currentPath);
-
-            if (!directory.exists) {
-                console.warn(`Directory does not exist: ${currentPath}`);
-                continue;
-            }
-
-            let items: (Directory | File)[] = [];
-
-            try {
-                items = perfTime("LocalMusic.Directory.list", () => directory.list());
-            } catch (error) {
-                console.error(`Failed to list directory ${currentPath}:`, error);
-                continue;
-            }
-
-            for (const item of items) {
-                perfCount("LocalMusic.scanDirectory.item");
-
-                if (item instanceof File) {
-                    const decodedFileName = decodeFSComponent(item.name, currentPath);
-                    if (!decodedFileName.toLowerCase().endsWith(".mp3")) {
-                        continue;
-                    }
-
-                    const filePath = joinPath(currentPath, decodedFileName);
-
-                    if (seenPaths?.has(filePath)) {
-                        continue;
-                    }
-
-                    try {
-                        const id3Delta = perfDelta("LocalMusic.scanDirectory.id3Loop");
-                        perfLog("LocalMusic.scanDirectory.processFile", {
-                            filePath,
-                            id3Delta,
-                        });
-                        // Extract metadata from ID3 tags with filename fallback
-                        const metadata = await extractId3Metadata(filePath, item.name);
-
-                        const track: LocalTrack = {
-                            id: filePath,
-                            title: metadata.title,
-                            artist: metadata.artist,
-                            album: metadata.album,
-                            duration: metadata.duration || "0:00",
-                            thumbnail: metadata.thumbnail,
-                            thumbnailKey: metadata.thumbnailKey,
-                            filePath,
-                            fileName: item.name,
-                        };
-
-                        tracks.push(track);
-                        seenPaths?.add(filePath);
-                    } catch (error) {
-                        console.error(`Failed to process MP3 file ${item.name}:`, error);
-                        // Continue with other files
-                    }
-                    continue;
-                }
-
-                if (item instanceof Directory) {
-                    const decodedDirectoryName = decodeFSComponent(item.name, currentPath);
-                    const childPath = joinPath(currentPath, decodedDirectoryName);
-                    if (!visited.has(childPath)) {
-                        pending.push(childPath);
-                    }
-                }
-            }
-        }
-
-        console.log(`Found ${tracks.length} MP3 files in ${directoryPath}`);
-        return tracks;
-    } catch (error) {
-        console.error(`Error scanning directory ${directoryPath}:`, error);
-        throw error;
     }
 }
 
@@ -825,29 +666,9 @@ export async function scanLocalMusic(): Promise<void> {
         let collectedTracks: LocalTrack[] = [];
         let scanErrors: string[] = [];
 
-        try {
-            const nativeResult = await scanLibraryNative(availablePaths, thumbnailsDir.uri);
-            collectedTracks = nativeResult.tracks;
-            scanErrors = nativeResult.errors;
-        } catch (nativeError) {
-            console.warn("Native scan failed, falling back to JS pipeline:", nativeError);
-            localMusicState$.scanProgress.set(0);
-            localMusicState$.scanTotal.set(availablePaths.length);
-            localMusicState$.error.set(
-                missingPaths.length > 0
-                    ? `Skipping missing folders: ${missingPaths.join(", ")}. Native scan failed; please retry.`
-                    : "Library scan failed. Please check folder permissions and try again.",
-            );
-
-            for (const path of availablePaths) {
-                try {
-                    const tracks = await scanDirectory(path);
-                    collectedTracks.push(...tracks);
-                } catch (directoryError) {
-                    console.error(`Failed to scan directory ${path}:`, directoryError);
-                }
-            }
-        }
+        const nativeResult = await scanLibraryNative(availablePaths, thumbnailsDir.uri);
+        collectedTracks = nativeResult.tracks;
+        scanErrors = nativeResult.errors;
 
         const dedupedTracks = dedupeTracksByPath(collectedTracks);
 
@@ -870,7 +691,7 @@ export async function scanLocalMusic(): Promise<void> {
             );
         }
 
-        console.log(`Scan complete: Found ${dedupedTracks.length} total MP3 files`);
+        debugLocalMusicLog(`Scan complete: Found ${dedupedTracks.length} total MP3 files`);
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
         localMusicState$.error.set(`Scan failed: ${errorMessage}`);
@@ -882,12 +703,6 @@ export async function scanLocalMusic(): Promise<void> {
 
 export function markLibraryChangeUserInitiated(): void {
     pendingUserInitiatedLibraryChange = true;
-}
-
-export function resetLibraryCaches(): void {
-    clearCachedLibraryData();
-    clearPlaylistCache();
-    localMusicState$.error.set(null);
 }
 
 export async function loadLocalPlaylists(): Promise<void> {
@@ -947,7 +762,7 @@ export async function loadLocalPlaylists(): Promise<void> {
 export function setCurrentPlaylist(playlistId: string, playlistType: "file"): void {
     localMusicState$.isLocalFilesSelected.set(playlistId === DEFAULT_LOCAL_PLAYLIST_ID);
 
-    console.log("setCurrentPlaylist", playlistId, playlistType);
+    debugLocalMusicLog("setCurrentPlaylist", playlistId, playlistType);
 
     // Save current playlist to persistent state
     stateSaved$.assign({
@@ -957,17 +772,17 @@ export function setCurrentPlaylist(playlistId: string, playlistType: "file"): vo
 }
 
 stateSaved$.playlist.onChange(({ value }) => {
-    console.log("stateSaved$.playlist.onChange", value);
+    debugLocalMusicLog("stateSaved$.playlist.onChange", value);
 });
 stateSaved$.playlistType.onChange(({ value }) => {
-    console.log("stateSaved$.playlistType.onChange", value);
+    debugLocalMusicLog("stateSaved$.playlistType.onChange", value);
 });
 
 // Initialize and scan on app start
 export function initializeLocalMusic(): void {
     const settings = localMusicSettings$.get();
 
-    console.log("initializeLocalMusic", settings);
+    debugLocalMusicLog("initializeLocalMusic", settings);
 
     lastLibraryPaths = Array.isArray(settings.libraryPaths) ? [...settings.libraryPaths] : [];
     configureLibraryPathWatcher(lastLibraryPaths);
@@ -987,7 +802,7 @@ export function initializeLocalMusic(): void {
             configureLibraryPathWatcher(nextPaths);
 
             if (userInitiated && !localMusicState$.isScanning.get()) {
-                console.log("User initiated library change, scanning immediately");
+                debugLocalMusicLog("User initiated library change, scanning immediately");
                 scanLocalMusic().catch((error) => {
                     console.error("Failed to scan local music after user change:", error);
                 });
@@ -1005,7 +820,7 @@ export function initializeLocalMusic(): void {
         const isLocalFiles = savedPlaylistId === DEFAULT_LOCAL_PLAYLIST_ID;
         localMusicState$.isLocalFilesSelected.set(isLocalFiles);
         if (isLocalFiles) {
-            console.log("Restored default library playlist selection on startup");
+            debugLocalMusicLog("Restored default library playlist selection on startup");
         }
     }
 
@@ -1021,15 +836,15 @@ export function initializeLocalMusic(): void {
         perfLog("LocalMusic.autoScan.policy", { deferInitialScan, playlistCacheReady, libraryCacheReady });
 
         if (deferInitialScan) {
-            console.log("Deferring auto-scan of local music until idle (cache available)");
+            debugLocalMusicLog("Deferring auto-scan of local music until idle (cache available)");
             runAfterInteractions(() => {
-                console.log("Auto-scanning local music during idle...");
+                debugLocalMusicLog("Auto-scanning local music during idle...");
                 scanLocalMusic().catch((error) => {
                     console.error("Failed to auto-scan local music:", error);
                 });
             });
         } else {
-            console.log("Auto-scanning local music on startup...");
+            debugLocalMusicLog("Auto-scanning local music on startup...");
             scanLocalMusic().catch((error) => {
                 console.error("Failed to auto-scan local music:", error);
             });

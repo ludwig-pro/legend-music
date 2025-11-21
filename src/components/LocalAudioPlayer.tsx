@@ -11,6 +11,7 @@ import { type RepeatMode, settings$ } from "@/systems/Settings";
 import { clearQueueM3U, loadQueueFromM3U, saveQueueToM3U } from "@/utils/m3uManager";
 import { perfCount, perfDelta, perfLog } from "@/utils/perfLogger";
 import { runAfterInteractions } from "@/utils/runAfterInteractions";
+import { resolveThumbnailFromFields } from "@/utils/thumbnails";
 
 export interface LocalPlayerState {
     isPlaying: boolean;
@@ -47,6 +48,7 @@ export const queue$ = observable<PlaybackQueueState>({
     tracks: [],
 });
 
+const DEBUG_AUDIO_LOGS = false;
 let queueEntryCounter = 0;
 
 function createQueueEntryId(seed: string): string {
@@ -55,6 +57,7 @@ function createQueueEntryId(seed: string): string {
 }
 
 const createQueuedTrackFromPersisted = (track: PersistedQueuedTrack): QueuedTrack => {
+    const { thumbnail, thumbnailKey } = resolveThumbnailFromFields(track);
     const fileName = track.filePath.split("/").pop() || track.title || track.filePath;
     return {
         id: track.filePath,
@@ -64,7 +67,8 @@ const createQueuedTrackFromPersisted = (track: PersistedQueuedTrack): QueuedTrac
         duration: track.duration,
         filePath: track.filePath,
         fileName,
-        thumbnail: track.thumbnail,
+        thumbnail,
+        thumbnailKey,
         queueEntryId: createQueueEntryId(track.filePath),
     };
 };
@@ -114,6 +118,7 @@ const serializeQueuedTrack = (track: QueuedTrack): PersistedQueuedTrack => ({
     duration: track.duration,
     filePath: track.filePath,
     thumbnail: track.thumbnail,
+    thumbnailKey: track.thumbnailKey,
 });
 
 type PlaylistSnapshotPayload = Omit<PlaylistSnapshot, "version" | "updatedAt">;
@@ -306,7 +311,9 @@ async function pause(): Promise<void> {
 async function loadTrackInternal(track: LocalTrack, autoPlay: boolean): Promise<void> {
     perfLog("LocalAudioControls.loadTrack", { id: track.id, filePath: track.filePath, autoPlay });
     if (__DEV__) {
-        console.log("Loading track:", track.title, "by", track.artist);
+        if (DEBUG_AUDIO_LOGS) {
+            console.log("Loading track:", track.title, "by", track.artist);
+        }
     }
 
     localPlayerState$.currentTrack.set(track);
@@ -336,13 +343,21 @@ async function loadTrackInternal(track: LocalTrack, autoPlay: boolean): Promise<
             return;
         }
 
+        const thumbnailKey = track.thumbnailKey;
+        const updates: Partial<QueuedTrack> = thumbnailKey ? { thumbnail, thumbnailKey } : { thumbnail };
+
         if (queueEntryId) {
-            updateQueueEntry(queueEntryId, { thumbnail });
+            updateQueueEntry(queueEntryId, updates);
         }
 
         const current = localPlayerState$.currentTrack.peek();
-        if (current && current.id === track.id && current.thumbnail !== thumbnail) {
-            localPlayerState$.currentTrack.set({ ...current, thumbnail });
+        const isCurrentTrack = current && current.id === track.id;
+        const hasNewThumbnail =
+            current &&
+            (current.thumbnail !== thumbnail || (thumbnailKey && current.thumbnailKey !== thumbnailKey));
+
+        if (isCurrentTrack && hasNewThumbnail) {
+            localPlayerState$.currentTrack.set({ ...current, ...updates });
         }
 
         if (audioPlayer) {
@@ -643,7 +658,9 @@ async function initializeQueueFromCache(): Promise<void> {
             clearHistory();
             const queuedTracks = savedTracks.map(createQueuedTrack);
             queue$.tracks.set(queuedTracks);
-            console.log(`Restored queue with ${queuedTracks.length} tracks from cache`);
+            if (DEBUG_AUDIO_LOGS) {
+                console.log(`Restored queue with ${queuedTracks.length} tracks from cache`);
+            }
         }
     } catch (error) {
         console.error("Failed to initialize queue from cache:", error);
@@ -911,7 +928,9 @@ export function LocalAudioPlayer() {
                 const delta = perfDelta("LocalAudioPlayer.onLoadSuccess");
                 perfLog("LocalAudioPlayer.onLoadSuccess", { delta, data });
                 if (__DEV__) {
-                    console.log("Audio loaded successfully:", data);
+                    if (DEBUG_AUDIO_LOGS) {
+                        console.log("Audio loaded successfully:", data);
+                    }
                 }
                 localPlayerState$.duration.set(data.duration);
                 localPlayerState$.isLoading.set(false);
@@ -934,7 +953,9 @@ export function LocalAudioPlayer() {
                 const delta = perfDelta("LocalAudioPlayer.onPlaybackStateChanged");
                 perfLog("LocalAudioPlayer.onPlaybackStateChanged", { delta, data });
                 if (__DEV__) {
-                    console.log("Playback state changed:", data.isPlaying);
+                    if (DEBUG_AUDIO_LOGS) {
+                        console.log("Playback state changed:", data.isPlaying);
+                    }
                 }
                 localPlayerState$.isPlaying.set(data.isPlaying);
             }),
@@ -956,7 +977,9 @@ export function LocalAudioPlayer() {
                 const delta = perfDelta("LocalAudioPlayer.onCompletion");
                 perfLog("LocalAudioPlayer.onCompletion", { delta });
                 if (__DEV__) {
-                    console.log("Track completed, playing next if available");
+                    if (DEBUG_AUDIO_LOGS) {
+                        console.log("Track completed, playing next if available");
+                    }
                 }
                 localPlayerState$.isPlaying.set(false);
                 localAudioControls.playNext();

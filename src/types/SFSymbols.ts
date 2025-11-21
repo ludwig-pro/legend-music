@@ -231,11 +231,6 @@ export type BaseSFSymbol =
     | "exclamationmark";
 
 /**
- * Adds common variations to base SF Symbol names
- */
-export type SFSymbolWithFill = BaseSFSymbol | `${BaseSFSymbol}.fill`;
-
-/**
  * Add more variations as needed
  */
 export type SFSymbolWithVariations =

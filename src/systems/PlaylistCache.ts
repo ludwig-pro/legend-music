@@ -1,5 +1,5 @@
-import { deleteCacheFiles } from "@/utils/cacheDirectories";
 import { createJSONManager } from "@/utils/JSONManager";
+import { deriveThumbnailKey, resolveThumbnailFromFields } from "@/utils/thumbnails";
 
 export interface PersistedQueuedTrack {
     filePath: string;
@@ -8,6 +8,7 @@ export interface PersistedQueuedTrack {
     album?: string;
     duration: string;
     thumbnail?: string;
+    thumbnailKey?: string;
 }
 
 export interface PlaylistSnapshot {
@@ -18,7 +19,7 @@ export interface PlaylistSnapshot {
     isPlaying: boolean;
 }
 
-const PLAYLIST_CACHE_VERSION = 2;
+const PLAYLIST_CACHE_VERSION = 1;
 
 const defaultSnapshot: PlaylistSnapshot = {
     version: PLAYLIST_CACHE_VERSION,
@@ -31,12 +32,10 @@ const defaultSnapshot: PlaylistSnapshot = {
 const playlistCache$ = createJSONManager<PlaylistSnapshot>({
     filename: "playlistCache",
     initialValue: defaultSnapshot,
-    format: "msgpack",
+    format: "json",
     saveTimeout: 0,
     preload: false,
 });
-
-deleteCacheFiles("data", ["playlistCache.json"]);
 
 type LegacyQueuedTrack = {
     id?: string;
@@ -48,6 +47,8 @@ type LegacyQueuedTrack = {
     fileName?: string;
     queueEntryId?: string;
     thumbnail?: string;
+    thumbnailKey?: string;
+    thumb?: string;
 };
 
 const getFileName = (filePath: string): string => {
@@ -68,13 +69,26 @@ const sanitizeTrack = (input: LegacyQueuedTrack | PersistedQueuedTrack): Persist
         return null;
     }
 
+    const legacyThumbnailKey =
+        typeof legacyInput.thumbnailKey === "string" && legacyInput.thumbnailKey.length > 0
+            ? legacyInput.thumbnailKey
+            : typeof legacyInput.thumb === "string" && legacyInput.thumb.length > 0
+              ? legacyInput.thumb
+              : deriveThumbnailKey(legacyInput.thumbnail);
+
+    const thumbnailFields = resolveThumbnailFromFields({
+        thumbnail: typeof input.thumbnail === "string" && input.thumbnail.length > 0 ? input.thumbnail : undefined,
+        thumbnailKey: legacyThumbnailKey,
+    });
+
     return {
         filePath,
         title: typeof input.title === "string" && input.title.length > 0 ? input.title : getFileName(filePath),
         artist: typeof input.artist === "string" && input.artist.length > 0 ? input.artist : "Unknown Artist",
         album: typeof input.album === "string" && input.album.length > 0 ? input.album : undefined,
         duration: typeof input.duration === "string" && input.duration.length > 0 ? input.duration : "0:00",
-        thumbnail: typeof input.thumbnail === "string" && input.thumbnail.length > 0 ? input.thumbnail : undefined,
+        thumbnail: thumbnailFields.thumbnail,
+        thumbnailKey: thumbnailFields.thumbnailKey,
     };
 };
 

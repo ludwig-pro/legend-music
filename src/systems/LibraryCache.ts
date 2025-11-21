@@ -1,4 +1,3 @@
-import { deleteCacheFiles } from "@/utils/cacheDirectories";
 import { createJSONManager } from "@/utils/JSONManager";
 
 export interface PersistedLibraryTrack {
@@ -20,7 +19,7 @@ export interface LibrarySnapshot {
     roots: string[];
 }
 
-const LIBRARY_CACHE_VERSION = 5;
+const LIBRARY_CACHE_VERSION = 1;
 
 const defaultSnapshot: LibrarySnapshot = {
     version: LIBRARY_CACHE_VERSION,
@@ -33,12 +32,10 @@ const defaultSnapshot: LibrarySnapshot = {
 const libraryCache$ = createJSONManager<LibrarySnapshot>({
     filename: "libraryCache",
     initialValue: defaultSnapshot,
-    format: "msgpack",
+    format: "json",
     saveTimeout: 0,
     preload: false,
 });
-
-deleteCacheFiles("data", ["libraryCache.json"]);
 
 type RawLibraryTrack = Partial<PersistedLibraryTrack>;
 

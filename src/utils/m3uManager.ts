@@ -4,6 +4,7 @@ import { getCacheDirectory } from "@/utils/cacheDirectories";
 import { formatSecondsToMmSs, type M3UTrack, parseDurationToSeconds, parseM3U, writeM3U } from "@/utils/m3u";
 
 const QUEUE_FILE_PATH = "queue.m3u";
+const DEBUG_QUEUE_LOGS = false;
 
 /**
  * Converts LocalTrack to M3UTrack
@@ -54,7 +55,9 @@ export async function saveQueueToM3U(tracks: LocalTrack[]): Promise<void> {
 
         const file = new File(directory, QUEUE_FILE_PATH);
         file.write(m3uContent);
-        console.log(`Saved queue with ${tracks.length} tracks to ${QUEUE_FILE_PATH}`);
+        if (DEBUG_QUEUE_LOGS) {
+            console.log(`Saved queue with ${tracks.length} tracks to ${QUEUE_FILE_PATH}`);
+        }
     } catch (error) {
         console.error("Failed to save queue to M3U:", error);
     }
@@ -69,7 +72,9 @@ export async function loadQueueFromM3U(): Promise<LocalTrack[]> {
         const file = new File(directory, QUEUE_FILE_PATH);
 
         if (!file.exists) {
-            console.log("No queue.m3u file found, starting with empty queue");
+            if (DEBUG_QUEUE_LOGS) {
+                console.log("No queue.m3u file found, starting with empty queue");
+            }
             return [];
         }
 
@@ -77,7 +82,9 @@ export async function loadQueueFromM3U(): Promise<LocalTrack[]> {
         const playlist = parseM3U(content);
         const tracks = playlist.songs.map(m3uTrackToLocalTrack);
 
-        console.log(`Loaded queue with ${tracks.length} tracks from ${QUEUE_FILE_PATH}`);
+        if (DEBUG_QUEUE_LOGS) {
+            console.log(`Loaded queue with ${tracks.length} tracks from ${QUEUE_FILE_PATH}`);
+        }
         return tracks;
     } catch (error) {
         console.error("Failed to load queue from M3U:", error);
@@ -94,7 +101,9 @@ export async function clearQueueM3U(): Promise<void> {
         const file = new File(directory, QUEUE_FILE_PATH);
         if (file.exists) {
             file.delete();
-            console.log("Cleared queue.m3u file");
+            if (DEBUG_QUEUE_LOGS) {
+                console.log("Cleared queue.m3u file");
+            }
         }
     } catch (error) {
         console.error("Failed to clear queue M3U:", error);
