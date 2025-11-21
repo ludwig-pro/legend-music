@@ -54,6 +54,7 @@ const MODIFIERS = [
     KeyCodes.MODIFIER_OPTION,
     KeyCodes.MODIFIER_CONTROL,
 ] as const;
+const DEBUG_HOTKEY_LOGS = false;
 
 // Handle events to set current key states
 const onKeyDown = (e: KeyboardEvent) => {
@@ -61,7 +62,9 @@ const onKeyDown = (e: KeyboardEvent) => {
     perfLog("Keyboard.onKeyDown", e);
     const { keyCode, modifiers } = e;
 
-    console.log("onKeyDown", keyCode, modifiers);
+    if (DEBUG_HOTKEY_LOGS) {
+        console.log("onKeyDown", keyCode, modifiers);
+    }
 
     batch(() => {
         // Add the pressed key
@@ -167,7 +170,9 @@ export function onHotkeys(hotkeyCallbacks: HotkeyCallbacks, options: HotkeyScope
                 console.warn(`No hotkey configuration found for ${name}`);
                 continue;
             }
-            console.log("onHotkeys", name, configuredKey);
+            if (DEBUG_HOTKEY_LOGS) {
+                console.log("onHotkeys", name, configuredKey);
+            }
 
             const keys =
                 typeof configuredKey === "number" ? [configuredKey.toString()] : configuredKey.toLowerCase().split("+");
@@ -209,7 +214,9 @@ export function onHotkeys(hotkeyCallbacks: HotkeyCallbacks, options: HotkeyScope
         for (const [keys, callback] of hotkeyMap) {
             // If every key in the hotkey is pressed, call the callback
             const allKeysPressed = keys.every((key) => keysPressed$[key].get());
-            console.log("checkHotkeys", keys, allKeysPressed);
+            if (DEBUG_HOTKEY_LOGS) {
+                console.log("checkHotkeys", keys, allKeysPressed);
+            }
             if (allKeysPressed) {
                 callback();
             }

@@ -8,10 +8,10 @@ import { playbackInteractionState$ } from "@/systems/PlaybackInteractionState";
 import type { PersistedQueuedTrack, PlaylistSnapshot } from "@/systems/PlaylistCache";
 import { getPlaylistCacheSnapshot, persistPlaylistSnapshot } from "@/systems/PlaylistCache";
 import { type RepeatMode, settings$ } from "@/systems/Settings";
-import { getCacheDirectory } from "@/utils/cacheDirectories";
 import { clearQueueM3U, loadQueueFromM3U, saveQueueToM3U } from "@/utils/m3uManager";
 import { perfCount, perfDelta, perfLog } from "@/utils/perfLogger";
 import { runAfterInteractions } from "@/utils/runAfterInteractions";
+import { resolveThumbnailFromFields } from "@/utils/thumbnails";
 
 export interface LocalPlayerState {
     isPlaying: boolean;
@@ -48,38 +48,7 @@ export const queue$ = observable<PlaybackQueueState>({
     tracks: [],
 });
 
-const thumbnailsDirUri = getCacheDirectory("thumbnails").uri;
-
-const buildThumbnailUri = (key?: string): string | undefined => {
-    if (!key) {
-        return undefined;
-    }
-
-    const normalizedBase = thumbnailsDirUri.endsWith("/") ? thumbnailsDirUri.slice(0, -1) : thumbnailsDirUri;
-    return `${normalizedBase}/${key}.png`;
-};
-
-const deriveThumbnailKey = (value?: string): string | undefined => {
-    if (!value || typeof value !== "string" || value.length === 0) {
-        return undefined;
-    }
-
-    const fileName = value.split("/").pop() ?? value;
-    const [baseName] = fileName.split(".");
-    return baseName && baseName.length > 0 ? baseName : undefined;
-};
-
-const resolvePersistedThumbnail = (track: PersistedQueuedTrack): { thumbnail?: string; thumbnailKey?: string } => {
-    const persistedKey =
-        typeof track.thumbnailKey === "string" && track.thumbnailKey.length > 0 ? track.thumbnailKey : undefined;
-    const thumbnailKey = persistedKey ?? deriveThumbnailKey(track.thumbnail);
-
-    return {
-        thumbnail: track.thumbnail ?? buildThumbnailUri(thumbnailKey),
-        thumbnailKey: thumbnailKey ?? undefined,
-    };
-};
-
+const DEBUG_AUDIO_LOGS = false;
 let queueEntryCounter = 0;
 
 function createQueueEntryId(seed: string): string {
@@ -88,7 +57,7 @@ function createQueueEntryId(seed: string): string {
 }
 
 const createQueuedTrackFromPersisted = (track: PersistedQueuedTrack): QueuedTrack => {
-    const { thumbnail, thumbnailKey } = resolvePersistedThumbnail(track);
+    const { thumbnail, thumbnailKey } = resolveThumbnailFromFields(track);
     const fileName = track.filePath.split("/").pop() || track.title || track.filePath;
     return {
         id: track.filePath,
@@ -342,7 +311,9 @@ async function pause(): Promise<void> {
 async function loadTrackInternal(track: LocalTrack, autoPlay: boolean): Promise<void> {
     perfLog("LocalAudioControls.loadTrack", { id: track.id, filePath: track.filePath, autoPlay });
     if (__DEV__) {
-        console.log("Loading track:", track.title, "by", track.artist);
+        if (DEBUG_AUDIO_LOGS) {
+            console.log("Loading track:", track.title, "by", track.artist);
+        }
     }
 
     localPlayerState$.currentTrack.set(track);
@@ -687,7 +658,9 @@ async function initializeQueueFromCache(): Promise<void> {
             clearHistory();
             const queuedTracks = savedTracks.map(createQueuedTrack);
             queue$.tracks.set(queuedTracks);
-            console.log(`Restored queue with ${queuedTracks.length} tracks from cache`);
+            if (DEBUG_AUDIO_LOGS) {
+                console.log(`Restored queue with ${queuedTracks.length} tracks from cache`);
+            }
         }
     } catch (error) {
         console.error("Failed to initialize queue from cache:", error);
@@ -955,7 +928,9 @@ export function LocalAudioPlayer() {
                 const delta = perfDelta("LocalAudioPlayer.onLoadSuccess");
                 perfLog("LocalAudioPlayer.onLoadSuccess", { delta, data });
                 if (__DEV__) {
-                    console.log("Audio loaded successfully:", data);
+                    if (DEBUG_AUDIO_LOGS) {
+                        console.log("Audio loaded successfully:", data);
+                    }
                 }
                 localPlayerState$.duration.set(data.duration);
                 localPlayerState$.isLoading.set(false);
@@ -978,7 +953,9 @@ export function LocalAudioPlayer() {
                 const delta = perfDelta("LocalAudioPlayer.onPlaybackStateChanged");
                 perfLog("LocalAudioPlayer.onPlaybackStateChanged", { delta, data });
                 if (__DEV__) {
-                    console.log("Playback state changed:", data.isPlaying);
+                    if (DEBUG_AUDIO_LOGS) {
+                        console.log("Playback state changed:", data.isPlaying);
+                    }
                 }
                 localPlayerState$.isPlaying.set(data.isPlaying);
             }),
@@ -1000,7 +977,9 @@ export function LocalAudioPlayer() {
                 const delta = perfDelta("LocalAudioPlayer.onCompletion");
                 perfLog("LocalAudioPlayer.onCompletion", { delta });
                 if (__DEV__) {
-                    console.log("Track completed, playing next if available");
+                    if (DEBUG_AUDIO_LOGS) {
+                        console.log("Track completed, playing next if available");
+                    }
                 }
                 localPlayerState$.isPlaying.set(false);
                 localAudioControls.playNext();

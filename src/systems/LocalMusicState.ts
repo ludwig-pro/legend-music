@@ -12,7 +12,7 @@ import {
     hasCachedLibraryData,
     type PersistedLibraryTrack,
 } from "@/systems/LibraryCache";
-import { clearPlaylistCache, hasCachedPlaylistData } from "@/systems/PlaylistCache";
+import { hasCachedPlaylistData } from "@/systems/PlaylistCache";
 import { stateSaved$ } from "@/systems/State";
 import { ensureCacheDirectory, getCacheDirectory } from "@/utils/cacheDirectories";
 import { createJSONManager } from "@/utils/JSONManager";
@@ -90,6 +90,12 @@ let removeLibraryWatcher: (() => void) | undefined;
 let libraryWatcherTimeout: ReturnType<typeof setTimeout> | undefined;
 let hasSubscribedToLibraryPathChanges = false;
 let lastLibraryPaths: string[] = [];
+const DEBUG_LOCAL_MUSIC_LOGS = false;
+const debugLocalMusicLog = (...args: unknown[]) => {
+    if (DEBUG_LOCAL_MUSIC_LOGS) {
+        console.log(...args);
+    }
+};
 
 function clearCachedLibraryData(): void {
     clearLibraryCache();
@@ -113,7 +119,7 @@ function scheduleScanAfterFileChange(delayMs = FILE_WATCH_DEBOUNCE_MS): void {
                 return;
             }
 
-            console.log("Rescanning local music after filesystem change");
+            debugLocalMusicLog("Rescanning local music after filesystem change");
             scanLocalMusic().catch((error) => {
                 console.error("Failed to rescan local music after filesystem change:", error);
             });
@@ -685,7 +691,7 @@ export async function scanLocalMusic(): Promise<void> {
             );
         }
 
-        console.log(`Scan complete: Found ${dedupedTracks.length} total MP3 files`);
+        debugLocalMusicLog(`Scan complete: Found ${dedupedTracks.length} total MP3 files`);
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
         localMusicState$.error.set(`Scan failed: ${errorMessage}`);
@@ -697,12 +703,6 @@ export async function scanLocalMusic(): Promise<void> {
 
 export function markLibraryChangeUserInitiated(): void {
     pendingUserInitiatedLibraryChange = true;
-}
-
-export function resetLibraryCaches(): void {
-    clearCachedLibraryData();
-    clearPlaylistCache();
-    localMusicState$.error.set(null);
 }
 
 export async function loadLocalPlaylists(): Promise<void> {
@@ -762,7 +762,7 @@ export async function loadLocalPlaylists(): Promise<void> {
 export function setCurrentPlaylist(playlistId: string, playlistType: "file"): void {
     localMusicState$.isLocalFilesSelected.set(playlistId === DEFAULT_LOCAL_PLAYLIST_ID);
 
-    console.log("setCurrentPlaylist", playlistId, playlistType);
+    debugLocalMusicLog("setCurrentPlaylist", playlistId, playlistType);
 
     // Save current playlist to persistent state
     stateSaved$.assign({
@@ -772,17 +772,17 @@ export function setCurrentPlaylist(playlistId: string, playlistType: "file"): vo
 }
 
 stateSaved$.playlist.onChange(({ value }) => {
-    console.log("stateSaved$.playlist.onChange", value);
+    debugLocalMusicLog("stateSaved$.playlist.onChange", value);
 });
 stateSaved$.playlistType.onChange(({ value }) => {
-    console.log("stateSaved$.playlistType.onChange", value);
+    debugLocalMusicLog("stateSaved$.playlistType.onChange", value);
 });
 
 // Initialize and scan on app start
 export function initializeLocalMusic(): void {
     const settings = localMusicSettings$.get();
 
-    console.log("initializeLocalMusic", settings);
+    debugLocalMusicLog("initializeLocalMusic", settings);
 
     lastLibraryPaths = Array.isArray(settings.libraryPaths) ? [...settings.libraryPaths] : [];
     configureLibraryPathWatcher(lastLibraryPaths);
@@ -802,7 +802,7 @@ export function initializeLocalMusic(): void {
             configureLibraryPathWatcher(nextPaths);
 
             if (userInitiated && !localMusicState$.isScanning.get()) {
-                console.log("User initiated library change, scanning immediately");
+                debugLocalMusicLog("User initiated library change, scanning immediately");
                 scanLocalMusic().catch((error) => {
                     console.error("Failed to scan local music after user change:", error);
                 });
@@ -820,7 +820,7 @@ export function initializeLocalMusic(): void {
         const isLocalFiles = savedPlaylistId === DEFAULT_LOCAL_PLAYLIST_ID;
         localMusicState$.isLocalFilesSelected.set(isLocalFiles);
         if (isLocalFiles) {
-            console.log("Restored default library playlist selection on startup");
+            debugLocalMusicLog("Restored default library playlist selection on startup");
         }
     }
 
@@ -836,15 +836,15 @@ export function initializeLocalMusic(): void {
         perfLog("LocalMusic.autoScan.policy", { deferInitialScan, playlistCacheReady, libraryCacheReady });
 
         if (deferInitialScan) {
-            console.log("Deferring auto-scan of local music until idle (cache available)");
+            debugLocalMusicLog("Deferring auto-scan of local music until idle (cache available)");
             runAfterInteractions(() => {
-                console.log("Auto-scanning local music during idle...");
+                debugLocalMusicLog("Auto-scanning local music during idle...");
                 scanLocalMusic().catch((error) => {
                     console.error("Failed to auto-scan local music:", error);
                 });
             });
         } else {
-            console.log("Auto-scanning local music on startup...");
+            debugLocalMusicLog("Auto-scanning local music on startup...");
             scanLocalMusic().catch((error) => {
                 console.error("Failed to auto-scan local music:", error);
             });

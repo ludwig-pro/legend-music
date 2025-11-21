@@ -55,6 +55,12 @@ type LegendListHandle = ElementRef<typeof LegendList> & {
     scrollIndexIntoView?: (params: { index: number; animated?: boolean }) => void;
     scrollToIndex?: (params: { index: number; animated?: boolean }) => void;
 };
+const DEBUG_PLAYLIST_LOGS = false;
+const debugPlaylistLog = (...args: unknown[]) => {
+    if (DEBUG_PLAYLIST_LOGS) {
+        console.log(...args);
+    }
+};
 
 export function Playlist() {
     perfCount("Playlist.render");
@@ -607,7 +613,7 @@ export function Playlist() {
             perfLog("Playlist.handleFileDrop", { fileCount: files.length });
 
             if (files.length === 0) {
-                console.log("No files to add to queue");
+                debugPlaylistLog("No files to add to queue");
                 return;
             }
 
@@ -657,7 +663,7 @@ export function Playlist() {
                     });
                 }
 
-                console.log(`Added ${tracksToAdd.length} files to queue`);
+                debugPlaylistLog(`Added ${tracksToAdd.length} files to queue`);
             } catch (error) {
                 console.error("Error adding dropped files to queue:", error);
                 showDropFeedback({

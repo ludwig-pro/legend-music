@@ -180,24 +180,6 @@ function extractTitleFromPath(filePath: string): string {
     }
 }
 
-/**
- * Validate M3U content format
- */
-export function isValidM3U(content: string): boolean {
-    const trimmed = content.trim();
-    if (!trimmed) return false;
-
-    // Check if it starts with M3U header or has at least one valid line
-    const lines = trimmed
-        .split("\n")
-        .map((line) => line.trim())
-        .filter((line) => line.length > 0);
-
-    // Must have at least one non-comment line (file path)
-    const hasFilePath = lines.some((line) => !line.startsWith("#"));
-
-    return hasFilePath;
-}
 
 /**
  * Parse duration from "MM:SS" format to seconds
