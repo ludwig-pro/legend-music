@@ -31,7 +31,6 @@ export interface LocalTrack {
     fileName: string;
     thumbnail?: string;
     thumbnailKey?: string;
-    thumbnailVersion?: number;
 }
 
 export interface LocalPlaylist {
@@ -58,6 +57,7 @@ export interface LocalMusicState {
     error: string | null;
     isLocalFilesSelected: boolean;
     playlists: LocalPlaylist[];
+    thumbnailVersion: number;
 }
 
 export { DEFAULT_LOCAL_PLAYLIST_ID, DEFAULT_LOCAL_PLAYLIST_NAME } from "./localMusicConstants";
@@ -83,6 +83,7 @@ export const localMusicState$ = observable<LocalMusicState>({
     error: null,
     isLocalFilesSelected: false,
     playlists: [],
+    thumbnailVersion: 0,
 });
 
 const FILE_WATCH_DEBOUNCE_MS = 2000;
@@ -96,6 +97,12 @@ const debugLocalMusicLog = (...args: unknown[]) => {
     if (DEBUG_LOCAL_MUSIC_LOGS) {
         console.log(...args);
     }
+};
+
+const bumpThumbnailVersion = (): number => {
+    const version = Date.now();
+    localMusicState$.thumbnailVersion.set(version);
+    return version;
 };
 
 function clearCachedLibraryData(): void {
@@ -345,7 +352,7 @@ export async function ensureLocalTrackThumbnail(track: LocalTrack): Promise<stri
     if (fromKey && thumbnailFileExists(fromKey)) {
         track.thumbnail = fromKey;
         if (missingLocalThumbnail) {
-            track.thumbnailVersion = Date.now();
+            bumpThumbnailVersion();
         }
         return fromKey;
     }
@@ -357,8 +364,8 @@ export async function ensureLocalTrackThumbnail(track: LocalTrack): Promise<stri
         }
         if (metadata.thumbnail) {
             track.thumbnail = metadata.thumbnail;
-            if (missingLocalThumbnail && isLocalFileUri(metadata.thumbnail)) {
-                track.thumbnailVersion = Date.now();
+            if (missingLocalThumbnail) {
+                bumpThumbnailVersion();
             }
         }
         return metadata.thumbnail;

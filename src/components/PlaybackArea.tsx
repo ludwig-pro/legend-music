@@ -19,6 +19,7 @@ import {
 } from "@/overlay/OverlayConstants";
 import { setIsScrubbing } from "@/systems/PlaybackInteractionState";
 import { type PlaybackControlId, settings$ } from "@/systems/Settings";
+import { localMusicState$ } from "@/systems/LocalMusicState";
 import { cn } from "@/utils/cn";
 import { perfCount } from "@/utils/perfLogger";
 
@@ -94,6 +95,7 @@ export function PlaybackArea({ showBorder = true, overlayMode }: PlaybackAreaPro
     const isPlaying = use$(localPlayerState$.isPlaying);
     const currentLocalTime$ = localPlayerState$.currentTime;
     const playbackControlsLayout = usePlaybackControlLayout();
+    const thumbnailVersion = use$(localMusicState$.thumbnailVersion);
     const shuffleEnabled = use$(settings$.playback.shuffle);
     const repeatMode = use$(settings$.playback.repeatMode);
     const handleSlidingStart = useCallback(() => setIsScrubbing(true), []);
@@ -277,7 +279,7 @@ export function PlaybackArea({ showBorder = true, overlayMode }: PlaybackAreaPro
                 <View className="mr-3">
                     <AlbumArt
                         uri={currentTrack?.thumbnail}
-                        reloadKey={currentTrack?.thumbnailVersion}
+                        reloadKey={thumbnailVersion}
                         size="large"
                         fallbackIcon="♪"
                     />
