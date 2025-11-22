@@ -1,7 +1,7 @@
 import { File } from "expo-file-system/next";
 import type { LocalTrack } from "@/systems/LocalMusicState";
 import { DEBUG_QUEUE_LOGS } from "@/systems/constants";
-import { getCacheDirectory } from "@/utils/cacheDirectories";
+import { ensureCacheDirectory, getCacheDirectory } from "@/utils/cacheDirectories";
 import { formatSecondsToMmSs, type M3UTrack, parseDurationToSeconds, parseM3U, writeM3U } from "@/utils/m3u";
 
 const QUEUE_FILE_PATH = "queue.m3u";
@@ -52,6 +52,7 @@ export async function saveQueueToM3U(tracks: LocalTrack[]): Promise<void> {
         const m3uContent = writeM3U(playlist);
 
         const directory = getCacheDirectory("data");
+        ensureCacheDirectory(directory);
 
         const file = new File(directory, QUEUE_FILE_PATH);
         file.write(m3uContent);
@@ -69,6 +70,7 @@ export async function saveQueueToM3U(tracks: LocalTrack[]): Promise<void> {
 export async function loadQueueFromM3U(): Promise<LocalTrack[]> {
     try {
         const directory = getCacheDirectory("data");
+        ensureCacheDirectory(directory);
         const file = new File(directory, QUEUE_FILE_PATH);
 
         if (!file.exists) {
@@ -98,6 +100,7 @@ export async function loadQueueFromM3U(): Promise<LocalTrack[]> {
 export async function clearQueueM3U(): Promise<void> {
     try {
         const directory = getCacheDirectory("data");
+        ensureCacheDirectory(directory);
         const file = new File(directory, QUEUE_FILE_PATH);
         if (file.exists) {
             file.delete();
