@@ -997,6 +997,7 @@ interface PlaylistDropZoneProps {
 
 function PlaylistDropZone({ position, allowDrop, onDrop }: PlaylistDropZoneProps) {
     const dropId = `playlist-drop-${position}`;
+    const isFirstZone = position === 0;
 
     return (
         <DroppableZone
@@ -1007,7 +1008,7 @@ function PlaylistDropZone({ position, allowDrop, onDrop }: PlaylistDropZoneProps
             {(isActive) => (
                 <View
                     pointerEvents="none"
-                    className={"h-[3px] -mt-[3px] rounded-full bg-blue-500"}
+                    className={cn("h-[3px] rounded-full bg-blue-500", isFirstZone ? "-mb-[3px]" : "-mt-[3px]")}
                     style={{ opacity: isActive ? 1 : 0 }}
                 />
             )}
