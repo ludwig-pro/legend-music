@@ -46,6 +46,7 @@ export interface AppSettings {
     general: {
         playlistStyle: PlaylistStyle;
         showHints: boolean;
+        showTitleBarOnHover: boolean;
     };
     registration: {
         isRegistered: boolean;
@@ -71,6 +72,7 @@ export const settings$ = createJSONManager<AppSettings>({
         general: {
             playlistStyle: "compact",
             showHints: true,
+            showTitleBarOnHover: true,
         },
         // Registration settings
         registration: {

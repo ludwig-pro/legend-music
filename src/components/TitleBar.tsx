@@ -1,10 +1,12 @@
 import { VibrancyView } from "@fluentui-react-native/vibrancy-view";
 import { AnimatePresence, Motion } from "@legendapp/motion";
 import { observe } from "@legendapp/state";
-import { Show } from "@legendapp/state/react";
+import { use$, useObserveEffect } from "@legendapp/state/react";
 import type { JSX } from "react";
-import { Pressable, StyleSheet } from "react-native";
+import { useEffect } from "react";
+import { Pressable } from "react-native";
 import WindowControls from "@/native-modules/WindowControls";
+import { settings$ } from "@/systems/Settings";
 import { state$ } from "@/systems/State";
 import { perfCount, perfLog } from "@/utils/perfLogger";
 
@@ -13,15 +15,36 @@ const MotionView = Motion.View as unknown as (props: MotionViewProps) => JSX.Ele
 
 export function TitleBar() {
     perfCount("TitleBar.render");
+    const showOnHover = use$(settings$.general.showTitleBarOnHover);
+    const isHovered = use$(state$.titleBarHovered);
+
+    useObserveEffect(() => {
+        const showOnHover = settings$.general.showTitleBarOnHover.get();
+        const isHovered = state$.titleBarHovered.get();
+        if (!showOnHover && isHovered) {
+            state$.titleBarHovered.set(false);
+        }
+    });
+
     const onHover = () => {
+        if (!settings$.general.showTitleBarOnHover.get()) {
+            return;
+        }
         perfLog("TitleBar.onHover", { hovered: true });
         state$.titleBarHovered.set(true);
     };
 
     const onHoverLeave = () => {
+        if (!settings$.general.showTitleBarOnHover.get()) {
+            return;
+        }
         perfLog("TitleBar.onHoverLeave", { hovered: false });
         state$.titleBarHovered.set(false);
     };
+
+    if (!showOnHover) {
+        return null;
+    }
 
     return (
         <Pressable
@@ -29,39 +52,46 @@ export function TitleBar() {
             onPointerMove={onHover}
             onHoverIn={onHover}
             onHoverOut={onHoverLeave}
+            mouseDownCanMoveWindow
         >
-            <Show if={state$.titleBarHovered} wrap={AnimatePresence}>
-                <MotionView
-                    className="absolute inset-0 border-b border-border-popup"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ type: "tween", duration: 100 }}
-                >
-                    <VibrancyView blendingMode="withinWindow" state="active" material="popover" style={styles.vibrancy} />
-                </MotionView>
-            </Show>
+            <AnimatePresence>
+                {isHovered ? (
+                    <MotionView
+                        className="absolute inset-0 border-b border-border-popup"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ type: "tween", duration: 100 }}
+                    >
+                        <VibrancyView
+                            blendingMode="withinWindow"
+                            state="active"
+                            material="popover"
+                            style={{ flex: 1 }}
+                        />
+                    </MotionView>
+                ) : null}
+            </AnimatePresence>
         </Pressable>
     );
 }
 
+let isVisible: boolean | undefined;
 observe(() => {
     perfCount("TitleBar.observe");
-    const hide = !state$.titleBarHovered.get();
-    perfLog("TitleBar.observe.state", { hide });
+    const showOnHover = settings$.general.showTitleBarOnHover.get();
+    const show = !showOnHover || !state$.titleBarHovered.get();
+    perfLog("TitleBar.observe.state", { hide: show, showOnHover });
 
-    setTimeout(() => {
-        if (hide) {
-            WindowControls.hideWindowControls();
-        } else {
-            WindowControls.showWindowControls();
-        }
-        perfLog("TitleBar.observe.timeout", { hide });
-    }, 100);
-});
-
-const styles = StyleSheet.create({
-    vibrancy: {
-        flex: 1,
-    },
+    if (isVisible === undefined || isVisible !== show) {
+        isVisible = show;
+        setTimeout(() => {
+            if (show) {
+                WindowControls.showWindowControls();
+            } else {
+                WindowControls.hideWindowControls();
+            }
+            perfLog("TitleBar.observe.timeout", { hide: show, showOnHover });
+        }, 100);
+    }
 });

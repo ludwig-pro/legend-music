@@ -17,9 +17,9 @@ import {
     OVERLAY_CONTENT_SPRING_STIFFNESS,
     OVERLAY_WINDOW_WIDTH_COMPACT,
 } from "@/overlay/OverlayConstants";
+import { localMusicState$ } from "@/systems/LocalMusicState";
 import { setIsScrubbing } from "@/systems/PlaybackInteractionState";
 import { type PlaybackControlId, settings$ } from "@/systems/Settings";
-import { localMusicState$ } from "@/systems/LocalMusicState";
 import { cn } from "@/utils/cn";
 import { perfCount } from "@/utils/perfLogger";
 
@@ -245,6 +245,7 @@ export function PlaybackArea({ showBorder = true, overlayMode }: PlaybackAreaPro
         <View
             className={cn("group flex-row items-center pb-1 pt-1", !currentTrack && "opacity-0")}
             onLayout={handleSliderRowLayout}
+            mouseDownCanMoveWindow={false}
         >
             <CurrentTime currentLocalTime$={currentLocalTime$} />
             <CustomSlider
@@ -273,7 +274,7 @@ export function PlaybackArea({ showBorder = true, overlayMode }: PlaybackAreaPro
     // });
 
     return (
-        <View className={cn("px-3 pt-3", showBorder && "border-b border-white/10")}>
+        <View className={cn("px-3 pt-3", showBorder && "border-b border-white/10")} mouseDownCanMoveWindow>
             <View className="flex-row items-center">
                 {/* Album Art */}
                 <View className="mr-3">

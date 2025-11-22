@@ -34,6 +34,9 @@ NativeModules.WindowControls = {
     minimize: jest.fn(),
     maximize: jest.fn(),
     close: jest.fn(),
+    hideWindowControls: jest.fn(async () => {}),
+    showWindowControls: jest.fn(async () => {}),
+    isWindowFullScreen: jest.fn(async () => false),
 };
 const mockWindowControls = NativeModules.WindowControls;
 NativeModules.WindowManager = {

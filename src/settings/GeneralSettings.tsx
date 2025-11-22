@@ -35,6 +35,11 @@ export const GeneralSettings = observer(function GeneralSettings() {
                     description="Toggle contextual hints like the media library status bar"
                     control={<Checkbox $checked={settings$.general.showHints} />}
                 />
+                <SettingsRow
+                    title="Show Titlebar on Hover"
+                    description="Reveal macOS window controls when hovering near the top edge"
+                    control={<Checkbox $checked={settings$.general.showTitleBarOnHover} />}
+                />
             </SettingsSection>
 
             <SettingsSection title="About">
