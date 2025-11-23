@@ -126,4 +126,44 @@ RCT_EXPORT_METHOD(save:(NSDictionary *)options
   });
 }
 
+RCT_EXPORT_METHOD(revealInFinder:(NSString *)path
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+{
+  dispatch_async(dispatch_get_main_queue(), ^{
+    @try {
+      if (![path isKindOfClass:[NSString class]] || path.length == 0) {
+        resolve(@(NO));
+        return;
+      }
+
+      NSString *expandedPath = [path stringByExpandingTildeInPath];
+      NSURL *inputURL = [NSURL URLWithString:expandedPath];
+      NSURL *fileURL = nil;
+
+      if (inputURL && inputURL.isFileURL) {
+        fileURL = inputURL;
+      } else {
+        fileURL = [NSURL fileURLWithPath:expandedPath];
+      }
+
+      if (!fileURL || fileURL.path.length == 0) {
+        resolve(@(NO));
+        return;
+      }
+
+      BOOL exists = [[NSFileManager defaultManager] fileExistsAtPath:fileURL.path];
+      if (!exists) {
+        resolve(@(NO));
+        return;
+      }
+
+      [[NSWorkspace sharedWorkspace] activateFileViewerSelectingURLs:@[fileURL]];
+      resolve(@(YES));
+    } @catch (NSException *exception) {
+      reject(@"file_dialog_error", exception.reason, nil);
+    }
+  });
+}
+
 @end

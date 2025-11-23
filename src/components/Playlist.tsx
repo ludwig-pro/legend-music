@@ -7,6 +7,7 @@ import { Button } from "@/components/Button";
 import { localAudioControls, localPlayerState$, type QueuedTrack, queue$ } from "@/components/LocalAudioPlayer";
 import { type TrackData, TrackItem } from "@/components/TrackItem";
 import { usePlaylistSelection } from "@/hooks/usePlaylistSelection";
+import { showContextMenu } from "@/native-modules/ContextMenu";
 import {
     DragDropView,
     type NativeDragTrack,
@@ -14,6 +15,7 @@ import {
     type TrackDragEvent,
 } from "@/native-modules/DragDropView";
 import { TrackDragSource } from "@/native-modules/TrackDragSource";
+import { DEBUG_PLAYLIST_LOGS } from "@/systems/constants";
 import { libraryUI$ } from "@/systems/LibraryState";
 import type { LocalTrack } from "@/systems/LocalMusicState";
 import {
@@ -25,11 +27,11 @@ import {
     scanLocalMusic,
     setCurrentPlaylist,
 } from "@/systems/LocalMusicState";
-import { DEBUG_PLAYLIST_LOGS } from "@/systems/constants";
 import { settings$ } from "@/systems/Settings";
 import { state$ } from "@/systems/State";
 import { cn } from "@/utils/cn";
 import { perfCount, perfLog } from "@/utils/perfLogger";
+import { buildTrackContextMenuItems, handleTrackContextMenuSelection } from "@/utils/trackContextMenu";
 import {
     type DragData,
     DraggableItem,
@@ -45,6 +47,8 @@ type PlaylistTrackWithSuggestions = TrackData & {
     queueEntryId: string;
     fromSuggestions?: true;
     isSeparator?: boolean;
+    filePath: string;
+    fileName: string;
 };
 
 interface DropFeedback {
@@ -109,11 +113,21 @@ export function Playlist() {
                 artist: track.artist,
                 duration: track.duration,
                 thumbnail: track.thumbnail || "",
+                filePath: track.filePath,
+                fileName: track.fileName,
                 index,
                 isPlaying: index === currentTrackIndex && isPlayerActive,
                 queueEntryId: track.queueEntryId,
             })),
         [queueTracks, currentTrackIndex, isPlayerActive],
+    );
+
+    const playlistContextMenuItems = useMemo(
+        () =>
+            buildTrackContextMenuItems({
+                includeFinder: true,
+            }),
+        [],
     );
 
     useEffect(() => {
@@ -152,6 +166,21 @@ export function Playlist() {
             handleTrackClickBase(index, event);
         },
         [handleTrackClickBase],
+    );
+
+    const handleTrackContextMenu = useCallback(
+        async (index: number, event: NativeMouseEvent) => {
+            const x = event.pageX ?? event.x ?? 0;
+            const y = event.pageY ?? event.y ?? 0;
+
+            const selection = await showContextMenu(playlistContextMenuItems, { x, y });
+
+            await handleTrackContextMenuSelection({
+                selection,
+                filePath: playlist[index]?.filePath,
+            });
+        },
+        [playlist, playlistContextMenuItems],
     );
 
     const handleTrackMouseDown = useCallback(
@@ -842,6 +871,7 @@ export function Playlist() {
                                     onDoubleClick={handleTrackDoubleClick}
                                     selectedIndices$={selectedIndices$}
                                     onMouseDown={handleTrackMouseDown}
+                                    onRightClick={handleTrackContextMenu}
                                     disableHover
                                 />
                             );

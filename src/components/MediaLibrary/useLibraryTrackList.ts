@@ -7,10 +7,11 @@ import type { MediaLibraryDragData } from "@/components/dnd";
 import { localAudioControls } from "@/components/LocalAudioPlayer";
 import type { TrackData } from "@/components/TrackItem";
 import { usePlaylistSelection } from "@/hooks/usePlaylistSelection";
-import { type ContextMenuItem, showContextMenu } from "@/native-modules/ContextMenu";
+import { showContextMenu } from "@/native-modules/ContextMenu";
 import type { LibraryItem, LibraryTrack } from "@/systems/LibraryState";
 import { library$, libraryUI$ } from "@/systems/LibraryState";
 import { getQueueAction, type QueueAction } from "@/utils/queueActions";
+import { buildTrackContextMenuItems, handleTrackContextMenuSelection } from "@/utils/trackContextMenu";
 
 type TrackListItem = TrackData;
 
@@ -25,11 +26,6 @@ interface UseLibraryTrackListResult {
     keyExtractor: (item: TrackData) => string;
     selectedItem: LibraryItem | null;
 }
-
-const TRACK_CONTEXT_MENU_ITEMS: ContextMenuItem[] = [
-    { id: "queue-add", title: "Add to Queue" },
-    { id: "queue-play-next", title: "Play Next" },
-];
 
 interface BuildTrackItemsInput {
     tracks: LibraryTrack[];
@@ -134,23 +130,31 @@ export function useLibraryTrackList(searchQuery: string): UseLibraryTrackListRes
         [sourceTracks],
     );
 
+    const trackContextMenuItems = useMemo(
+        () =>
+            buildTrackContextMenuItems({
+                includeQueueActions: true,
+                includeFinder: true,
+            }),
+        [],
+    );
+
     const handleTrackContextMenu = useCallback(
         async (index: number, event: NativeMouseEvent) => {
             const x = event.pageX ?? event.x ?? 0;
             const y = event.pageY ?? event.y ?? 0;
 
-            const selection = await showContextMenu(TRACK_CONTEXT_MENU_ITEMS, { x, y });
-            if (!selection) {
-                return;
-            }
+            const selection = await showContextMenu(trackContextMenuItems, { x, y });
 
-            if (selection === "queue-play-next") {
-                handleTrackAction(index, "play-next");
-            } else {
-                handleTrackAction(index, "enqueue");
-            }
+            await handleTrackContextMenuSelection({
+                selection,
+                filePath: sourceTracks[index]?.filePath,
+                onQueueAction: (action) => {
+                    handleTrackAction(index, action === "play-next" ? "play-next" : "enqueue");
+                },
+            });
         },
-        [handleTrackAction],
+        [handleTrackAction, sourceTracks, trackContextMenuItems],
     );
 
     const handleNativeDragStart = useCallback(() => {

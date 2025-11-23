@@ -6,6 +6,7 @@ type DirectoryLike = string | { uri?: string } | null | undefined;
 type NativeFileDialogModule = {
     open?: (options: NativeFileDialogOpenOptions) => Promise<string[] | null>;
     save?: (options: NativeFileDialogSaveOptions) => Promise<string | null>;
+    revealInFinder?: (path: string) => Promise<boolean>;
 };
 
 type NativeFileDialogOpenOptions = {
@@ -137,6 +138,27 @@ export async function saveFileDialog(options: FileDialogSaveOptions = {}): Promi
     } catch (error) {
         console.error("Failed to open save dialog", error);
         return null;
+    }
+}
+
+export async function showInFinder(path?: string | null): Promise<boolean> {
+    if (Platform.OS !== "macos" || !path) {
+        return false;
+    }
+
+    const revealInFinderMethod = NativeFileDialog.revealInFinder;
+    if (!ensureModuleAvailable(revealInFinderMethod, "revealInFinder")) {
+        return false;
+    }
+
+    const resolvedPath = path.startsWith("file://") ? fileUriToPath(path) : path;
+
+    try {
+        const result = await revealInFinderMethod(resolvedPath);
+        return result === true;
+    } catch (error) {
+        console.error("Failed to reveal in Finder", error);
+        return false;
     }
 }
 
