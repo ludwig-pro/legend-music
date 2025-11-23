@@ -798,6 +798,10 @@ export function Playlist() {
         )
     ) : null;
 
+    const getFixedItemSize = useCallback(() => {
+        return playlistStyle === "compact" ? 32 : 50;
+    }, [playlistStyle]);
+
     return (
         <DragDropView
             ref={dropAreaRef}
@@ -854,6 +858,7 @@ export function Playlist() {
                         contentContainerStyle={styles.container}
                         waitForInitialLayout={false}
                         estimatedItemSize={playlistStyle === "compact" ? 32 : 50}
+                        getFixedItemSize={getFixedItemSize}
                         ListHeaderComponent={
                             <PlaylistDropZone
                                 position={0}

@@ -1,16 +1,19 @@
+import { LegendList } from "@legendapp/list";
 import type { Observable } from "@legendapp/state";
 import { useCallback } from "react";
 import { Platform, Text, View } from "react-native";
 import type { NativeMouseEvent } from "react-native-macos";
-
 import { DraggableItem, MEDIA_LIBRARY_DRAG_ZONE_ID, type MediaLibraryDragData } from "@/components/dnd";
-import { LegendList } from "@legendapp/list";
 import { type TrackData, TrackItem } from "@/components/TrackItem";
 import { type NativeDragTrack, TrackDragSource } from "@/native-modules/TrackDragSource";
 import { useLibraryTrackList } from "./useLibraryTrackList";
 
 interface TrackListProps {
     searchQuery: string;
+}
+
+function getFixedItemSize() {
+    return 32;
 }
 
 export function TrackList({ searchQuery }: TrackListProps) {
@@ -63,6 +66,7 @@ export function TrackList({ searchQuery }: TrackListProps) {
                 data={tracks}
                 keyExtractor={keyExtractor}
                 renderItem={renderTrack}
+                getFixedItemSize={getFixedItemSize}
                 style={{ flex: 1 }}
                 contentContainerStyle={
                     tracks.length
