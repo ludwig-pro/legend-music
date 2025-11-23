@@ -165,6 +165,7 @@ export type WindowFocusedEvent = {
 type NativeWindowManagerType = NativeModule & {
     openWindow: (options?: NativeWindowOptions) => Promise<{ success: boolean }>;
     closeWindow: (identifier?: string) => Promise<{ success: boolean; message?: string }>;
+    closeFrontmostWindow: () => Promise<{ success: boolean; message?: string }>;
     getMainWindowFrame: () => Promise<WindowFrame>;
     setMainWindowFrame: (frame: WindowFrame) => Promise<{ success: boolean }>;
     setWindowBlur: (identifier: string, radius: number, durationMs: number) => Promise<{ success: boolean }>;
@@ -177,6 +178,7 @@ const windowManagerEmitter = new NativeEventEmitter(windowManagerModule);
 export type WindowManagerBridge = {
     openWindow: (options?: WindowOptions) => Promise<{ success: boolean }>;
     closeWindow: (identifier?: string) => Promise<{ success: boolean; message?: string }>;
+    closeFrontmostWindow: () => Promise<{ success: boolean; message?: string }>;
     getMainWindowFrame: () => Promise<WindowFrame>;
     setMainWindowFrame: (frame: WindowFrame) => Promise<{ success: boolean }>;
     setWindowBlur: (identifier: string, radius: number, durationMs?: number) => Promise<{ success: boolean }>;
@@ -188,6 +190,7 @@ export const useWindowManager = (): WindowManagerBridge => {
     return {
         openWindow: (options = {}) => windowManagerModule.openWindow(convertOptionsToNative(options)),
         closeWindow: (identifier?: string) => windowManagerModule.closeWindow(identifier),
+        closeFrontmostWindow: () => windowManagerModule.closeFrontmostWindow(),
         getMainWindowFrame: () => windowManagerModule.getMainWindowFrame(),
         setMainWindowFrame: (frame: WindowFrame) => windowManagerModule.setMainWindowFrame(frame),
         setWindowBlur: (identifier: string, radius: number, durationMs?: number) =>
@@ -211,6 +214,8 @@ export const openWindow = (options: WindowOptions = {}) =>
     windowManagerModule.openWindow(convertOptionsToNative(options));
 
 export const closeWindow = (identifier?: string) => windowManagerModule.closeWindow(identifier);
+
+export const closeFrontmostWindow = () => windowManagerModule.closeFrontmostWindow();
 
 export const setWindowBlur = (identifier: string, radius: number, durationMs?: number) =>
     windowManagerModule.setWindowBlur(identifier, radius, durationMs ?? 0);

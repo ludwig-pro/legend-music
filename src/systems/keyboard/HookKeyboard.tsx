@@ -1,13 +1,22 @@
 import { useEffect, useRef } from "react";
 import { AppState, type AppStateStatus, TextInput } from "react-native";
 import { useWindowManager } from "@/native-modules/WindowManager";
-import { activeWindowId$, useHookKeyboard } from "@/systems/keyboard/Keyboard";
+import { activeWindowId$, useHookKeyboard, useOnHotkeys } from "@/systems/keyboard/Keyboard";
 import { perfCount, perfLog } from "@/utils/perfLogger";
 
 export function HookKeyboard() {
     perfCount("HookKeyboard.render");
     useHookKeyboard();
     const windowManagerRef = useRef(useWindowManager());
+
+    useOnHotkeys(
+        {
+            CloseWindow: () => {
+                void windowManagerRef.current.closeFrontmostWindow();
+            },
+        },
+        { global: true },
+    );
 
     useEffect(() => {
         activeWindowId$.set("main");

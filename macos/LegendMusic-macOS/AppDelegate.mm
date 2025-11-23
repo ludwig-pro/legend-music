@@ -66,10 +66,33 @@ static inline NSAppearance *LegendDarkAppearance() {
 @interface AppDelegate ()
 @property (nonatomic, assign) BOOL mainWindowFrameAdjusted;
 @property (nonatomic, strong) NSMutableDictionary<NSString *, NSMenuItem *> *menuCommandItems;
+@property (nonatomic, strong) id secondaryClickActivationMonitor;
 @end
 
 
 @implementation AppDelegate
+
+- (void)activateWindowIfNeeded:(NSWindow *)window
+{
+  if (!window || window.isKeyWindow || !window.canBecomeKeyWindow) {
+    return;
+  }
+  [NSApp activateIgnoringOtherApps:YES];
+  [window makeKeyAndOrderFront:nil];
+}
+
+- (void)setupWindowActivationMonitor
+{
+  __weak AppDelegate *weakSelf = self;
+  self.secondaryClickActivationMonitor = [NSEvent addLocalMonitorForEventsMatchingMask:(NSEventMaskRightMouseDown | NSEventMaskOtherMouseDown)
+                                                                               handler:^NSEvent * _Nullable(NSEvent *event) {
+    if (!weakSelf) {
+      return event;
+    }
+    [weakSelf activateWindowIfNeeded:event.window];
+    return event;
+  }];
+}
 
 - (void)applicationDidFinishLaunching:(NSNotification *)notification
 {
@@ -101,6 +124,7 @@ static inline NSAppearance *LegendDarkAppearance() {
   });
 
   [super applicationDidFinishLaunching:notification];
+  [self setupWindowActivationMonitor];
 
   NSAppearance *darkAppearance = LegendDarkAppearance();
   if (darkAppearance) {
@@ -113,6 +137,28 @@ static inline NSAppearance *LegendDarkAppearance() {
     devSettings.isSecondaryClickToShowDevMenuEnabled = NO;
   }
 #endif
+}
+
+- (BOOL)applicationShouldHandleReopen:(NSApplication *)sender hasVisibleWindows:(BOOL)flag
+{
+  if (self.window == nil) {
+    [self loadReactNativeWindow:nil];
+  } else if (!self.window.isVisible) {
+    [self.window makeKeyAndOrderFront:self];
+  }
+
+  [self.window makeKeyAndOrderFront:self];
+  [NSApp activateIgnoringOtherApps:YES];
+  return YES;
+}
+
+- (BOOL)windowShouldClose:(NSWindow *)sender
+{
+  if (sender == self.window) {
+    [self.window orderOut:self];
+    return NO;
+  }
+  return YES;
 }
 
 - (void)loadReactNativeWindow:(NSDictionary *)launchOptions
@@ -147,6 +193,7 @@ static inline NSAppearance *LegendDarkAppearance() {
   rootView.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
 
   self.window.contentViewController = rootViewController;
+  [self.window setDelegate:self];
 
   // Only center if no saved frame exists
   if (![[NSUserDefaults standardUserDefaults] objectForKey:@"NSWindow Frame MainWindow"]) {
@@ -155,6 +202,14 @@ static inline NSAppearance *LegendDarkAppearance() {
 
   // Now make the window visible - frame should already be restored by autosave
   [self.window makeKeyAndOrderFront:self];
+}
+
+- (void)dealloc
+{
+  if (self.secondaryClickActivationMonitor) {
+    [NSEvent removeMonitor:self.secondaryClickActivationMonitor];
+  }
+  [[NSNotificationCenter defaultCenter] removeObserver:self];
 }
 
 // Setup menu item connections
@@ -372,10 +427,6 @@ static inline NSAppearance *LegendDarkAppearance() {
   [[NSNotificationCenter defaultCenter] postNotificationName:kMenuCommandTriggeredNotification
                                                       object:nil
                                                     userInfo:userInfo];
-}
-
-- (void)dealloc {
-  [[NSNotificationCenter defaultCenter] removeObserver:self];
 }
 
 - (NSURL *)sourceURLForBridge:(RCTBridge *)bridge

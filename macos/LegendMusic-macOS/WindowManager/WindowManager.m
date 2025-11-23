@@ -308,6 +308,18 @@ RCT_EXPORT_METHOD(closeWindow:(NSString *)identifier
   resolve(@{@"success": @YES});
 }
 
+RCT_EXPORT_METHOD(closeFrontmostWindow:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject) {
+  NSWindow *window = [NSApp keyWindow] ?: [NSApp mainWindow];
+  if (!window) {
+    resolve(@{@"success": @NO, @"message": @"No window to close"});
+    return;
+  }
+
+  [window performClose:nil];
+  resolve(@{@"success": @YES});
+}
+
 RCT_EXPORT_METHOD(setWindowBlur:(NSString *)identifier
                   radius:(nonnull NSNumber *)radiusNumber
                   duration:(nonnull NSNumber *)durationNumber
