@@ -1,3 +1,7 @@
+if (!process.env.EXPO_OS) {
+    process.env.EXPO_OS = "macos";
+}
+
 const { NativeModules } = require("react-native");
 
 const mockAudioPlayer = {
