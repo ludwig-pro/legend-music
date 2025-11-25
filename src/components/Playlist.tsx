@@ -16,19 +16,18 @@ import {
 } from "@/native-modules/DragDropView";
 import { TrackDragSource } from "@/native-modules/TrackDragSource";
 import { DEBUG_PLAYLIST_LOGS } from "@/systems/constants";
-import { libraryUI$ } from "@/systems/LibraryState";
 import type { LocalTrack } from "@/systems/LocalMusicState";
 import {
     createLocalTrackFromFile,
     DEFAULT_LOCAL_PLAYLIST_ID,
     ensureLocalTrackThumbnail,
-    localMusicSettings$,
+    librarySettings$,
     localMusicState$,
     scanLocalMusic,
     setCurrentPlaylist,
 } from "@/systems/LocalMusicState";
 import { settings$ } from "@/systems/Settings";
-import { state$ } from "@/systems/State";
+import { state$, stateSaved$ } from "@/systems/State";
 import { cn } from "@/utils/cn";
 import { perfCount, perfLog } from "@/utils/perfLogger";
 import { buildTrackContextMenuItems, handleTrackContextMenuSelection } from "@/utils/trackContextMenu";
@@ -79,7 +78,7 @@ const normalizeTrackPath = (path: string): string => {
 export function Playlist() {
     perfCount("Playlist.render");
     const localMusicState = use$(localMusicState$);
-    const libraryPaths = use$(localMusicSettings$.libraryPaths);
+    const libraryPaths = use$(librarySettings$.paths);
     const queueTracks = use$(queue$.tracks);
     const currentTrackIndex = use$(localPlayerState$.currentIndex);
     const currentTrack = use$(localPlayerState$.currentTrack);
@@ -304,7 +303,7 @@ export function Playlist() {
 
     const handleAddLibraryTracks = useCallback(() => {
         perfLog("Playlist.openLibraryFromEmptyState");
-        libraryUI$.isOpen.set(true);
+        stateSaved$.libraryIsOpen.set(true);
     }, []);
 
     const toWindowCoordinates = useCallback((location: { x: number; y: number }) => {
@@ -607,7 +606,7 @@ export function Playlist() {
             }
 
             let addedPaths: string[] = [];
-            localMusicSettings$.libraryPaths.set((paths) => {
+            librarySettings$.paths.set((paths) => {
                 const existing = new Set(paths.map(normalizeDroppedPath));
                 const additions: string[] = [];
 

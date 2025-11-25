@@ -43,6 +43,11 @@ export interface AppSettings {
         isSidebarOpen: boolean;
         panels: Record<string, number>;
     };
+    library: {
+        paths: string[];
+        autoScanOnStart: boolean;
+        lastScanTime: number;
+    };
     general: {
         playlistStyle: PlaylistStyle;
         showHints: boolean;
@@ -67,6 +72,11 @@ export const settings$ = createJSONManager<AppSettings>({
             sidebarWidth: 140,
             isSidebarOpen: true,
             panels: {},
+        },
+        library: {
+            paths: [],
+            autoScanOnStart: true,
+            lastScanTime: 0,
         },
         // General settings
         general: {

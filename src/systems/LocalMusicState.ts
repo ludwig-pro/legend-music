@@ -14,9 +14,9 @@ import {
     type PersistedLibraryTrack,
 } from "@/systems/LibraryCache";
 import { hasCachedPlaylistData } from "@/systems/PlaylistCache";
+import { settings$ } from "@/systems/Settings";
 import { stateSaved$ } from "@/systems/State";
 import { ensureCacheDirectory, getCacheDirectory } from "@/utils/cacheDirectories";
-import { createJSONManager } from "@/utils/JSONManager";
 import { perfCount, perfLog } from "@/utils/perfLogger";
 import { runAfterInteractions, runAfterInteractionsWithLabel } from "@/utils/runAfterInteractions";
 import { DEFAULT_LOCAL_PLAYLIST_ID } from "./localMusicConstants";
@@ -42,12 +42,6 @@ export interface LocalPlaylist {
     trackCount: number;
 }
 
-export interface LocalMusicSettings {
-    libraryPaths: string[];
-    autoScanOnStart: boolean;
-    lastScanTime: number;
-}
-
 export interface LocalMusicState {
     tracks: LocalTrack[];
     isScanning: boolean;
@@ -63,15 +57,7 @@ export interface LocalMusicState {
 
 export { DEFAULT_LOCAL_PLAYLIST_ID, DEFAULT_LOCAL_PLAYLIST_NAME } from "./localMusicConstants";
 
-// Settings persistence
-export const localMusicSettings$ = createJSONManager<LocalMusicSettings>({
-    filename: "localMusicSettings",
-    initialValue: {
-        libraryPaths: [],
-        autoScanOnStart: true,
-        lastScanTime: 0,
-    },
-});
+export const librarySettings$ = settings$.library;
 
 // Runtime state
 export const localMusicState$ = observable<LocalMusicState>({
@@ -108,7 +94,7 @@ const bumpThumbnailVersion = (): number => {
 
 function clearCachedLibraryData(): void {
     clearLibraryCache();
-    localMusicSettings$.lastScanTime.set(0);
+    librarySettings$.lastScanTime.set(0);
     localMusicState$.tracks.set([]);
     localMusicState$.scanTrackProgress.set(0);
     localMusicState$.scanTrackTotal.set(0);
@@ -672,7 +658,7 @@ async function scanLibraryNative(
 export async function scanLocalMusic(): Promise<void> {
     const paths = Array.from(
         new Set(
-            localMusicSettings$.libraryPaths
+            librarySettings$.paths
                 .get()
                 .map((path) => normalizeRootPath(path))
                 .filter(Boolean),
@@ -723,7 +709,7 @@ export async function scanLocalMusic(): Promise<void> {
 
         perfLog("LocalMusic.scanLocalMusic.done", { total: dedupedTracks.length });
         localMusicState$.tracks.set(dedupedTracks);
-        localMusicSettings$.lastScanTime.set(Date.now());
+        librarySettings$.lastScanTime.set(Date.now());
         localMusicState$.scanProgress.set(localMusicState$.scanTotal.get());
         localMusicState$.scanTrackProgress.set(dedupedTracks.length);
         localMusicState$.scanTrackTotal.set(dedupedTracks.length);
@@ -824,16 +810,16 @@ stateSaved$.playlistType.onChange(({ value }) => {
 // Initialize and scan on app start
 export function initializeLocalMusic(): void {
     batch(() => {
-        const settings = localMusicSettings$.get();
+        const settings = librarySettings$.get();
 
         debugLocalMusicLog("initializeLocalMusic", settings);
 
-        lastLibraryPaths = Array.isArray(settings.libraryPaths) ? [...settings.libraryPaths] : [];
+        lastLibraryPaths = Array.isArray(settings.paths) ? [...settings.paths] : [];
         configureLibraryPathWatcher(lastLibraryPaths);
 
         if (!hasSubscribedToLibraryPathChanges) {
             hasSubscribedToLibraryPathChanges = true;
-            localMusicSettings$.libraryPaths.onChange(({ value }) => {
+            librarySettings$.paths.onChange(({ value }) => {
                 const userInitiated = pendingUserInitiatedLibraryChange;
                 pendingUserInitiatedLibraryChange = false;
 

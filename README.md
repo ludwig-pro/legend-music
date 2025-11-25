@@ -52,7 +52,7 @@ https://github.com/user-attachments/assets/061cae41-c47a-4977-b095-27d007b9d0e9
 
 ### Managing your library
 
-- Library folders live in `settings$.library` (managed through **Settings → Library**). Paths are persisted via `localMusicSettings.json`.
+- Library folders live in `settings$.library.paths` (managed through **Settings → Library**) and persist in `settings.json`.
 - Adding or removing a folder triggers a rescan that reads tags natively, caches thumbnails, and records playlists in `localMusicState`.
 - The `FileSystemWatcher` native module watches every configured directory. When files change, `scanLocalMusic()` reruns automatically after a short debounce.
 - If you need a manual reset, clear the cache directory at `~/Library/Caches/LegendMusic/data` and restart the app.
@@ -115,7 +115,7 @@ Hotkeys are defined in `src/systems/hotkeys.ts` and persisted to `Cache/hotkeys.
 
 ## Persistence & caches
 
-- All observable stores (`localMusicSettings`, `LibraryCache`, `PlaylistCache`, `settings$, hotkeys$, visualizer preferences`) write to `~/Library/Caches/LegendMusic/data/*.json` (with queue exports saved as `.m3u`).
+- All observable stores (`LibraryCache`, `PlaylistCache`, `settings$` incl. library paths, hotkeys$, visualizer preferences) write to `~/Library/Caches/LegendMusic/data/*.json` (with queue exports saved as `.m3u`).
 - Queue exports and imports use M3U via `saveQueueToM3U`/`loadQueueFromM3U`. Clear `queue.m3u` if you need to reset the session.
 - Album art is cached under `~/Library/Caches/LegendMusic/artwork/<hash>.<ext>` with versioning handled in `LocalMusicState`.
 - Removing the cache directory is the fastest way to reset the app without touching Git.

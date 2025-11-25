@@ -5,7 +5,6 @@ import { useCallback, useMemo } from "react";
 import { localAudioControls } from "@/components/LocalAudioPlayer";
 import { useOnHotkeys } from "@/systems/keyboard/Keyboard";
 import type { LibraryItem, LibraryTrack } from "@/systems/LibraryState";
-import { libraryUI$ } from "@/systems/LibraryState";
 import type { LocalMusicState, LocalPlaylist, LocalTrack } from "@/systems/LocalMusicState";
 import {
     DEFAULT_LOCAL_PLAYLIST_ID,
@@ -215,11 +214,11 @@ export function usePlaylistQueueHandlers({
 }
 
 export function useLibraryToggle() {
-    const isLibraryOpen = use$(libraryUI$.isOpen);
+    const isLibraryOpen = use$(stateSaved$.libraryIsOpen);
 
     const toggleLibraryWindow = useCallback(() => {
-        perfLog("PlaylistSelector.toggleLibraryWindow", { isOpen: libraryUI$.isOpen.get() });
-        libraryUI$.isOpen.set(!libraryUI$.isOpen.get());
+        perfLog("PlaylistSelector.toggleLibraryWindow", { isOpen: stateSaved$.libraryIsOpen.get() });
+        stateSaved$.libraryIsOpen.set(!stateSaved$.libraryIsOpen.get());
     }, []);
 
     return { isLibraryOpen, toggleLibraryWindow };

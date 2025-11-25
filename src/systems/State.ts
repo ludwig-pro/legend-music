@@ -17,6 +17,7 @@ export const state$ = observable({
 type SavedState = {
     playlist: string | undefined;
     playlistType: "file" | "url";
+    libraryIsOpen: boolean;
 };
 
 export const stateSaved$ = createJSONManager<SavedState>({
@@ -24,5 +25,6 @@ export const stateSaved$ = createJSONManager<SavedState>({
     initialValue: {
         playlist: undefined as string | undefined,
         playlistType: "file" as const,
+        libraryIsOpen: false,
     },
 });

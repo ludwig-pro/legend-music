@@ -1,7 +1,7 @@
 import { observable } from "@legendapp/state";
 import type { LibrarySnapshot, PersistedLibraryTrack } from "@/systems/LibraryCache";
 import { getLibrarySnapshot, persistLibrarySnapshot } from "@/systems/LibraryCache";
-import { type LocalTrack, localMusicSettings$, localMusicState$ } from "@/systems/LocalMusicState";
+import { type LocalTrack, librarySettings$, localMusicState$ } from "@/systems/LocalMusicState";
 import { getCacheDirectory } from "@/utils/cacheDirectories";
 import { createJSONManager } from "@/utils/JSONManager";
 import { perfCount, perfLog, perfTime } from "@/utils/perfLogger";
@@ -22,15 +22,21 @@ export interface LibraryTrack extends LocalTrack {
     // LibraryTrack extends LocalTrack which already has album?: string
 }
 
+export interface LibraryUIState {
+    selectedItem: LibraryItem | null;
+    searchQuery: string;
+    selectedCollection: "artists" | "albums" | "playlists";
+}
+
 // Library UI state (persistent)
-export const libraryUI$ = createJSONManager({
+export const libraryUI$ = createJSONManager<LibraryUIState>({
     filename: "libraryUI",
     initialValue: {
-        isOpen: false,
-        selectedItem: null as LibraryItem | null,
+        selectedItem: null,
         searchQuery: "",
-        selectedCollection: "artists" as "artists" | "albums" | "playlists",
+        selectedCollection: "artists",
     },
+    preload: false,
 });
 
 // Library data derived from local music state
@@ -136,7 +142,7 @@ const buildThumbnailUri = (baseUri: string, key: string | undefined): string | u
 
 const collectLibrarySnapshot = (sourceTracks: LibraryTrack[]): LibrarySnapshotPayload => {
     const lastScan = library$.lastScanTime.peek();
-    const roots = localMusicSettings$.libraryPaths
+    const roots = librarySettings$.paths
         .get()
         .map((path) => normalizeRootPath(path))
         .filter(Boolean);
@@ -293,7 +299,7 @@ function syncLibraryFromLocalState(): void {
 }
 
 syncLibraryFromLocalState();
-const initialLastScan = localMusicSettings$.lastScanTime.get();
+const initialLastScan = librarySettings$.lastScanTime.get();
 library$.lastScanTime.set(initialLastScan ? new Date(initialLastScan) : null);
 const initialTracks = library$.tracks.peek();
 lastLibrarySnapshotSignature = makeLibrarySnapshotSignature(collectLibrarySnapshot(initialTracks), initialTracks);
@@ -303,7 +309,7 @@ localMusicState$.isScanning.onChange(() => {
     scheduleLibrarySnapshotPersist();
 });
 
-localMusicSettings$.lastScanTime.onChange(({ value }) => {
+librarySettings$.lastScanTime.onChange(({ value }) => {
     library$.lastScanTime.set(value ? new Date(value) : null);
     scheduleLibrarySnapshotPersist();
 });

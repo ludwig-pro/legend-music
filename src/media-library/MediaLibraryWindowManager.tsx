@@ -5,7 +5,7 @@ import { Dimensions } from "react-native";
 import { mediaLibraryPreferences$ } from "@/media-library/preferences";
 import { useWindowManager } from "@/native-modules/WindowManager";
 import { useOnHotkeys } from "@/systems/keyboard/Keyboard";
-import { libraryUI$ } from "@/systems/LibraryState";
+import { stateSaved$ } from "@/systems/State";
 import { perfCount, perfLog } from "@/utils/perfLogger";
 import { WindowsNavigator } from "@/windows";
 
@@ -27,12 +27,12 @@ const clamp = (value: number, min: number, max: number) => {
 export const MediaLibraryWindowManager = () => {
     perfCount("MediaLibraryWindowManager.render");
     const windowManager = useWindowManager();
-    const isOpen = use$(libraryUI$.isOpen);
+    const isOpen = use$(stateSaved$.libraryIsOpen);
 
     const toggleLibrary = useCallback(() => {
-        perfLog("MediaLibraryWindowManager.toggleLibrary", { isOpen: libraryUI$.isOpen.get() });
-        const current = libraryUI$.isOpen.get();
-        libraryUI$.isOpen.set(!current);
+        perfLog("MediaLibraryWindowManager.toggleLibrary", { isOpen: stateSaved$.libraryIsOpen.get() });
+        const current = stateSaved$.libraryIsOpen.get();
+        stateSaved$.libraryIsOpen.set(!current);
     }, []);
 
     useOnHotkeys({
@@ -43,7 +43,7 @@ export const MediaLibraryWindowManager = () => {
         perfLog("MediaLibraryWindowManager.windowClosedEffect");
         const subscription = windowManager.onWindowClosed(({ identifier }) => {
             if (identifier === MEDIA_LIBRARY_WINDOW_ID) {
-                libraryUI$.isOpen.set(false);
+                stateSaved$.libraryIsOpen.set(false);
             }
         });
 

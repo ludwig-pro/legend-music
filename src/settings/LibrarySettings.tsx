@@ -6,7 +6,7 @@ import { SkiaSpinner } from "@/components/SkiaSpinner";
 import { selectDirectory } from "@/native-modules/FileDialog";
 import { SettingsPage, SettingsSection } from "@/settings/components";
 import {
-    localMusicSettings$,
+    librarySettings$,
     localMusicState$,
     markLibraryChangeUserInitiated,
     scanLocalMusic,
@@ -14,7 +14,7 @@ import {
 import type { SFSymbols } from "@/types/SFSymbols";
 
 export const LibrarySettings = observer(function LibrarySettings() {
-    const localMusicSettings = use$(localMusicSettings$);
+    const librarySettings = use$(librarySettings$);
     const localMusicState = use$(localMusicState$);
     const latestError = use$(localMusicState$.error);
 
@@ -32,7 +32,7 @@ export const LibrarySettings = observer(function LibrarySettings() {
 
     const handleRemoveLibraryPath = (index: number) => {
         markLibraryChangeUserInitiated();
-        localMusicSettings$.libraryPaths.set((paths) => {
+        librarySettings$.paths.set((paths) => {
             if (index < 0 || index >= paths.length) {
                 return paths;
             }
@@ -44,14 +44,14 @@ export const LibrarySettings = observer(function LibrarySettings() {
     };
 
     const handleChangeLibraryPath = async (index: number) => {
-        const currentPath = localMusicSettings.libraryPaths[index];
+        const currentPath = librarySettings.paths[index];
         const directory = await selectDirectory({ directoryURL: currentPath });
 
         if (!directory) {
             return;
         }
 
-        localMusicSettings$.libraryPaths.set((paths) => {
+        librarySettings$.paths.set((paths) => {
             if (index < 0 || index >= paths.length) {
                 return paths;
             }
@@ -74,7 +74,7 @@ export const LibrarySettings = observer(function LibrarySettings() {
         }
 
         markLibraryChangeUserInitiated();
-        localMusicSettings$.libraryPaths.set((paths) => {
+        librarySettings$.paths.set((paths) => {
             if (paths.includes(directory)) {
                 return paths;
             }
@@ -91,9 +91,9 @@ export const LibrarySettings = observer(function LibrarySettings() {
     return (
         <SettingsPage title="Library Settings">
             <SettingsSection title="Library Paths">
-                {localMusicSettings.libraryPaths.length > 0 ? (
+                {librarySettings.paths.length > 0 ? (
                     <View className="flex flex-col gap-2">
-                        {localMusicSettings.libraryPaths.map((path, index) => (
+                        {librarySettings.paths.map((path, index) => (
                             <View
                                 key={index}
                                 className="bg-background-tertiary rounded-md border border-border-primary px-3 py-2 flex-row items-center gap-3"

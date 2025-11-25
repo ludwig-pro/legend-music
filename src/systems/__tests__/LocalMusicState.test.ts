@@ -1,6 +1,6 @@
 import { clearLibraryCache } from "@/systems/LibraryCache";
 import type { LocalTrack } from "@/systems/LocalMusicState";
-import { initializeLocalMusic, localMusicSettings$, localMusicState$, scanLocalMusic } from "@/systems/LocalMusicState";
+import { initializeLocalMusic, librarySettings$, localMusicState$, scanLocalMusic } from "@/systems/LocalMusicState";
 
 jest.mock("expo-file-system", () => {
     const pathExists = new Map<string, boolean>();
@@ -305,7 +305,7 @@ describe("scanLocalMusic", () => {
             },
         });
 
-        localMusicSettings$.libraryPaths.set(() => ["/music"]);
+        librarySettings$.paths.set(() => ["/music"]);
         localMusicState$.tracks.set([]);
     });
 
@@ -343,13 +343,13 @@ describe("scanLocalMusic", () => {
                 fileName: "root.mp3",
             },
         ]);
-        localMusicSettings$.lastScanTime.set(123);
+        librarySettings$.lastScanTime.set(123);
 
-        localMusicSettings$.libraryPaths.set(() => []);
+        librarySettings$.paths.set(() => []);
 
         expect(clearLibraryCacheMock).toHaveBeenCalledTimes(1);
         expect(localMusicState$.tracks.get()).toEqual([]);
-        expect(localMusicSettings$.lastScanTime.get()).toBe(0);
+        expect(librarySettings$.lastScanTime.get()).toBe(0);
     });
 
     it("skips missing library folders without crashing", async () => {
@@ -366,7 +366,7 @@ describe("scanLocalMusic", () => {
         });
         setPathExists("/music", false);
         setPathExists("/other", true);
-        localMusicSettings$.libraryPaths.set(() => ["/music", "/other"]);
+        librarySettings$.paths.set(() => ["/music", "/other"]);
 
         await scanLocalMusic();
         jest.runOnlyPendingTimers();
