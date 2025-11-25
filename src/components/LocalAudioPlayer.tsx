@@ -3,7 +3,7 @@ import { File } from "expo-file-system/next";
 import { useEffect } from "react";
 import { View } from "react-native";
 import { showToast } from "@/components/Toast";
-import { type NowPlayingInfoPayload, useAudioPlayer } from "@/native-modules/AudioPlayer";
+import audioPlayerApi, { type NowPlayingInfoPayload, useAudioPlayer } from "@/native-modules/AudioPlayer";
 import { DEBUG_AUDIO_LOGS } from "@/systems/constants";
 import type { LocalTrack } from "@/systems/LocalMusicState";
 import { ensureLocalTrackThumbnail } from "@/systems/LocalMusicState";
@@ -182,7 +182,7 @@ interface QueueUpdateOptions {
 
 type QueueInput = LocalTrack | LocalTrack[];
 
-let audioPlayer: ReturnType<typeof useAudioPlayer> | null = null;
+const audioPlayer: ReturnType<typeof useAudioPlayer> | null = audioPlayerApi;
 
 function createQueuedTrack(track: LocalTrack): QueuedTrack {
     return {
@@ -697,8 +697,7 @@ function queueClear(): void {
         void clearQueueM3U();
     }
 }
-
-async function initializeQueueFromCache(): Promise<void> {
+function initializeQueueFromCache(): void {
     if (queueInitialized) {
         return;
     }
@@ -708,9 +707,9 @@ async function initializeQueueFromCache(): Promise<void> {
         return;
     }
 
-    const start = perfMark("Queue.initializeFromCache.start");
+    const start = perfMark("Queue.initializeQueueFromCache.start");
     try {
-        const savedTracks = await loadQueueFromM3U();
+        const savedTracks = loadQueueFromM3U();
 
         if (savedTracks.length > 0) {
             // Convert to queued tracks without triggering save
@@ -726,11 +725,14 @@ async function initializeQueueFromCache(): Promise<void> {
     } finally {
         const durationMs = typeof start === "number" ? Date.now() - start : undefined;
         if (durationMs !== undefined) {
-            perfMark("Queue.initializeFromCache.end", { durationMs });
+            perfMark("Queue.initializeQueueFromCache.end", { durationMs });
         }
         queueInitialized = true;
     }
 }
+
+// Initialize queue from cache on first run
+initializeQueueFromCache();
 
 export const queueControls = {
     replace: queueReplace,
@@ -740,7 +742,6 @@ export const queueControls = {
     reorder: queueReorder,
     remove: queueRemoveIndices,
     clear: queueClear,
-    initializeFromCache: initializeQueueFromCache,
 };
 
 async function loadTrack(track: LocalTrack, options?: QueueUpdateOptions): Promise<void>;
@@ -946,12 +947,17 @@ function getCurrentState(): LocalPlayerState {
 async function restoreTrackFromSnapshotIfNeeded({
     force,
     playAfterLoad,
-}: { force?: boolean; playAfterLoad?: boolean } = {}): Promise<void> {
+}: {
+    force?: boolean;
+    playAfterLoad?: boolean;
+} = {}): Promise<void> {
     if (!audioPlayer || !pendingInitialTrackRestore) {
+        console.log("ZZZ returning");
         return;
     }
 
     if (!force) {
+        console.log("ZZZ returning 2");
         return;
     }
 
@@ -1004,23 +1010,6 @@ export const localAudioControls = {
 export function LocalAudioPlayer() {
     const player = useAudioPlayer();
     perfCount("LocalAudioPlayer.render");
-
-    // Initialize queue from cache on first mount
-    useEffect(() => {
-        void initializeQueueFromCache();
-    }, []);
-
-    // Set global reference
-    useEffect(() => {
-        perfMark("LocalAudioPlayer.useEffect[player]", { hasPlayer: !!player });
-        audioPlayer = player;
-        void restoreTrackFromSnapshotIfNeeded();
-        return () => {
-            perfLog("LocalAudioPlayer.cleanup[player]");
-            player.clearNowPlayingInfo();
-            audioPlayer = null;
-        };
-    }, [player]);
 
     // Set up event listeners
     useEffect(() => {

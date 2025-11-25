@@ -1,4 +1,4 @@
-import { observable } from "@legendapp/state";
+import { batch, observable } from "@legendapp/state";
 import { Directory, File } from "expo-file-system/next";
 import AudioPlayer, {
     type MediaScanBatchEvent,
@@ -6,6 +6,7 @@ import AudioPlayer, {
     type MediaScanResult,
 } from "@/native-modules/AudioPlayer";
 import { addChangeListener, setWatchedDirectories } from "@/native-modules/FileSystemWatcher";
+import { DEBUG_LOCAL_MUSIC_LOGS } from "@/systems/constants";
 import {
     clearLibraryCache,
     getLibrarySnapshot,
@@ -13,7 +14,6 @@ import {
     type PersistedLibraryTrack,
 } from "@/systems/LibraryCache";
 import { hasCachedPlaylistData } from "@/systems/PlaylistCache";
-import { DEBUG_LOCAL_MUSIC_LOGS } from "@/systems/constants";
 import { stateSaved$ } from "@/systems/State";
 import { ensureCacheDirectory, getCacheDirectory } from "@/utils/cacheDirectories";
 import { createJSONManager } from "@/utils/JSONManager";
@@ -823,77 +823,79 @@ stateSaved$.playlistType.onChange(({ value }) => {
 
 // Initialize and scan on app start
 export function initializeLocalMusic(): void {
-    const settings = localMusicSettings$.get();
+    batch(() => {
+        const settings = localMusicSettings$.get();
 
-    debugLocalMusicLog("initializeLocalMusic", settings);
+        debugLocalMusicLog("initializeLocalMusic", settings);
 
-    lastLibraryPaths = Array.isArray(settings.libraryPaths) ? [...settings.libraryPaths] : [];
-    configureLibraryPathWatcher(lastLibraryPaths);
+        lastLibraryPaths = Array.isArray(settings.libraryPaths) ? [...settings.libraryPaths] : [];
+        configureLibraryPathWatcher(lastLibraryPaths);
 
-    if (!hasSubscribedToLibraryPathChanges) {
-        hasSubscribedToLibraryPathChanges = true;
-        localMusicSettings$.libraryPaths.onChange(({ value }) => {
-            const userInitiated = pendingUserInitiatedLibraryChange;
-            pendingUserInitiatedLibraryChange = false;
+        if (!hasSubscribedToLibraryPathChanges) {
+            hasSubscribedToLibraryPathChanges = true;
+            localMusicSettings$.libraryPaths.onChange(({ value }) => {
+                const userInitiated = pendingUserInitiatedLibraryChange;
+                pendingUserInitiatedLibraryChange = false;
 
-            const nextPaths = Array.isArray(value) ? [...value] : [];
-            const removedPaths = lastLibraryPaths.filter((path) => !nextPaths.includes(path));
-            if (removedPaths.length > 0) {
-                clearCachedLibraryData();
+                const nextPaths = Array.isArray(value) ? [...value] : [];
+                const removedPaths = lastLibraryPaths.filter((path) => !nextPaths.includes(path));
+                if (removedPaths.length > 0) {
+                    clearCachedLibraryData();
+                }
+                lastLibraryPaths = nextPaths;
+                configureLibraryPathWatcher(nextPaths);
+
+                if (userInitiated && !localMusicState$.isScanning.get()) {
+                    debugLocalMusicLog("User initiated library change, scanning immediately");
+                    scanLocalMusic().catch((error) => {
+                        console.error("Failed to scan local music after user change:", error);
+                    });
+                    return;
+                }
+
+                scheduleScanAfterFileChange(userInitiated ? 0 : FILE_WATCH_DEBOUNCE_MS);
+            });
+        }
+
+        // Restore isLocalFilesSelected state based on saved playlist type
+        const savedPlaylistType = stateSaved$.playlistType.get();
+        if (savedPlaylistType === "file") {
+            const savedPlaylistId = stateSaved$.playlist.get();
+            const isLocalFiles = savedPlaylistId === DEFAULT_LOCAL_PLAYLIST_ID;
+            localMusicState$.isLocalFilesSelected.set(isLocalFiles);
+            if (isLocalFiles) {
+                debugLocalMusicLog("Restored default library playlist selection on startup");
             }
-            lastLibraryPaths = nextPaths;
-            configureLibraryPathWatcher(nextPaths);
+        }
 
-            if (userInitiated && !localMusicState$.isScanning.get()) {
-                debugLocalMusicLog("User initiated library change, scanning immediately");
+        runAfterInteractionsWithLabel(() => {
+            loadLocalPlaylists().catch((error) => {
+                console.error("Failed to load local playlists:", error);
+            });
+        }, "LocalMusic.loadLocalPlaylists");
+
+        if (settings.autoScanOnStart) {
+            const playlistCacheReady = hasCachedPlaylistData();
+            const libraryCacheReady = hasCachedLibraryData();
+            const deferInitialScan = playlistCacheReady || libraryCacheReady;
+
+            perfLog("LocalMusic.autoScan.policy", { deferInitialScan, playlistCacheReady, libraryCacheReady });
+
+            const scheduleScan = () => {
+                debugLocalMusicLog("Auto-scanning local music during idle...");
                 scanLocalMusic().catch((error) => {
-                    console.error("Failed to scan local music after user change:", error);
+                    console.error("Failed to auto-scan local music:", error);
                 });
+            };
+
+            if (deferInitialScan) {
+                debugLocalMusicLog("Deferring auto-scan of local music until idle (cache available)");
+                runAfterInteractions(scheduleScan);
                 return;
             }
 
-            scheduleScanAfterFileChange(userInitiated ? 0 : FILE_WATCH_DEBOUNCE_MS);
-        });
-    }
-
-    // Restore isLocalFilesSelected state based on saved playlist type
-    const savedPlaylistType = stateSaved$.playlistType.get();
-    if (savedPlaylistType === "file") {
-        const savedPlaylistId = stateSaved$.playlist.get();
-        const isLocalFiles = savedPlaylistId === DEFAULT_LOCAL_PLAYLIST_ID;
-        localMusicState$.isLocalFilesSelected.set(isLocalFiles);
-        if (isLocalFiles) {
-            debugLocalMusicLog("Restored default library playlist selection on startup");
+            debugLocalMusicLog("Auto-scanning local music on startup after interactions...");
+            runAfterInteractionsWithLabel(scheduleScan, "LocalMusic.autoScanOnStart");
         }
-    }
-
-    runAfterInteractionsWithLabel(() => {
-        loadLocalPlaylists().catch((error) => {
-            console.error("Failed to load local playlists:", error);
-        });
-    }, "LocalMusic.loadLocalPlaylists");
-
-    if (settings.autoScanOnStart) {
-        const playlistCacheReady = hasCachedPlaylistData();
-        const libraryCacheReady = hasCachedLibraryData();
-        const deferInitialScan = playlistCacheReady || libraryCacheReady;
-
-        perfLog("LocalMusic.autoScan.policy", { deferInitialScan, playlistCacheReady, libraryCacheReady });
-
-        const scheduleScan = () => {
-            debugLocalMusicLog("Auto-scanning local music during idle...");
-            scanLocalMusic().catch((error) => {
-                console.error("Failed to auto-scan local music:", error);
-            });
-        };
-
-        if (deferInitialScan) {
-            debugLocalMusicLog("Deferring auto-scan of local music until idle (cache available)");
-            runAfterInteractions(scheduleScan);
-            return;
-        }
-
-        debugLocalMusicLog("Auto-scanning local music on startup after interactions...");
-        runAfterInteractionsWithLabel(scheduleScan, "LocalMusic.autoScanOnStart");
-    }
+    });
 }

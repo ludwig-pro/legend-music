@@ -1,6 +1,6 @@
 import { File } from "expo-file-system/next";
-import type { LocalTrack } from "@/systems/LocalMusicState";
 import { DEBUG_QUEUE_LOGS } from "@/systems/constants";
+import type { LocalTrack } from "@/systems/LocalMusicState";
 import { ensureCacheDirectory, getCacheDirectory } from "@/utils/cacheDirectories";
 import { formatSecondsToMmSs, type M3UTrack, parseDurationToSeconds, parseM3U, writeM3U } from "@/utils/m3u";
 
@@ -67,7 +67,7 @@ export async function saveQueueToM3U(tracks: LocalTrack[]): Promise<void> {
 /**
  * Loads tracks from queue.m3u file
  */
-export async function loadQueueFromM3U(): Promise<LocalTrack[]> {
+export function loadQueueFromM3U(): LocalTrack[] {
     try {
         const directory = getCacheDirectory("data");
         ensureCacheDirectory(directory);
