@@ -78,7 +78,7 @@ const createQueuedTrackFromPersisted = (track: PersistedQueuedTrack): QueuedTrac
 
 const snapshotFromCache = getPlaylistCacheSnapshot();
 let queueHydratedFromSnapshot = false;
-let pendingInitialTrackRestore: { track: QueuedTrack; autoPlay: boolean } | null = null;
+let pendingInitialTrackRestore: { track: QueuedTrack } | null = null;
 
 const playbackHistory: number[] = [];
 const MAX_HISTORY_LENGTH = 100;
@@ -101,7 +101,6 @@ if (snapshotFromCache.queue.length > 0) {
         localPlayerState$.currentIndex.set(resolvedIndex);
         pendingInitialTrackRestore = {
             track: currentTrack,
-            autoPlay: snapshotFromCache.isPlaying,
         };
     } else {
         localPlayerState$.currentTrack.set(null);
@@ -364,8 +363,8 @@ async function pause(): Promise<void> {
     }
 }
 
-async function loadTrackInternal(track: LocalTrack, autoPlay: boolean): Promise<void> {
-    perfLog("LocalAudioControls.loadTrack", { id: track.id, filePath: track.filePath, autoPlay });
+async function loadTrackInternal(track: LocalTrack): Promise<void> {
+    perfLog("LocalAudioControls.loadTrack", { id: track.id, filePath: track.filePath });
     if (__DEV__) {
         if (DEBUG_AUDIO_LOGS) {
             console.log("Loading track:", track.title, "by", track.artist);
@@ -434,9 +433,6 @@ async function loadTrackInternal(track: LocalTrack, autoPlay: boolean): Promise<
         const result = await audioPlayer.loadTrack(track.filePath);
         if (result.success) {
             perfLog("LocalAudioControls.loadTrack.success", { filePath: track.filePath });
-            if (autoPlay) {
-                await play();
-            }
         } else {
             const errorMessage = result.error || "Failed to load track";
             perfLog("LocalAudioControls.loadTrack.error", errorMessage);
@@ -469,7 +465,11 @@ function playTrackFromQueue(index: number, options: PlayTrackFromQueueOptions = 
 
     const track = tracks[targetIndex];
     localPlayerState$.currentIndex.set(targetIndex);
-    void loadTrackInternal(track, options.playImmediately ?? true);
+    void loadTrackInternal(track).then(() => {
+        if (options.playImmediately ?? true) {
+            void play();
+        }
+    });
 }
 
 function queueReplace(tracksInput: LocalTrack[], options: QueueUpdateOptions = {}): void {
@@ -756,13 +756,17 @@ async function loadTrack(arg1: LocalTrack | string, arg2?: QueueUpdateOptions | 
             fileName: typeof arg2 === "string" ? arg2 : arg1,
         };
 
-        await loadTrackInternal(track, true);
+        await loadTrackInternal(track);
+        await play();
         return;
     }
 
     const options = (arg2 as QueueUpdateOptions | undefined) ?? {};
     localPlayerState$.currentIndex.set(-1);
-    await loadTrackInternal(arg1, options.playImmediately ?? true);
+    await loadTrackInternal(arg1);
+    if (options.playImmediately ?? true) {
+        await play();
+    }
 }
 
 function loadPlaylist(playlist: LocalTrack[], startIndex = 0, options: QueueUpdateOptions = {}): void {
@@ -777,7 +781,8 @@ async function togglePlayPause(): Promise<void> {
             await pause();
         } else {
             if (pendingInitialTrackRestore) {
-                await restoreTrackFromSnapshotIfNeeded({ force: true });
+                await restoreTrackFromSnapshotIfNeeded({ force: true, playAfterLoad: true });
+                return;
             }
             await play();
         }
@@ -938,32 +943,42 @@ function getCurrentState(): LocalPlayerState {
     return localPlayerState$.get();
 }
 
-async function restoreTrackFromSnapshotIfNeeded({ force }: { force?: boolean } = {}): Promise<void> {
+async function restoreTrackFromSnapshotIfNeeded({
+    force,
+    playAfterLoad,
+}: { force?: boolean; playAfterLoad?: boolean } = {}): Promise<void> {
     if (!audioPlayer || !pendingInitialTrackRestore) {
         return;
     }
 
-    const snapshot = pendingInitialTrackRestore;
-    if (!snapshot.autoPlay && !force) {
+    if (!force) {
         return;
     }
 
+    const snapshot = pendingInitialTrackRestore;
     pendingInitialTrackRestore = null;
-    const { track, autoPlay } = snapshot;
+    const { track } = snapshot;
 
     runAfterInteractionsWithLabel(() => {
         const start = perfMark("LocalAudioPlayer.restoreTrackFromSnapshot.start", {
             track: track.title,
             filePath: track.filePath,
         });
-        void loadTrackInternal(track, autoPlay || force === true).finally(() => {
-            if (start !== undefined) {
-                perfMark("LocalAudioPlayer.restoreTrackFromSnapshot.end", {
-                    track: track.title,
-                    durationMs: Date.now() - start,
-                });
-            }
-        });
+        void loadTrackInternal(track)
+            .then(() => {
+                if (playAfterLoad) {
+                    return play();
+                }
+                return undefined;
+            })
+            .finally(() => {
+                if (start !== undefined) {
+                    perfMark("LocalAudioPlayer.restoreTrackFromSnapshot.end", {
+                        track: track.title,
+                        durationMs: Date.now() - start,
+                    });
+                }
+            });
     }, "LocalAudioPlayer.restoreTrackFromSnapshot");
 }
 
