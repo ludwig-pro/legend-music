@@ -1,15 +1,15 @@
 import { observable } from "@legendapp/state";
+import { File } from "expo-file-system/next";
 import { useEffect } from "react";
 import { View } from "react-native";
-import { File } from "expo-file-system/next";
 import { showToast } from "@/components/Toast";
 import { type NowPlayingInfoPayload, useAudioPlayer } from "@/native-modules/AudioPlayer";
+import { DEBUG_AUDIO_LOGS } from "@/systems/constants";
 import type { LocalTrack } from "@/systems/LocalMusicState";
 import { ensureLocalTrackThumbnail } from "@/systems/LocalMusicState";
 import { playbackInteractionState$ } from "@/systems/PlaybackInteractionState";
 import type { PersistedQueuedTrack, PlaylistSnapshot } from "@/systems/PlaylistCache";
 import { getPlaylistCacheSnapshot, persistPlaylistSnapshot } from "@/systems/PlaylistCache";
-import { DEBUG_AUDIO_LOGS } from "@/systems/constants";
 import { type RepeatMode, settings$ } from "@/systems/Settings";
 import { clearQueueM3U, loadQueueFromM3U, saveQueueToM3U } from "@/utils/m3uManager";
 import { perfCount, perfDelta, perfLog, perfMark } from "@/utils/perfLogger";
@@ -101,7 +101,7 @@ if (snapshotFromCache.queue.length > 0) {
         localPlayerState$.currentIndex.set(resolvedIndex);
         pendingInitialTrackRestore = {
             track: currentTrack,
-            autoPlay: false,
+            autoPlay: snapshotFromCache.isPlaying,
         };
     } else {
         localPlayerState$.currentTrack.set(null);
@@ -414,8 +414,7 @@ async function loadTrackInternal(track: LocalTrack, autoPlay: boolean): Promise<
         const current = localPlayerState$.currentTrack.peek();
         const isCurrentTrack = current && current.id === track.id;
         const hasNewThumbnail =
-            current &&
-            (current.thumbnail !== thumbnail || (thumbnailKey && current.thumbnailKey !== thumbnailKey));
+            current && (current.thumbnail !== thumbnail || (thumbnailKey && current.thumbnailKey !== thumbnailKey));
 
         if (isCurrentTrack && hasNewThumbnail) {
             localPlayerState$.currentTrack.set({ ...current, ...updates });
@@ -777,6 +776,9 @@ async function togglePlayPause(): Promise<void> {
         if (isPlaying) {
             await pause();
         } else {
+            if (pendingInitialTrackRestore) {
+                await restoreTrackFromSnapshotIfNeeded({ force: true });
+            }
             await play();
         }
     }
@@ -936,20 +938,25 @@ function getCurrentState(): LocalPlayerState {
     return localPlayerState$.get();
 }
 
-async function restoreTrackFromSnapshotIfNeeded(): Promise<void> {
+async function restoreTrackFromSnapshotIfNeeded({ force }: { force?: boolean } = {}): Promise<void> {
     if (!audioPlayer || !pendingInitialTrackRestore) {
         return;
     }
 
-    const { track, autoPlay } = pendingInitialTrackRestore;
+    const snapshot = pendingInitialTrackRestore;
+    if (!snapshot.autoPlay && !force) {
+        return;
+    }
+
     pendingInitialTrackRestore = null;
+    const { track, autoPlay } = snapshot;
 
     runAfterInteractionsWithLabel(() => {
         const start = perfMark("LocalAudioPlayer.restoreTrackFromSnapshot.start", {
             track: track.title,
             filePath: track.filePath,
         });
-        void loadTrackInternal(track, autoPlay).finally(() => {
+        void loadTrackInternal(track, autoPlay || force === true).finally(() => {
             if (start !== undefined) {
                 perfMark("LocalAudioPlayer.restoreTrackFromSnapshot.end", {
                     track: track.title,
