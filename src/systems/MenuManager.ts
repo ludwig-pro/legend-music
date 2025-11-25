@@ -1,4 +1,5 @@
 import { localAudioControls, localPlayerState$ } from "@/components/LocalAudioPlayer";
+import { AutoUpdaterModule } from "@/native-modules/AutoUpdater";
 import { menuManager, type MenuShortcut } from "@/native-modules/NativeMenuManager";
 import { type RepeatMode, settings$ } from "@/systems/Settings";
 import { state$ } from "@/systems/State";
@@ -172,6 +173,9 @@ export function initializeMenuManager() {
                 break;
             case "playbackToggleRepeat":
                 localAudioControls.cycleRepeatMode();
+                break;
+            case "checkForUpdates":
+                void AutoUpdaterModule.checkForUpdates();
                 break;
             default:
                 break;

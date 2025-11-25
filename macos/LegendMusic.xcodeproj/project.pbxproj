@@ -24,6 +24,7 @@
 		698A69F62E1838D0001B4A90 /* KeyboardManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 698A69F02E1838D0001B4A90 /* KeyboardManager.swift */; };
 		699DCD2A2EB69511003BDB37 /* FileSystemWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 699DCD272EB69511003BDB37 /* FileSystemWatcher.swift */; };
 		699DCD2B2EB69511003BDB37 /* FileSystemWatcherBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = 699DCD282EB69511003BDB37 /* FileSystemWatcherBridge.m */; };
+		69A6F0223E5AAB9D00ABCDE1 /* AutoUpdater.m in Sources */ = {isa = PBXBuildFile; fileRef = 69A6F01F3E5AAB9D00ABCDE1 /* AutoUpdater.m */; };
 		69B7C91B2E9C2A4A00980C4D /* DragDropConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69B7C91A2E9C2A4A00980C4D /* DragDropConstants.swift */; };
 		69B7C91D2E9C2A9000980C4D /* TrackDraggableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69B7C91C2E9C2A9000980C4D /* TrackDraggableView.swift */; };
 		69B7C91F2E9C2AD800980C4D /* TrackDragSourceBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = 69B7C91E2E9C2AD800980C4D /* TrackDragSourceBridge.m */; };
@@ -33,9 +34,9 @@
 		69EDA8112DC910FA00CCB7F7 /* MenuEvents.m in Sources */ = {isa = PBXBuildFile; fileRef = 69EDA80F2DC910FA00CCB7F7 /* MenuEvents.m */; };
 		69EDB1012DCA10FA00CCB7F7 /* ContextMenuManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 69EDB0FF2DCA10FA00CCB7F7 /* ContextMenuManager.m */; };
 		69F4D1012F0A123400CCB7F7 /* FileDialog.m in Sources */ = {isa = PBXBuildFile; fileRef = 69F4D0FF2F0A123400CCB7F7 /* FileDialog.m */; };
+		A1B2C3D4E5F607801234567 /* AudioPlayer.m in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D6E5F607801234567 /* AudioPlayer.m */; };
 		B3C4A1412FF0A8B500A2C1E9 /* ID3TagEditor in Frameworks */ = {isa = PBXBuildFile; productRef = B3C4A1422FF0A8B500A2C1E9 /* ID3TagEditor */; };
 		B3C4A1452FF0A8F900A2C1E9 /* ID3TagEditorBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3C4A1442FF0A8F900A2C1E9 /* ID3TagEditorBridge.swift */; };
-		A1B2C3D4E5F607801234567 /* AudioPlayer.m in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D6E5F607801234567 /* AudioPlayer.m */; };
 		BEF2DD5FAECBF3C737045F10 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = E3812CA0776629430D89D5DA /* PrivacyInfo.xcprivacy */; };
 		DD7A5E943F53F74817727672 /* libPods-LegendMusic-macOS.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D923D34EAC788A5DE1EAAF00 /* libPods-LegendMusic-macOS.a */; };
 /* End PBXBuildFile section */
@@ -66,6 +67,8 @@
 		698A69F22E1838D0001B4A90 /* RNKeyboardManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RNKeyboardManager.swift; sourceTree = "<group>"; };
 		699DCD272EB69511003BDB37 /* FileSystemWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileSystemWatcher.swift; sourceTree = "<group>"; };
 		699DCD282EB69511003BDB37 /* FileSystemWatcherBridge.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = FileSystemWatcherBridge.m; sourceTree = "<group>"; };
+		69A6F01E3E5AAB9D00ABCDE1 /* AutoUpdater.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AutoUpdater.h; sourceTree = "<group>"; };
+		69A6F01F3E5AAB9D00ABCDE1 /* AutoUpdater.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AutoUpdater.m; sourceTree = "<group>"; };
 		69B7C91A2E9C2A4A00980C4D /* DragDropConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DragDropConstants.swift; sourceTree = "<group>"; };
 		69B7C91C2E9C2A9000980C4D /* TrackDraggableView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackDraggableView.swift; sourceTree = "<group>"; };
 		69B7C91E2E9C2AD800980C4D /* TrackDragSourceBridge.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TrackDragSourceBridge.m; sourceTree = "<group>"; };
@@ -96,15 +99,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-			514201462437B4B30078DB4F /* Frameworks */ = {
-				isa = PBXFrameworksBuildPhase;
-				buildActionMask = 2147483647;
-				files = (
-					B3C4A1412FF0A8B500A2C1E9 /* ID3TagEditor in Frameworks */,
-					DD7A5E943F53F74817727672 /* libPods-LegendMusic-macOS.a in Frameworks */,
-				);
-				runOnlyForDeploymentPostprocessing = 0;
-			};
+		514201462437B4B30078DB4F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B3C4A1412FF0A8B500A2C1E9 /* ID3TagEditor in Frameworks */,
+				DD7A5E943F53F74817727672 /* libPods-LegendMusic-macOS.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -144,6 +147,7 @@
 				A1B2C3D7E5F607801234567 /* AudioPlayer */,
 				69EDA8102DC910FA00CCB7F7 /* MenuEvents */,
 				69EDB1022DCA10FA00CCB7F7 /* ContextMenuManager */,
+				69A6F0203E5AAB9D00ABCDE1 /* AutoUpdater */,
 				69F4D1022F0A123400CCB7F7 /* FileDialog */,
 				69D53FB62DC6653D0004AD94 /* SFSymbol */,
 				696BC82B2E0EFA2500FFFA66 /* WindowControls */,
@@ -217,6 +221,15 @@
 				699DCD282EB69511003BDB37 /* FileSystemWatcherBridge.m */,
 			);
 			path = FileSystemWatcher;
+			sourceTree = "<group>";
+		};
+		69A6F0203E5AAB9D00ABCDE1 /* AutoUpdater */ = {
+			isa = PBXGroup;
+			children = (
+				69A6F01E3E5AAB9D00ABCDE1 /* AutoUpdater.h */,
+				69A6F01F3E5AAB9D00ABCDE1 /* AutoUpdater.m */,
+			);
+			path = AutoUpdater;
 			sourceTree = "<group>";
 		};
 		69D53FB62DC6653D0004AD94 /* SFSymbol */ = {
@@ -296,16 +309,16 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-			A1B2C3D7E5F607801234567 /* AudioPlayer */ = {
-				isa = PBXGroup;
-				children = (
-					A1B2C3D5E5F607801234567 /* AudioPlayer.h */,
-					A1B2C3D6E5F607801234567 /* AudioPlayer.m */,
-					B3C4A1442FF0A8F900A2C1E9 /* ID3TagEditorBridge.swift */,
-				);
-				path = AudioPlayer;
-				sourceTree = "<group>";
-			};
+		A1B2C3D7E5F607801234567 /* AudioPlayer */ = {
+			isa = PBXGroup;
+			children = (
+				A1B2C3D5E5F607801234567 /* AudioPlayer.h */,
+				A1B2C3D6E5F607801234567 /* AudioPlayer.m */,
+				B3C4A1442FF0A8F900A2C1E9 /* ID3TagEditorBridge.swift */,
+			);
+			path = AudioPlayer;
+			sourceTree = "<group>";
+		};
 		B669C9BC2CE56F5EFB57A35A /* ExpoModulesProviders */ = {
 			isa = PBXGroup;
 			children = (
@@ -348,18 +361,18 @@
 				9D2E5C3B52545030432B324A /* [CP] Copy Pods Resources */,
 				D40307B9B1EF7419C22DAC6E /* [CP] Embed Pods Frameworks */,
 			);
-				buildRules = (
-				);
-				dependencies = (
-				);
-				name = "LegendMusic-macOS";
-				packageProductDependencies = (
-					B3C4A1422FF0A8B500A2C1E9 /* ID3TagEditor */,
-				);
-				productName = LegendMusic;
-				productReference = 514201492437B4B30078DB4F /* LegendMusic.app */;
-				productType = "com.apple.product-type.application";
-			};
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "LegendMusic-macOS";
+			packageProductDependencies = (
+				B3C4A1422FF0A8B500A2C1E9 /* ID3TagEditor */,
+			);
+			productName = LegendMusic;
+			productReference = 514201492437B4B30078DB4F /* LegendMusic.app */;
+			productType = "com.apple.product-type.application";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -381,19 +394,19 @@
 			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
-				knownRegions = (
-					en,
-					Base,
-				);
-				mainGroup = 83CBB9F61A601CBA00E9B192;
-				packageReferences = (
-					B3C4A1432FF0A8B500A2C1E9 /* ID3TagEditor */,
-				);
-				productRefGroup = 83CBBA001A601CBA00E9B192 /* Products */;
-				projectDirPath = "";
-				projectRoot = "";
-				targets = (
-					13B07F861A680F5B00A75B9A /* LegendMusic-iOS */,
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 83CBB9F61A601CBA00E9B192;
+			packageReferences = (
+				B3C4A1432FF0A8B500A2C1E9 /* XCRemoteSwiftPackageReference "ID3TagEditor" */,
+			);
+			productRefGroup = 83CBBA001A601CBA00E9B192 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				13B07F861A680F5B00A75B9A /* LegendMusic-iOS */,
 				514201482437B4B30078DB4F /* LegendMusic-macOS */,
 			);
 		};
@@ -529,10 +542,12 @@
 			);
 			inputPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-LegendMusic-macOS/Pods-LegendMusic-macOS-frameworks.sh",
+				"${PODS_ROOT}/Sparkle/Sparkle.framework",
 				"${PODS_ROOT}/hermes-engine/destroot/Library/Frameworks/macosx/hermes.framework",
 			);
 			name = "[CP] Embed Pods Frameworks";
 			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/Sparkle.framework",
 				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -552,16 +567,16 @@
 		};
 		514201452437B4B30078DB4F /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
-				buildActionMask = 2147483647;
-				files = (
-					514201582437B4B40078DB4F /* main.m in Sources */,
-					A1B2C3D4E5F607801234567 /* AudioPlayer.m in Sources */,
-					B3C4A1452FF0A8F900A2C1E9 /* ID3TagEditorBridge.swift in Sources */,
-					69EDA8112DC910FA00CCB7F7 /* MenuEvents.m in Sources */,
-					699DCD2A2EB69511003BDB37 /* FileSystemWatcher.swift in Sources */,
-					699DCD2B2EB69511003BDB37 /* FileSystemWatcherBridge.m in Sources */,
-					69D53FB72DC6653D0004AD94 /* SFSymbol.swift in Sources */,
-					698A69F42E1838D0001B4A90 /* RNKeyboardManager.swift in Sources */,
+			buildActionMask = 2147483647;
+			files = (
+				514201582437B4B40078DB4F /* main.m in Sources */,
+				A1B2C3D4E5F607801234567 /* AudioPlayer.m in Sources */,
+				B3C4A1452FF0A8F900A2C1E9 /* ID3TagEditorBridge.swift in Sources */,
+				69EDA8112DC910FA00CCB7F7 /* MenuEvents.m in Sources */,
+				699DCD2A2EB69511003BDB37 /* FileSystemWatcher.swift in Sources */,
+				699DCD2B2EB69511003BDB37 /* FileSystemWatcherBridge.m in Sources */,
+				69D53FB72DC6653D0004AD94 /* SFSymbol.swift in Sources */,
+				698A69F42E1838D0001B4A90 /* RNKeyboardManager.swift in Sources */,
 				698A69F52E1838D0001B4A90 /* KeyboardManagerBridge.m in Sources */,
 				69B7C91B2E9C2A4A00980C4D /* DragDropConstants.swift in Sources */,
 				69118FE92E7F652300F00B75 /* DragDropView.swift in Sources */,
@@ -577,6 +592,7 @@
 				696BC82C2E0EFA2500FFFA66 /* WindowControls.swift in Sources */,
 				696BC82D2E0EFA2500FFFA66 /* WindowControlsBridge.m in Sources */,
 				69EDB1012DCA10FA00CCB7F7 /* ContextMenuManager.m in Sources */,
+				69A6F0223E5AAB9D00ABCDE1 /* AutoUpdater.m in Sources */,
 				69F4D1012F0A123400CCB7F7 /* FileDialog.m in Sources */,
 				1F88FA766E6115322310F4C0 /* ExpoModulesProvider.swift in Sources */,
 			);
@@ -846,25 +862,6 @@
 		};
 /* End XCBuildConfiguration section */
 
-/* Begin XCRemoteSwiftPackageReference section */
-		B3C4A1432FF0A8B500A2C1E9 /* ID3TagEditor */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/chicio/ID3TagEditor.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 5.4.0;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		B3C4A1422FF0A8B500A2C1E9 /* ID3TagEditor */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = B3C4A1432FF0A8B500A2C1E9 /* ID3TagEditor */;
-			productName = ID3TagEditor;
-		};
-/* End XCSwiftPackageProductDependency section */
-
 /* Begin XCConfigurationList section */
 		13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "LegendMusic-iOS" */ = {
 			isa = XCConfigurationList;
@@ -894,6 +891,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		B3C4A1432FF0A8B500A2C1E9 /* XCRemoteSwiftPackageReference "ID3TagEditor" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/chicio/ID3TagEditor.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.4.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		B3C4A1422FF0A8B500A2C1E9 /* ID3TagEditor */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B3C4A1432FF0A8B500A2C1E9 /* XCRemoteSwiftPackageReference "ID3TagEditor" */;
+			productName = ID3TagEditor;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 83CBB9F71A601CBA00E9B192 /* Project object */;
 }

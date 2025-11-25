@@ -228,7 +228,7 @@ function generateAppcast(distDir: string, config: AppConfig) {
         [
             distDir,
             "--download-url-prefix",
-            `https://github.com/LegendApp/legend-photos/releases/download/v${config.version}/`,
+            `https://github.com/LegendApp/legend-music/releases/download/v${config.version}/`,
         ],
         "Error generating appcast:",
     );
@@ -238,19 +238,20 @@ function generateAppcast(distDir: string, config: AppConfig) {
 }
 
 // Function to replace spaces with hyphens in appcast.xml and delta files
-function replaceSpacesInAppcast(distDir: string) {
+function replaceSpacesInAppcast(distDir: string, appName: string) {
     log("Replacing spaces with hyphens in appcast.xml and delta files");
 
     const appcastPath = join(distDir, "appcast.xml");
     const appcastContent = readFileSync(appcastPath, "utf-8");
 
-    // First rename any delta files that have spaces
-    const deltaFiles = appcastContent.match(/Legend%20Photos[^"<>]+\.delta/g) || [];
-    console.log("deltaFiles", deltaFiles);
+    const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const encodedAppName = appName.replace(/ /g, "%20");
+    const deltaPattern = new RegExp(`${escapeRegExp(encodedAppName)}[^"<>]+\\.delta`, "g");
+
+    const deltaFiles = appcastContent.match(deltaPattern) || [];
     deltaFiles.forEach((deltaFile) => {
         const oldPath = join(distDir, deltaFile.replace(/(%20)+/g, " "));
         const newPath = join(distDir, deltaFile.replace(/(%20)+/g, "-"));
-        console.log("newPath", oldPath, newPath);
 
         if (existsSync(oldPath)) {
             cpSync(oldPath, newPath, { force: true });
@@ -258,15 +259,9 @@ function replaceSpacesInAppcast(distDir: string) {
         }
     });
 
-    // Now update the appcast.xml content to use the new filenames
-    const updatedContent = appcastContent.replace(/Legend(%20)Photos[^"<>]+\.delta/g, (match) => {
-        console.log("match", match);
-        return match.replace(/(%20)+/g, "-");
-    });
+    const updatedContent = appcastContent.replace(deltaPattern, (match) => match.replace(/(%20)+/g, "-"));
 
     writeFileSync(appcastPath, updatedContent, "utf-8");
-
-    // Also update the root appcast.xml
     const rootAppcastPath = join(PROJECT_ROOT, "appcast.xml");
     writeFileSync(rootAppcastPath, updatedContent, "utf-8");
 
@@ -275,17 +270,13 @@ function replaceSpacesInAppcast(distDir: string) {
 
 // Main execution
 function main() {
-    const DO_CHANGELOG = false;
-    const DO_SPARKLE = false;
     // Load configuration
     const config = loadConfig();
 
     const appName = config.APP_NAME;
 
-    if (DO_CHANGELOG) {
-        // Check if this version exists in the changelog before proceeding
-        checkVersionInChangelog(config);
-    }
+    // Check if this version exists in the changelog before proceeding
+    checkVersionInChangelog(config);
 
     // Setup paths
     const builtAppPath = join(PROJECT_ROOT, "macos/build/Build/Products/Release", `${appName}.app`);
@@ -348,20 +339,16 @@ function main() {
     log("Packaging complete");
     console.log(`App has been packaged to: ${zipFilePath}`);
 
-    if (DO_SPARKLE) {
-        // Create version info file for Sparkle
-        createVersionInfoFile(distDir, config, zipFileName);
+    // Create version info file for Sparkle
+    createVersionInfoFile(distDir, config, zipFileName);
 
-        if (DO_CHANGELOG) {
-            // Generate HTML update files from CHANGELOG.md
-            generateChangelogHtml(distDir, config, appName);
-        }
+    // Generate HTML update files from CHANGELOG.md
+    generateChangelogHtml(distDir, config, appName);
 
-        // Generate appcast
-        generateAppcast(distDir, config);
+    // Generate appcast
+    generateAppcast(distDir, config);
 
-        replaceSpacesInAppcast(distDir);
-    }
+    replaceSpacesInAppcast(distDir, appName);
 }
 
 // Run the script

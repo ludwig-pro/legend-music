@@ -222,7 +222,7 @@ static inline NSAppearance *LegendDarkAppearance() {
 
   // Set up menu items
   [self setupMenuCommand:@"settings" itemTitle:@"Settings…" inMenu:@"LegendMusic"];
-//   [self setupMenuCommand:@"checkForUpdates" itemTitle:@"Check for Updates..." inMenu:@"LegendPhotos"];
+  [self setupMenuCommand:@"checkForUpdates" itemTitle:@"Check for Updates..." inMenu:@"LegendMusic"];
   [self setupMenuCommand:@"jump" itemTitle:@"Jump" inMenu:@"File"];
   [self setupPlaybackMenu];
   [self normalizeMenuKeyEquivalents:mainMenu];

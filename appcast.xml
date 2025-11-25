@@ -1,0 +1,9 @@
+<?xml version="1.0" standalone="yes"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+    <channel>
+        <title>Legend Music</title>
+        <description>
+            Update feed for Legend Music. This file is replaced by scripts/package-app.ts during release packaging.
+        </description>
+    </channel>
+</rss>
