@@ -51,8 +51,8 @@ export function SkiaText({
     style,
 }: SkiaTextProps) {
     const textShared = useSharedValue(text ?? "");
-    const textWidth$ = useObservable(0);
-    const textWidth = use$(textWidth$);
+    const textWidth$ = useObservable({ width: 0, length: 0 });
+    const { width: textWidth } = use$(textWidth$);
 
     useEffect(() => {
         if (typeof text === "string") {
@@ -68,13 +68,15 @@ export function SkiaText({
         const rawInitial = text$.get?.() ?? "";
         const initial = typeof rawInitial === "string" ? rawInitial : String(rawInitial);
         textShared.value = initial;
-        textWidth$.set(font.measureText(initial).width);
+        textWidth$.set({ length: initial.length, width: font.measureText(initial).width });
 
         const unsubscribe = text$.onChange(({ value }) => {
             const rawNext = value ?? "";
             const next = typeof rawNext === "string" ? rawNext : String(rawNext);
             textShared.value = next;
-            textWidth$.set(font.measureText(next).width);
+            if (value.length !== next.length) {
+                textWidth$.set({ length: next.length, width: font.measureText(next).width });
+            }
         });
 
         return () => unsubscribe();
@@ -86,7 +88,6 @@ export function SkiaText({
     const baseWidth = width ?? Math.ceil(fontSize * 3);
     const canvasWidth = Math.max(baseWidth, Math.ceil(textWidth));
 
-    const baseline = useMemo(() => Math.ceil(-metrics.ascent), [metrics.ascent]);
     const x = useMemo(() => {
         if (align === "right") {
             return canvasWidth - textWidth;
@@ -105,7 +106,7 @@ export function SkiaText({
                     // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
                     text={textShared as unknown as { value: string }}
                     x={x}
-                    y={baseline}
+                    y={fontSize}
                     color={color}
                     font={font}
                 />
