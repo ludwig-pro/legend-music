@@ -100,7 +100,7 @@ export interface AudioPlayerEvents {
     onLoadSuccess: (data: { duration: number }) => void;
     onLoadError: (data: { error: string }) => void;
     onPlaybackStateChanged: (data: { isPlaying: boolean }) => void;
-    onProgress: (data: { currentTime: number; duration: number }) => void;
+    onProgress: (data: { currentTime: number; duration?: number }) => void;
     onCompletion: () => void;
     onRemoteCommand: (data: { command: RemoteCommand }) => void;
     onVisualizerFrame: (data: VisualizerFrame) => void;

@@ -51,6 +51,10 @@ export const queue$ = observable<PlaybackQueueState>({
 });
 
 let queueEntryCounter = 0;
+let jsProgressTimer: ReturnType<typeof setInterval> | null = null;
+let lastNativeProgressTime = 0;
+let lastNativeProgressTimestamp = 0;
+const JS_PROGRESS_INTERVAL_MS = 500;
 
 function createQueueEntryId(seed: string): string {
     queueEntryCounter += 1;
@@ -182,6 +186,47 @@ type QueueInput = LocalTrack | LocalTrack[];
 
 const audioPlayer: typeof audioPlayerApi | null = audioPlayerApi;
 let localAudioPlayerInitialized = false;
+
+function stopJsProgressTimer(): void {
+    if (jsProgressTimer) {
+        clearInterval(jsProgressTimer);
+        jsProgressTimer = null;
+    }
+}
+
+function anchorProgress(time: number): void {
+    lastNativeProgressTime = time;
+    lastNativeProgressTimestamp = Date.now();
+}
+
+function tickJsProgress(): void {
+    if (!localPlayerState$.isPlaying.peek()) {
+        stopJsProgressTimer();
+        return;
+    }
+
+    if (!lastNativeProgressTimestamp) {
+        return;
+    }
+
+    const elapsedSeconds = (Date.now() - lastNativeProgressTimestamp) / 1000;
+    const duration = localPlayerState$.duration.peek();
+    const projected = lastNativeProgressTime + elapsedSeconds;
+    const target = duration > 0 ? Math.min(duration, projected) : projected;
+    const current = localPlayerState$.currentTime.peek();
+
+    if (!playbackInteractionState$.isScrubbing.peek() && Math.abs(target - current) >= 0.05) {
+        localPlayerState$.currentTime.set(target);
+    }
+}
+
+function startJsProgressTimer(): void {
+    if (jsProgressTimer) {
+        return;
+    }
+
+    jsProgressTimer = setInterval(tickJsProgress, JS_PROGRESS_INTERVAL_MS);
+}
 
 function createQueuedTrack(track: LocalTrack): QueuedTrack {
     return {
@@ -360,6 +405,8 @@ async function pause(): Promise<void> {
     } catch (error) {
         console.error("Error pausing:", error);
     }
+
+    stopJsProgressTimer();
 }
 
 async function loadTrackInternal(track: LocalTrack): Promise<void> {
@@ -370,6 +417,8 @@ async function loadTrackInternal(track: LocalTrack): Promise<void> {
         }
     }
 
+    stopJsProgressTimer();
+    anchorProgress(0);
     localPlayerState$.currentTrack.set(track);
     localPlayerState$.currentTime.set(0);
     localPlayerState$.duration.set(0);
@@ -1038,26 +1087,25 @@ export function initializeLocalAudioPlayer(): void {
     });
 
     audioPlayer.addListener("onPlaybackStateChanged", (data) => {
-        perfCount("LocalAudioPlayer.onPlaybackStateChanged");
-        const delta = perfDelta("LocalAudioPlayer.onPlaybackStateChanged");
-        perfLog("LocalAudioPlayer.onPlaybackStateChanged", { delta, data });
-        if (__DEV__) {
-            if (DEBUG_AUDIO_LOGS) {
-                console.log("Playback state changed:", data.isPlaying);
-            }
-        }
         localPlayerState$.isPlaying.set(data.isPlaying);
+        if (data.isPlaying) {
+            anchorProgress(localPlayerState$.currentTime.peek());
+            startJsProgressTimer();
+        } else {
+            stopJsProgressTimer();
+        }
     });
 
     audioPlayer.addListener("onProgress", (data) => {
-        perfCount("LocalAudioPlayer.onProgress");
-        const delta = perfDelta("LocalAudioPlayer.onProgress");
-        perfLog("LocalAudioPlayer.onProgress", { delta, current: data.currentTime, duration: data.duration });
+        anchorProgress(data.currentTime);
         if (!playbackInteractionState$.isScrubbing.peek()) {
             localPlayerState$.currentTime.set(data.currentTime);
         }
-        if (data.duration !== localPlayerState$.duration.peek()) {
+        if (typeof data.duration === "number" && data.duration > 0 && data.duration !== localPlayerState$.duration.peek()) {
             localPlayerState$.duration.set(data.duration);
+        }
+        if (localPlayerState$.isPlaying.peek()) {
+            startJsProgressTimer();
         }
     });
 
@@ -1073,6 +1121,7 @@ export function initializeLocalAudioPlayer(): void {
         const duration = localPlayerState$.duration.peek();
         localPlayerState$.currentTime.set(duration);
         localPlayerState$.isPlaying.set(false);
+        stopJsProgressTimer();
         localAudioControls.playNext();
     });
 
