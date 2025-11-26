@@ -951,12 +951,10 @@ async function restoreTrackFromSnapshotIfNeeded({
     playAfterLoad?: boolean;
 } = {}): Promise<void> {
     if (!audioPlayer || !pendingInitialTrackRestore) {
-        console.log("ZZZ returning");
         return;
     }
 
     if (!force) {
-        console.log("ZZZ returning 2");
         return;
     }
 
