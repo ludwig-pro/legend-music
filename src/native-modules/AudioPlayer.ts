@@ -93,6 +93,7 @@ export interface MediaScanOptions {
     batchSize?: number;
     includeHidden?: boolean;
     skip?: { rootIndex: number; relativePath: string }[];
+    includeArtwork?: boolean;
 }
 
 export interface AudioPlayerEvents {

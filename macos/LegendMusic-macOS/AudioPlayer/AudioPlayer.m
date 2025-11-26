@@ -250,7 +250,7 @@ static void LMCacheArtworkThumbnail(NSData *artworkData, NSURL *fileURL, NSStrin
     }
 }
 
-static NSDictionary *LMExtractAVMediaTags(NSURL *fileURL, NSString *cacheDirPath) {
+static NSDictionary *LMExtractAVMediaTags(NSURL *fileURL, NSString *cacheDirPath, BOOL includeArtwork) {
     if (!fileURL) {
         return @{};
     }
@@ -292,28 +292,30 @@ static NSDictionary *LMExtractAVMediaTags(NSURL *fileURL, NSString *cacheDirPath
         durationSeconds = LMReadDurationSeconds(fileURL);
     }
 
-    NSData *artworkData = nil;
-    NSArray<AVMetadataItem *> *artworkItems = [AVMetadataItem metadataItemsFromArray:commonMetadata withKey:AVMetadataCommonKeyArtwork keySpace:AVMetadataKeySpaceCommon];
-    if (artworkItems.count > 0) {
-        artworkData = [artworkItems.firstObject dataValue];
-    }
-    if (!artworkData) {
-        NSArray<AVMetadataItem *> *id3ArtworkItems = [AVMetadataItem metadataItemsFromArray:[asset metadataForFormat:AVMetadataFormatiTunesMetadata] withKey:AVMetadataiTunesMetadataKeyCoverArt keySpace:AVMetadataKeySpaceiTunes];
-        if (id3ArtworkItems.count == 0) {
-            id3ArtworkItems = [AVMetadataItem metadataItemsFromArray:[asset metadataForFormat:AVMetadataFormatiTunesMetadata] withKey:AVMetadataCommonKeyArtwork keySpace:AVMetadataKeySpaceCommon];
+    if (includeArtwork) {
+        NSData *artworkData = nil;
+        NSArray<AVMetadataItem *> *artworkItems = [AVMetadataItem metadataItemsFromArray:commonMetadata withKey:AVMetadataCommonKeyArtwork keySpace:AVMetadataKeySpaceCommon];
+        if (artworkItems.count > 0) {
+            artworkData = [artworkItems.firstObject dataValue];
         }
-        if (id3ArtworkItems.count > 0) {
-            artworkData = [id3ArtworkItems.firstObject dataValue];
+        if (!artworkData) {
+            NSArray<AVMetadataItem *> *id3ArtworkItems = [AVMetadataItem metadataItemsFromArray:[asset metadataForFormat:AVMetadataFormatiTunesMetadata] withKey:AVMetadataiTunesMetadataKeyCoverArt keySpace:AVMetadataKeySpaceiTunes];
+            if (id3ArtworkItems.count == 0) {
+                id3ArtworkItems = [AVMetadataItem metadataItemsFromArray:[asset metadataForFormat:AVMetadataFormatiTunesMetadata] withKey:AVMetadataCommonKeyArtwork keySpace:AVMetadataKeySpaceCommon];
+            }
+            if (id3ArtworkItems.count > 0) {
+                artworkData = [id3ArtworkItems.firstObject dataValue];
+            }
         }
-    }
-    if (!artworkData) {
-        NSArray<AVMetadataItem *> *id3Attached = [AVMetadataItem metadataItemsFromArray:[asset metadataForFormat:AVMetadataFormatID3Metadata] withKey:AVMetadataID3MetadataKeyAttachedPicture keySpace:AVMetadataKeySpaceID3];
-        if (id3Attached.count > 0) {
-            artworkData = [id3Attached.firstObject dataValue];
+        if (!artworkData) {
+            NSArray<AVMetadataItem *> *id3Attached = [AVMetadataItem metadataItemsFromArray:[asset metadataForFormat:AVMetadataFormatID3Metadata] withKey:AVMetadataID3MetadataKeyAttachedPicture keySpace:AVMetadataKeySpaceID3];
+            if (id3Attached.count > 0) {
+                artworkData = [id3Attached.firstObject dataValue];
+            }
         }
-    }
 
-    LMCacheArtworkThumbnail(artworkData, fileURL, cacheDirPath, &artworkPath, &artworkKey);
+        LMCacheArtworkThumbnail(artworkData, fileURL, cacheDirPath, &artworkPath, &artworkKey);
+    }
 
     NSMutableDictionary *result = [NSMutableDictionary dictionary];
     if (title.length > 0) {
@@ -328,17 +330,17 @@ static NSDictionary *LMExtractAVMediaTags(NSURL *fileURL, NSString *cacheDirPath
     if (durationSeconds) {
         result[@"durationSeconds"] = durationSeconds;
     }
-    if (artworkPath.length > 0) {
+    if (includeArtwork && artworkPath.length > 0) {
         result[@"artworkUri"] = artworkPath;
     }
-    if (artworkKey.length > 0) {
+    if (includeArtwork && artworkKey.length > 0) {
         result[@"artworkKey"] = artworkKey;
     }
 
     return result;
 }
 
-static NSDictionary *LMExtractID3MediaTags(NSURL *fileURL, NSString *cacheDirPath) {
+static NSDictionary *LMExtractID3MediaTags(NSURL *fileURL, NSString *cacheDirPath, BOOL includeArtwork) {
     NSError *error = nil;
     LMID3TagsResult *tags = [LMID3TagEditorBridge readTagsForURL:fileURL error:&error];
     if (!tags) {
@@ -362,7 +364,9 @@ static NSDictionary *LMExtractID3MediaTags(NSURL *fileURL, NSString *cacheDirPat
         durationSeconds = LMReadDurationSeconds(fileURL);
     }
 
-    LMCacheArtworkThumbnail(tags.artworkData, fileURL, cacheDirPath, &artworkUri, &artworkKey);
+    if (includeArtwork) {
+        LMCacheArtworkThumbnail(tags.artworkData, fileURL, cacheDirPath, &artworkUri, &artworkKey);
+    }
 
     NSMutableDictionary *result = [NSMutableDictionary dictionary];
     if (title) {
@@ -377,29 +381,29 @@ static NSDictionary *LMExtractID3MediaTags(NSURL *fileURL, NSString *cacheDirPat
     if (durationSeconds) {
         result[@"durationSeconds"] = durationSeconds;
     }
-    if (artworkUri) {
+    if (includeArtwork && artworkUri) {
         result[@"artworkUri"] = artworkUri;
     }
-    if (artworkKey) {
+    if (includeArtwork && artworkKey) {
         result[@"artworkKey"] = artworkKey;
     }
 
     return result;
 }
 
-static NSDictionary *LMExtractMediaTags(NSURL *fileURL, NSString *cacheDirPath) {
+static NSDictionary *LMExtractMediaTags(NSURL *fileURL, NSString *cacheDirPath, BOOL includeArtwork) {
     if (!fileURL) {
         return @{};
     }
 
     if (LMIsMP3URL(fileURL)) {
-        NSDictionary *id3Tags = LMExtractID3MediaTags(fileURL, cacheDirPath);
+        NSDictionary *id3Tags = LMExtractID3MediaTags(fileURL, cacheDirPath, includeArtwork);
         if (id3Tags) {
             return id3Tags;
         }
     }
 
-    NSDictionary *fallback = LMExtractAVMediaTags(fileURL, cacheDirPath);
+    NSDictionary *fallback = LMExtractAVMediaTags(fileURL, cacheDirPath, includeArtwork);
     return fallback ?: @{};
 }
 
@@ -1461,7 +1465,7 @@ RCT_EXPORT_METHOD(getMediaTags:(NSString *)filePath
             }
 
             NSString *normalizedCacheDir = cacheDir ? LMNormalizePathString(cacheDir) : @"";
-            NSDictionary *result = LMExtractMediaTags(fileURL, normalizedCacheDir);
+            NSDictionary *result = LMExtractMediaTags(fileURL, normalizedCacheDir, YES);
             resolve(result ?: @{});
         }
     });
@@ -1558,7 +1562,8 @@ RCT_EXPORT_METHOD(scanMediaLibrary:(NSArray<NSString *> *)paths
             }
 
             BOOL includeHidden = [[options objectForKey:@"includeHidden"] boolValue];
-            NSString *normalizedCacheDir = cacheDir ? LMNormalizePathString(cacheDir) : @"";
+            BOOL includeArtwork = [[options objectForKey:@"includeArtwork"] boolValue];
+            NSString *normalizedCacheDir = (includeArtwork && cacheDir) ? LMNormalizePathString(cacheDir) : @"";
 
             NSMutableDictionary<NSNumber *, NSMutableSet<NSString *> *> *skipLookup = [NSMutableDictionary dictionary];
             NSArray *skipEntries = [options objectForKey:@"skip"];
@@ -1704,7 +1709,7 @@ RCT_EXPORT_METHOD(scanMediaLibrary:(NSArray<NSString *> *)paths
                             continue;
                         }
 
-                        NSDictionary *tags = LMExtractMediaTags(fileURL, normalizedCacheDir);
+                        NSDictionary *tags = LMExtractMediaTags(fileURL, normalizedCacheDir, includeArtwork);
 
                         NSMutableDictionary *track = [@{
                             @"rootIndex": @(rootIndex),
