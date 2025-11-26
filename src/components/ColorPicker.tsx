@@ -1,5 +1,5 @@
 import type { Observable } from "@legendapp/state";
-import { use$ } from "@legendapp/state/react";
+import { useValue } from "@legendapp/state/react";
 import { Text, TextInput, View } from "react-native";
 
 import { cn } from "@/utils/cn";
@@ -11,7 +11,7 @@ export interface ColorPickerProps {
 }
 
 export function ColorPicker({ label, $color, className }: ColorPickerProps) {
-    const color = use$($color);
+    const color = useValue($color);
 
     const handleChange = (value: string) => {
         $color.set(value.trim());

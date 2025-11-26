@@ -1,10 +1,11 @@
 import { LegendList } from "@legendapp/list";
-import { use$ } from "@legendapp/state/react";
+import { useValue } from "@legendapp/state/react";
 import { type ElementRef, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { findNodeHandle, type NativeSyntheticEvent, Platform, StyleSheet, Text, UIManager, View } from "react-native";
 import type { NativeMouseEvent } from "react-native-macos";
 import { Button } from "@/components/Button";
 import { localAudioControls, localPlayerState$, type QueuedTrack, queue$ } from "@/components/LocalAudioPlayer";
+import { showToast } from "@/components/Toast";
 import { type TrackData, TrackItem } from "@/components/TrackItem";
 import { usePlaylistSelection } from "@/hooks/usePlaylistSelection";
 import { showContextMenu } from "@/native-modules/ContextMenu";
@@ -41,7 +42,6 @@ import {
     type PlaylistDragData,
 } from "./dnd";
 import { useDragDrop } from "./dnd/DragDropContext";
-import { showToast } from "@/components/Toast";
 
 type PlaylistTrackWithSuggestions = TrackData & {
     queueEntryId: string;
@@ -77,13 +77,13 @@ const normalizeTrackPath = (path: string): string => {
 
 export function Playlist() {
     perfCount("Playlist.render");
-    const localMusicState = use$(localMusicState$);
-    const libraryPaths = use$(librarySettings$.paths);
-    const queueTracks = use$(queue$.tracks);
-    const currentTrackIndex = use$(localPlayerState$.currentIndex);
-    const currentTrack = use$(localPlayerState$.currentTrack);
-    const isPlayerActive = use$(localPlayerState$.isPlaying);
-    const playlistStyle = use$(settings$.general.playlistStyle);
+    const localMusicState = useValue(localMusicState$);
+    const libraryPaths = useValue(librarySettings$.paths);
+    const queueTracks = useValue(queue$.tracks);
+    const currentTrackIndex = useValue(localPlayerState$.currentIndex);
+    const currentTrack = useValue(localPlayerState$.currentTrack);
+    const isPlayerActive = useValue(localPlayerState$.isPlaying);
+    const playlistStyle = useValue(settings$.general.playlistStyle);
     const queueLength = queueTracks.length;
     const hasConfiguredLibrary = libraryPaths.length > 0;
     const hasLibraryTracks = localMusicState.tracks.length > 0;
@@ -294,12 +294,9 @@ export function Playlist() {
         [activeDropZone$, draggedItem$, queueLength, updateDropAreaWindowRect],
     );
 
-    const showDropFeedback = useCallback(
-        (feedback: DropFeedback) => {
-            showToast(feedback.message, feedback.type === "warning" ? "error" : "info");
-        },
-        [],
-    );
+    const showDropFeedback = useCallback((feedback: DropFeedback) => {
+        showToast(feedback.message, feedback.type === "warning" ? "error" : "info");
+    }, []);
 
     const handleAddLibraryTracks = useCallback(() => {
         perfLog("Playlist.openLibraryFromEmptyState");

@@ -4,6 +4,7 @@
 module.exports = {
     presets: ["module:@react-native/babel-preset", "nativewind/babel"],
     plugins: [
+        "babel-plugin-react-compiler", // must run first!
         [
             "module-resolver",
             {

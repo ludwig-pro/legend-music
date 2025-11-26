@@ -1,5 +1,5 @@
 import type { Observable } from "@legendapp/state";
-import { use$, useSelector } from "@legendapp/state/react";
+import { useSelector, useValue } from "@legendapp/state/react";
 import { Text, View } from "react-native";
 import type { NativeMouseEvent } from "react-native-macos";
 import { Button } from "@/components/Button";
@@ -74,7 +74,7 @@ export const TrackItem = ({
         return currentTrack.id === track.id;
     });
 
-    const isSelected = use$(() => {
+    const isSelected = useValue(() => {
         const currentSelection = selectedIndices$?.get();
         return currentSelection ? currentSelection.has(index) : false;
     });
@@ -114,7 +114,8 @@ export const TrackItem = ({
         "w-full",
     );
     const indexTone = track.fromSuggestions || isMissing ? listItemStyles.text.muted : listItemStyles.text.secondary;
-    const primaryTone = track.fromSuggestions || isMissing ? listItemStyles.text.secondary : listItemStyles.text.primary;
+    const primaryTone =
+        track.fromSuggestions || isMissing ? listItemStyles.text.secondary : listItemStyles.text.primary;
     const durationTone = track.fromSuggestions || isMissing ? listItemStyles.text.muted : "";
 
     return (

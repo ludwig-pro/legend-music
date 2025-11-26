@@ -1,6 +1,6 @@
 import { VibrancyView } from "@fluentui-react-native/vibrancy-view";
 import { PortalProvider } from "@gorhom/portal";
-import { use$, useObservable } from "@legendapp/state/react";
+import { useObservable, useValue } from "@legendapp/state/react";
 import { StyleSheet, View } from "react-native";
 
 import { Sidebar } from "@/components/Sidebar";
@@ -29,9 +29,9 @@ const SETTING_PAGES: { id: SettingsPage; name: string }[] = ax([
 ]);
 
 export default function SettingsContainer() {
-    const showSettingsPage = use$(state$.showSettingsPage);
+    const showSettingsPage = useValue(state$.showSettingsPage);
     const selectedItem$ = useObservable<SettingsPage>(showSettingsPage || "general");
-    const selectedItem = use$(selectedItem$);
+    const selectedItem = useValue(selectedItem$);
 
     const renderContent = () => {
         switch (selectedItem) {

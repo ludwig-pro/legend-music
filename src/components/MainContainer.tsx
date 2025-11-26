@@ -14,7 +14,7 @@ initializeLocalAudioPlayer();
 
 export function MainContainer() {
     perfCount("MainContainer.render");
-    // const _playlistNavigation = use$(playlistNavigationState$);
+    // const _playlistNavigation = useValue(playlistNavigationState$);
 
     useOnHotkeys({
         // These are handled by native media keys, don't need to handle them here

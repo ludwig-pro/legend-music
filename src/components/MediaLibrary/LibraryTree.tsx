@@ -1,10 +1,9 @@
-import { use$ } from "@legendapp/state/react";
+import { LegendList } from "@legendapp/list";
+import { useValue } from "@legendapp/state/react";
 import { useCallback, useEffect, useMemo } from "react";
 import { Text, View } from "react-native";
 import type { NativeMouseEvent } from "react-native-macos";
-
 import { Button } from "@/components/Button";
-import { LegendList } from "@legendapp/list";
 import { localAudioControls } from "@/components/LocalAudioPlayer";
 import { useListItemStyles } from "@/hooks/useListItemStyles";
 import { type ContextMenuItem, showContextMenu } from "@/native-modules/ContextMenu";
@@ -26,12 +25,12 @@ const MEDIA_LIBRARY_CONTEXT_MENU_ITEMS: ContextMenuItem[] = [
 
 export function LibraryTree({ searchQuery }: LibraryTreeProps) {
     perfCount("MediaLibrary.LibraryTree.render");
-    const selectedItem = use$(libraryUI$.selectedItem);
-    const selectedCollection = use$(libraryUI$.selectedCollection);
-    const artists = use$(library$.artists);
-    const albums = use$(library$.albums);
-    const playlists = use$(library$.playlists);
-    const tracks = use$(library$.tracks);
+    const selectedItem = useValue(libraryUI$.selectedItem);
+    const selectedCollection = useValue(libraryUI$.selectedCollection);
+    const artists = useValue(library$.artists);
+    const albums = useValue(library$.albums);
+    const playlists = useValue(library$.playlists);
+    const tracks = useValue(library$.tracks);
     const listItemStyles = useListItemStyles();
 
     const selectItem = useCallback((item: LibraryItem | null) => {
@@ -197,7 +196,7 @@ interface LibraryTreeRowProps {
 }
 
 function LibraryTreeRow({ item, listItemStyles, onSelect, onContextMenu, onDoubleClick }: LibraryTreeRowProps) {
-    const selectedItem = use$(libraryUI$.selectedItem);
+    const selectedItem = useValue(libraryUI$.selectedItem);
     const isSelected = selectedItem?.id === item.id;
 
     return (

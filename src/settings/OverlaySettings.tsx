@@ -1,4 +1,4 @@
-import { observer, use$ } from "@legendapp/state/react";
+import { useValue } from "@legendapp/state/react";
 import { useEffect, useState } from "react";
 import { TextInput, View } from "react-native";
 
@@ -23,9 +23,9 @@ const horizontalOptions = [
     { value: "right", label: "Right" },
 ];
 
-export const OverlaySettings = observer(function OverlaySettings() {
-    const durationSeconds = use$(settings$.overlay.displayDurationSeconds);
-    const overlayEnabled = use$(settings$.overlay.enabled);
+export const OverlaySettings = function OverlaySettings() {
+    const durationSeconds = useValue(settings$.overlay.displayDurationSeconds);
+    const overlayEnabled = useValue(settings$.overlay.enabled);
     const [durationDraft, setDurationDraft] = useState(String(durationSeconds));
 
     useEffect(() => {
@@ -108,4 +108,4 @@ export const OverlaySettings = observer(function OverlaySettings() {
             </SettingsSection>
         </SettingsPage>
     );
-});
+};

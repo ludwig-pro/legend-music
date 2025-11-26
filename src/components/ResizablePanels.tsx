@@ -1,5 +1,5 @@
 import type { Observable } from "@legendapp/state";
-import { use$, useObservable } from "@legendapp/state/react";
+import { useObservable, useValue } from "@legendapp/state/react";
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useRef } from "react";
 import { type GestureResponderEvent, PanResponder, type PanResponderGestureState, View } from "react-native";
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
@@ -50,7 +50,7 @@ export function PanelGroup({ children, direction = "horizontal", className }: Pa
     const refPanelConfigs = useRef<Record<string, PanelConfig>>({});
     const refPanelsArray = useRef<PanelConfig[]>([]);
     const containerSize$ = useObservable<number>(1000); // Default fallback
-    const containerSizeState = use$(containerSize$);
+    const containerSizeState = useValue(containerSize$);
 
     const registerPanel = useCallback(
         (panel: PanelConfig) => {
@@ -276,7 +276,7 @@ interface PanelProps {
 function Panel({ children, id, minSize = 100, maxSize, defaultSize, order = 0, className, flex = false }: PanelProps) {
     const { registerPanel, unregisterPanel, direction } = usePanelContext();
     const size$ = settings$.state.panels[id];
-    const size = use$(size$);
+    const size = useValue(size$);
 
     // Register panel on mount
     useEffect(() => {

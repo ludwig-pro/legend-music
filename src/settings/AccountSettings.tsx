@@ -1,4 +1,4 @@
-import { use$ } from "@legendapp/state/react";
+import { useValue } from "@legendapp/state/react";
 import { Linking, Text, View } from "react-native";
 
 import { Button } from "@/components/Button";
@@ -6,8 +6,8 @@ import { SettingsCard, SettingsPage, SettingsSection } from "@/settings/componen
 import { settings$ } from "@/systems/Settings";
 
 export function AccountSettings() {
-    const isRegistered = use$(settings$.registration.isRegistered);
-    const registrationType = use$(settings$.registration.registrationType);
+    const isRegistered = useValue(settings$.registration.isRegistered);
+    const registrationType = useValue(settings$.registration.registrationType);
 
     const handleRegister = () => {
         // TODO: Implement registration flow

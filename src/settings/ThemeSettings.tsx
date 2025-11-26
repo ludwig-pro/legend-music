@@ -1,11 +1,10 @@
-import { observer } from "@legendapp/state/react";
 import { Text } from "react-native";
 import { Button } from "@/components/Button";
 import { ColorPicker } from "@/components/ColorPicker";
 import { SettingsPage, SettingsSection } from "@/settings/components";
 import { themeState$, useTheme } from "@/theme/ThemeProvider";
 
-export const ThemeSettings = observer(() => {
+export const ThemeSettings = () => {
     const { resetTheme } = useTheme();
     const colors$ = themeState$.customColors.dark;
 
@@ -43,4 +42,4 @@ export const ThemeSettings = observer(() => {
             </SettingsSection>
         </SettingsPage>
     );
-});
+};

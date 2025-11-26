@@ -1,4 +1,4 @@
-import { use$ } from "@legendapp/state/react";
+import { useValue } from "@legendapp/state/react";
 import { type ReactNode, useEffect, useId, useRef } from "react";
 import { type LayoutChangeEvent, type LayoutRectangle, View } from "react-native";
 
@@ -34,8 +34,8 @@ export const DroppableZone = ({
     const { registerDropZone, unregisterDropZone, updateDropZoneRect, draggedItem$, activeDropZone$ } = useDragDrop();
 
     // Access the current values of observables
-    const draggedItem = use$(draggedItem$);
-    const activeDropZone = use$(activeDropZone$);
+    const draggedItem = useValue(draggedItem$);
+    const activeDropZone = useValue(activeDropZone$);
 
     // Keep track of the zone's layout
     const layoutRef = useRef<LayoutRectangle>({
@@ -78,11 +78,11 @@ export const DroppableZone = ({
         updateRectFromWindow();
     };
 
-    useEffect(() => {
-        if (draggedItem) {
-            requestAnimationFrame(updateRectFromWindow);
-        }
-    }, [draggedItem]);
+    // useEffect(() => {
+    //     if (draggedItem) {
+    //         requestAnimationFrame(updateRectFromWindow);
+    //     }
+    // }, [draggedItem]);
 
     // Determine if this zone is active (has a dragged item over it)
     const isActive = draggedItem !== null && activeDropZone === id;

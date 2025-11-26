@@ -1,7 +1,7 @@
 import { VibrancyView } from "@fluentui-react-native/vibrancy-view";
 import { AnimatePresence, Motion } from "@legendapp/motion";
 import { observe } from "@legendapp/state";
-import { use$, useObserveEffect } from "@legendapp/state/react";
+import { useObserveEffect, useValue } from "@legendapp/state/react";
 import type { JSX } from "react";
 import { Pressable } from "react-native";
 import WindowControls from "@/native-modules/WindowControls";
@@ -14,8 +14,8 @@ const MotionView = Motion.View as unknown as (props: MotionViewProps) => JSX.Ele
 
 export function TitleBar() {
     perfCount("TitleBar.render");
-    const showOnHover = use$(settings$.general.showTitleBarOnHover);
-    const isHovered = use$(state$.titleBarHovered);
+    const showOnHover = useValue(settings$.general.showTitleBarOnHover);
+    const isHovered = useValue(state$.titleBarHovered);
 
     useObserveEffect(() => {
         const showOnHover = settings$.general.showTitleBarOnHover.get();

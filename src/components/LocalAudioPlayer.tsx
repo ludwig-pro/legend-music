@@ -55,7 +55,7 @@ let jsProgressTimer: ReturnType<typeof setInterval> | null = null;
 let lastNativeProgressTime = 0;
 let lastNativeProgressTimestamp = 0;
 let isWindowOccluded = false;
-const JS_PROGRESS_INTERVAL_MS = 1000;
+const JS_PROGRESS_INTERVAL_MS = 800;
 
 function createQueueEntryId(seed: string): string {
     queueEntryCounter += 1;

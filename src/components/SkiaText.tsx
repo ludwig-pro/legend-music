@@ -1,5 +1,5 @@
 import type { Observable } from "@legendapp/state";
-import { use$, useObservable } from "@legendapp/state/react";
+import { useObservable, useValue } from "@legendapp/state/react";
 import { Canvas, matchFont, type SkFont, Text as SkiaTextNode } from "@shopify/react-native-skia";
 import { useEffect, useMemo } from "react";
 import { Platform, type StyleProp, StyleSheet, View, type ViewStyle } from "react-native";
@@ -52,7 +52,7 @@ export function SkiaText({
 }: SkiaTextProps) {
     const textShared = useSharedValue(text ?? "");
     const textWidth$ = useObservable({ width: 0, length: 0 });
-    const { width: textWidth } = use$(textWidth$);
+    const { width: textWidth } = useValue(textWidth$);
 
     useEffect(() => {
         if (typeof text === "string") {

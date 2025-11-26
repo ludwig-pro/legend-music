@@ -1,4 +1,4 @@
-import { use$ } from "@legendapp/state/react";
+import { useValue } from "@legendapp/state/react";
 import { useCallback, useMemo } from "react";
 import type { LayoutChangeEvent } from "react-native";
 import { Text, View } from "react-native";
@@ -9,10 +9,10 @@ import { visualizerPreferences$ } from "@/visualizer/preferences";
 import { defaultVisualizerPresetId, getVisualizerPresetById, visualizerPresets } from "@/visualizer/presets";
 
 export default function VisualizerWindow() {
-    const track = use$(localPlayerState$.currentTrack);
-    const isPlaying = use$(localPlayerState$.isPlaying);
-    const storedPresetId = use$(visualizerPreferences$.visualizer.selectedPresetId);
-    const storedBinCount = use$(visualizerPreferences$.visualizer.binCount);
+    const track = useValue(localPlayerState$.currentTrack);
+    const isPlaying = useValue(localPlayerState$.isPlaying);
+    const storedPresetId = useValue(visualizerPreferences$.visualizer.selectedPresetId);
+    const storedBinCount = useValue(visualizerPreferences$.visualizer.binCount);
     const binCount = storedBinCount ?? 64;
 
     const preset = useMemo(() => {

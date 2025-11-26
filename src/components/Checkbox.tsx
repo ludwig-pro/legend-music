@@ -1,5 +1,5 @@
 import type { Observable } from "@legendapp/state";
-import { use$ } from "@legendapp/state/react";
+import { useValue } from "@legendapp/state/react";
 import { Text, View } from "react-native";
 
 import { Icon } from "@/systems/Icon";
@@ -26,7 +26,7 @@ export function Checkbox({
     labelClassName = "",
 }: CheckboxProps) {
     // Get the current value of the observable
-    const isChecked = checkedProp ?? ($checked ? use$($checked) : undefined);
+    const isChecked = checkedProp ?? ($checked ? useValue($checked) : undefined);
 
     const handlePress = () => {
         if (disabled) {

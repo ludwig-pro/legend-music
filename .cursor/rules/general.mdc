@@ -6,9 +6,9 @@ alwaysApply: true
 # General app structure
 
 - Prefer named exports rather than default exports
-- Prefer Legend State useObservable and use$ rather than useState
+- Prefer Legend State useObservable and useValue rather than useState
 - Variables created with useObservable should be suffixed with $
-- To get the value of an observable within a React component we need to use$(it), and that should be done below the useObservable or at the top of the component.
+- To get the value of an observable within a React component we need to useValue(it), and that should be done below the useObservable or at the top of the component.
 
 # Rules for you
 

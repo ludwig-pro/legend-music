@@ -1,5 +1,5 @@
 import type { Observable } from "@legendapp/state";
-import { use$ } from "@legendapp/state/react";
+import { useValue } from "@legendapp/state/react";
 import { Text, View } from "react-native";
 import type { NativeMouseEvent } from "react-native-macos";
 
@@ -15,10 +15,10 @@ export interface SidebarButtonProps {
 }
 
 export function SidebarButton({ text, value, selectedItem$, indentLevel = 0 }: SidebarButtonProps) {
-    const isSelected = use$(() => selectedItem$.get() === value);
+    const isSelected = useValue(() => selectedItem$.get() === value);
     const textColor = isSelected ? "text-text-primary" : "text-text-secondary";
     const indentPadding = 8 + indentLevel * 12;
-    const isDropdownOpen = use$(state$.isDropdownOpen);
+    const isDropdownOpen = useValue(state$.isDropdownOpen);
 
     return (
         <Button

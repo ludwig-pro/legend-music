@@ -1,5 +1,5 @@
 import { LegendList } from "@legendapp/list";
-import { use$ } from "@legendapp/state/react";
+import { useValue } from "@legendapp/state/react";
 import { forwardRef, useCallback, useEffect, useMemo, useRef } from "react";
 import { type GestureResponderEvent, Text, useWindowDimensions, View } from "react-native";
 import type { NativeMouseEvent } from "react-native-macos";
@@ -39,7 +39,7 @@ export const PlaylistSelectorSearchDropdown = forwardRef<DropdownMenuRootRef, Pl
         const textInputRef = useRef<TextInputSearchRef>(null);
         const { width: windowWidth } = useWindowDimensions();
 
-        const library = use$(library$);
+        const library = useValue(library$);
         const effectiveWindowWidth = Math.max(windowWidth, 1);
         const fallbackWidth = Math.max(effectiveWindowWidth - 16, 1);
         const resolvedDropdownWidth = Math.max(dropdownWidth ?? fallbackWidth, 1);

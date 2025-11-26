@@ -1,5 +1,5 @@
 import type { Observable } from "@legendapp/state";
-import { use$, useObservable } from "@legendapp/state/react";
+import { useObservable, useValue } from "@legendapp/state/react";
 import { memo, useCallback, useEffect } from "react";
 import { type LayoutChangeEvent, Text, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
@@ -91,13 +91,13 @@ function formatTime(seconds: number, cache?: boolean): string {
 
 export function PlaybackArea({ showBorder = true, overlayMode }: PlaybackAreaProps = {}) {
     perfCount("PlaybackArea.render");
-    const currentTrack = use$(localPlayerState$.currentTrack);
-    const isPlaying = use$(localPlayerState$.isPlaying);
+    const currentTrack = useValue(localPlayerState$.currentTrack);
+    const isPlaying = useValue(localPlayerState$.isPlaying);
     const currentLocalTime$ = localPlayerState$.currentTime;
     const playbackControlsLayout = usePlaybackControlLayout();
-    const thumbnailVersion = use$(localMusicState$.thumbnailVersion);
-    const shuffleEnabled = use$(settings$.playback.shuffle);
-    const repeatMode = use$(settings$.playback.repeatMode);
+    const thumbnailVersion = useValue(localMusicState$.thumbnailVersion);
+    const shuffleEnabled = useValue(settings$.playback.shuffle);
+    const repeatMode = useValue(settings$.playback.repeatMode);
     const handleSlidingStart = useCallback(() => setIsScrubbing(true), []);
     const handleSlidingEnd = useCallback(() => setIsScrubbing(false), []);
     const overlayModeEnabled = overlayMode?.enabled ?? false;

@@ -1,4 +1,4 @@
-import { use$ } from "@legendapp/state/react";
+import { useValue } from "@legendapp/state/react";
 import { useRef } from "react";
 import { Text, View } from "react-native";
 
@@ -22,7 +22,7 @@ const collectionTabs = [
 ] as const;
 
 function LibraryCollectionTabs() {
-    const selectedCollection = use$(libraryUI$.selectedCollection);
+    const selectedCollection = useValue(libraryUI$.selectedCollection);
 
     return (
         <View className="flex-row gap-1 px-2 pb-3">
@@ -49,9 +49,9 @@ function LibraryCollectionTabs() {
 
 export function MediaLibraryView() {
     perfCount("MediaLibraryView.render");
-    const searchQuery = use$(libraryUI$.searchQuery);
+    const searchQuery = useValue(libraryUI$.searchQuery);
     const searchInputRef = useRef<TextInputSearchRef | null>(null);
-    const showHints = use$(settings$.general.showHints);
+    const showHints = useValue(settings$.general.showHints);
 
     return (
         <View className="flex-1 min-w-[360px] min-h-0 bg-black/5 border-l border-white/10">

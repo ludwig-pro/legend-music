@@ -1,4 +1,4 @@
-import { use$ } from "@legendapp/state/react";
+import { useValue } from "@legendapp/state/react";
 import { File } from "expo-file-system/next";
 import { useCallback, useMemo } from "react";
 
@@ -214,7 +214,7 @@ export function usePlaylistQueueHandlers({
 }
 
 export function useLibraryToggle() {
-    const isLibraryOpen = use$(stateSaved$.libraryIsOpen);
+    const isLibraryOpen = useValue(stateSaved$.libraryIsOpen);
 
     const toggleLibraryWindow = useCallback(() => {
         perfLog("PlaylistSelector.toggleLibraryWindow", { isOpen: stateSaved$.libraryIsOpen.get() });
@@ -225,7 +225,7 @@ export function useLibraryToggle() {
 }
 
 export function useVisualizerToggle() {
-    const isVisualizerOpen = use$(visualizerWindowState$.isOpen);
+    const isVisualizerOpen = useValue(visualizerWindowState$.isOpen);
     const toggleVisualizer = useCallback(toggleVisualizerWindow, [toggleVisualizerWindow]);
 
     useOnHotkeys({

@@ -1,4 +1,4 @@
-import { observer, use$ } from "@legendapp/state/react";
+import { useValue } from "@legendapp/state/react";
 import { Text, View } from "react-native";
 
 import { Button } from "@/components/Button";
@@ -13,10 +13,10 @@ import {
 } from "@/systems/LocalMusicState";
 import type { SFSymbols } from "@/types/SFSymbols";
 
-export const LibrarySettings = observer(function LibrarySettings() {
-    const librarySettings = use$(librarySettings$);
-    const localMusicState = use$(localMusicState$);
-    const latestError = use$(localMusicState$.error);
+export const LibrarySettings = function LibrarySettings() {
+    const librarySettings = useValue(librarySettings$);
+    const localMusicState = useValue(localMusicState$);
+    const latestError = useValue(localMusicState$.error);
 
     const hasTrackEstimate =
         localMusicState.scanTrackTotal > 0 && localMusicState.scanTrackTotal >= localMusicState.scanTrackProgress;
@@ -182,4 +182,4 @@ export const LibrarySettings = observer(function LibrarySettings() {
             </SettingsSection>
         </SettingsPage>
     );
-});
+};
