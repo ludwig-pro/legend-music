@@ -436,6 +436,8 @@ static NSDictionary *LMExtractMediaTags(NSURL *fileURL, NSString *cacheDirPath, 
 @property (nonatomic, assign) NSUInteger visualizerCPUOverrunFrames;
 @property (nonatomic, strong) dispatch_queue_t mediaScanQueue;
 @property (atomic, assign) BOOL isMediaScanning;
+@property (atomic, assign) BOOL progressEventsEnabled;
+@property (atomic, assign) NSTimeInterval lastProgressDurationSent;
 
 - (void)configureVisualizerDefaults;
 - (void)installVisualizerTapIfNeeded;
@@ -566,6 +568,8 @@ RCT_EXPORT_MODULE();
         _visualizerQueue = dispatch_queue_create("com.legendmusic.audio.visualizer", DISPATCH_QUEUE_SERIAL);
         _mediaScanQueue = dispatch_queue_create("com.legendmusic.audio.scanner", DISPATCH_QUEUE_SERIAL);
         _isMediaScanning = NO;
+        _progressEventsEnabled = YES;
+        _lastProgressDurationSent = -1;
         [self configureVisualizerDefaults];
         [self setupRemoteCommands];
     }
@@ -2231,10 +2235,16 @@ RCT_EXPORT_METHOD(getCurrentState:(RCTPromiseResolveBlock)resolve
 {
     [self removeTimeObserver];
 
+    if (!self.progressEventsEnabled) {
+        return;
+    }
+
+    self.lastProgressDurationSent = -1;
+
     __weak typeof(self) weakSelf = self;
-    // Throttle updates: emit every 2s on a background queue to minimize CPU impact
+    // Throttle updates: emit every 5s on a background queue to minimize CPU impact
     dispatch_queue_t backgroundQueue = dispatch_get_global_queue(QOS_CLASS_BACKGROUND, 0);
-    CMTime interval = CMTimeMakeWithSeconds(1.0, NSEC_PER_SEC);
+    CMTime interval = CMTimeMakeWithSeconds(5.0, NSEC_PER_SEC);
     self.timeObserver = [self.player addPeriodicTimeObserverForInterval:interval
                                                                    queue:backgroundQueue
                                                               usingBlock:^(CMTime time) {
@@ -2243,16 +2253,21 @@ RCT_EXPORT_METHOD(getCurrentState:(RCTPromiseResolveBlock)resolve
             NSTimeInterval newTime = CMTimeGetSeconds(time);
 
             // Only send updates if time has changed significantly (avoid redundant events)
-            if (fabs(newTime - strongSelf.currentTime) >= 0.5) {
+            if (fabs(newTime - strongSelf.currentTime) >= 0.1) {
                 strongSelf.currentTime = newTime;
                 [strongSelf updateNowPlayingElapsedTime:strongSelf.currentTime];
 
                 // Dispatch event sending back to main queue
                 dispatch_async(dispatch_get_main_queue(), ^{
-                    [strongSelf sendEventWithName:@"onProgress" body:@{
-                        @"currentTime": @(strongSelf.currentTime),
-                        @"duration": @(strongSelf.duration)
-                    }];
+                    NSMutableDictionary *payload = [NSMutableDictionary dictionaryWithCapacity:2];
+                    payload[@"currentTime"] = @(strongSelf.currentTime);
+
+                    if (fabs(strongSelf.duration - strongSelf.lastProgressDurationSent) >= 0.1) {
+                        payload[@"duration"] = @(strongSelf.duration);
+                        strongSelf.lastProgressDurationSent = strongSelf.duration;
+                    }
+
+                    [strongSelf sendEventWithName:@"onProgress" body:payload];
                 });
             }
         }
