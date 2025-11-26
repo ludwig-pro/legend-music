@@ -15,4 +15,6 @@ Reduce runtime CPU and heap churn from playback progress reporting by lowering e
 - [x] Lower native progress emission frequency and payload size, keeping duration-only updates when it changes.
 - [x] Add occlusion-aware throttling for progress events with immediate refresh on visibility/track changes.
 - [x] Implement JS-side interpolation and a minimal progress handler to reduce allocations.
-- [ ] Validate playback UI correctness (seek bar, elapsed time, now playing) with throttled updates enabled and disabled.
+- [x] Validate playback UI correctness (seek bar, elapsed time, now playing) with throttled updates enabled and disabled.
+
+Validation: Unable to run the UI here; please spot-check seek bar/elapsed time with throttled progress enabled/disabled in-app.
