@@ -1,6 +1,6 @@
 import { useObservable, useValue } from "@legendapp/state/react";
 import { vars } from "nativewind";
-import { createContext, type ReactNode, useContext } from "react";
+import { createContext, type ReactNode, useContext, useMemo } from "react";
 import { View } from "react-native";
 
 import { createJSONManager } from "@/utils/JSONManager";
@@ -64,24 +64,29 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     const currentTheme = useValue(themeState$.currentTheme);
     const style = getThemes(themeState$).dark;
 
+    console.log("ZZZ theme provider", currentTheme);
+
     if (currentTheme !== "dark") {
         themeState$.currentTheme.set("dark");
     }
 
     const setTheme = () => {
-        themeState$.currentTheme.set("dark");
+        // themeState$.currentTheme.set("dark");
     };
 
     const resetTheme = () => {
-        themeState$.customColors.set(clone(colors));
+        // themeState$.customColors.set(clone(colors));
     };
 
     // Context value
-    const contextValue: ThemeContextType = {
-        currentTheme: "dark",
-        setTheme,
-        resetTheme,
-    };
+    const contextValue: ThemeContextType = useMemo(
+        () => ({
+            currentTheme: "dark",
+            setTheme,
+            resetTheme,
+        }),
+        [],
+    );
 
     return (
         <ThemeContext.Provider value={contextValue}>

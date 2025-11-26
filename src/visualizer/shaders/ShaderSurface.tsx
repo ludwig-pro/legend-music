@@ -137,7 +137,7 @@ export function ShaderSurface({ definition, style, binCountOverride, shaderChild
     const applyUniforms = useCallback(
         (updater: (base: BaseUniformState) => void) => {
             updater(baseUniformRef.current);
-            uniformsValueRef.current.value = buildUniforms(baseUniformRef.current);
+            uniformsValueRef.current.set(buildUniforms(baseUniformRef.current));
         },
         [buildUniforms],
     );

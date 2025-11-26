@@ -7,10 +7,10 @@ import { StyleSheet, View } from "react-native";
 import { DragDropProvider } from "@/components/dnd";
 import { MediaLibraryView } from "@/components/MediaLibrary";
 import { TooltipProvider } from "@/components/TooltipProvider";
+import { mediaLibraryPreferences$ } from "@/media-library/preferences";
 import { HiddenTextInput } from "@/systems/keyboard/HookKeyboard";
 import { ThemeProvider } from "@/theme/ThemeProvider";
 import { WindowProvider } from "@/windows";
-import { mediaLibraryPreferences$ } from "@/media-library/preferences";
 
 const MEDIA_LIBRARY_WINDOW_ID = "media-library";
 
@@ -22,6 +22,8 @@ export default function MediaLibraryWindow() {
             mediaLibraryPreferences$.window.height.set(Math.round(height));
         }
     }, []);
+
+    console.log("ZZZ media window");
 
     return (
         <WindowProvider id={MEDIA_LIBRARY_WINDOW_ID}>

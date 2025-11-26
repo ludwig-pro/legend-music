@@ -56,7 +56,7 @@ export function SkiaText({
 
     useEffect(() => {
         if (typeof text === "string") {
-            textShared.value = text;
+            textShared.set(text);
         }
     }, [text, textShared]);
 
@@ -67,13 +67,13 @@ export function SkiaText({
 
         const rawInitial = text$.get?.() ?? "";
         const initial = typeof rawInitial === "string" ? rawInitial : String(rawInitial);
-        textShared.value = initial;
+        textShared.set(initial);
         textWidth$.set({ length: initial.length, width: font.measureText(initial).width });
 
         const unsubscribe = text$.onChange(({ value }) => {
             const rawNext = value ?? "";
             const next = typeof rawNext === "string" ? rawNext : String(rawNext);
-            textShared.value = next;
+            textShared.set(next);
             if (value.length !== next.length) {
                 textWidth$.set({ length: next.length, width: font.measureText(next).width });
             }

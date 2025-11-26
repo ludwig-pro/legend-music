@@ -107,17 +107,19 @@ export function PlaybackArea({ showBorder = true, overlayMode }: PlaybackAreaPro
 
     useEffect(() => {
         if (!overlayModeEnabled) {
-            overlayControlsProgress.value = 1;
+            overlayControlsProgress.set(1);
             return;
         }
 
-        overlayControlsProgress.value = withSpring(overlayControlsVisible ? 1 : 0, {
-            damping: OVERLAY_CONTENT_SPRING_DAMPING,
-            stiffness: OVERLAY_CONTENT_SPRING_STIFFNESS,
-            mass: OVERLAY_CONTENT_SPRING_MASS,
-            restDisplacementThreshold: OVERLAY_CONTENT_SPRING_REST_DISPLACEMENT,
-            restSpeedThreshold: OVERLAY_CONTENT_SPRING_REST_SPEED,
-        });
+        overlayControlsProgress.set(
+            withSpring(overlayControlsVisible ? 1 : 0, {
+                damping: OVERLAY_CONTENT_SPRING_DAMPING,
+                stiffness: OVERLAY_CONTENT_SPRING_STIFFNESS,
+                mass: OVERLAY_CONTENT_SPRING_MASS,
+                restDisplacementThreshold: OVERLAY_CONTENT_SPRING_REST_DISPLACEMENT,
+                restSpeedThreshold: OVERLAY_CONTENT_SPRING_REST_SPEED,
+            }),
+        );
     }, [overlayControlsVisible, overlayModeEnabled, overlayControlsProgress]);
 
     const controlsAnimatedStyle = useAnimatedStyle(() => {
@@ -236,7 +238,7 @@ export function PlaybackArea({ showBorder = true, overlayMode }: PlaybackAreaPro
 
     const handleSliderRowLayout = useCallback(
         (event: LayoutChangeEvent) => {
-            sliderRowHeight.value = event.nativeEvent.layout.height;
+            sliderRowHeight.set(event.nativeEvent.layout.height);
         },
         [sliderRowHeight],
     );

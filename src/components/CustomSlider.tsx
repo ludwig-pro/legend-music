@@ -59,7 +59,7 @@ export function CustomSlider({
 
     // Animate thumb height based on hover state
     useEffect(() => {
-        thumbHeight.value = withTiming(isHovered || isDragging ? 12 : 1, { duration: 150 });
+        thumbHeight.set(withTiming(isHovered || isDragging ? 12 : 1, { duration: 150 }));
     }, [isDragging, isHovered]);
 
     const updateValueFromLocation = useCallback(
@@ -211,7 +211,7 @@ export function useObservableSharedValue<T>(compute: () => T) {
     const sharedValue = useSharedValue(compute());
 
     useObserveEffect(() => {
-        sharedValue.value = compute();
+        sharedValue.set(compute());
     });
 
     return sharedValue;

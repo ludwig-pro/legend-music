@@ -347,7 +347,7 @@ export function PanelResizeHandle({
             onMoveShouldSetPanResponder: () => !disabled,
             onPanResponderGrant: () => {
                 lastDelta.current = 0;
-                isDragging.value = true;
+                isDragging.set(true);
                 runOnJS(() => onDragging?.(true))();
             },
             onPanResponderMove: (_: GestureResponderEvent, gestureState: PanResponderGestureState) => {
@@ -367,7 +367,7 @@ export function PanelResizeHandle({
             },
             onPanResponderRelease: () => {
                 lastDelta.current = 0;
-                isDragging.value = false;
+                isDragging.set(false);
                 runOnJS(() => onDragging?.(false))();
             },
         }),
