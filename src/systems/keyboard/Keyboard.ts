@@ -1,9 +1,9 @@
 import { batch, event, observable } from "@legendapp/state";
 import { useMount, useObserveEffect } from "@legendapp/state/react";
+import { DEBUG_HOTKEY_LOGS } from "@/systems/constants";
 import { getHotkey, getHotkeyMetadata, type HotkeyName } from "@/systems/hotkeys";
 import KeyboardManager, { type KeyboardEvent, KeyCodes, KeyText } from "@/systems/keyboard/KeyboardManager";
 import { state$ } from "@/systems/State";
-import { DEBUG_HOTKEY_LOGS } from "@/systems/constants";
 import { ax } from "@/utils/ax";
 import { perfCount, perfLog } from "@/utils/perfLogger";
 import { useWindowId } from "@/windows/WindowProvider";

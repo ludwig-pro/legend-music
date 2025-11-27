@@ -1,4 +1,4 @@
-import { useMountOnce } from "@legendapp/state/react";
+import { useMount } from "@legendapp/state/react";
 
 import { useWindowManager } from "@/native-modules/WindowManager";
 import { state$ } from "@/systems/State";
@@ -11,7 +11,7 @@ const SETTINGS_WINDOW_ID = WindowsNavigator.getIdentifier(SETTINGS_WINDOW_KEY);
 export const SettingsWindowManager = () => {
     const windowManager = useWindowManager();
 
-    useMountOnce(() => {
+    useMount(() => {
         perfLog("SettingsWindowManager.mount");
         state$.showSettings.onChange(async ({ value }) => {
             perfLog("SettingsWindowManager.showSettingsChange", { value });
