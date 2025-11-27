@@ -1,13 +1,15 @@
 import { LegendList } from "@legendapp/list";
-import { use$ } from "@legendapp/state/react";
+import { useValue } from "@legendapp/state/react";
 import { type ElementRef, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { findNodeHandle, type NativeSyntheticEvent, Platform, StyleSheet, Text, UIManager, View } from "react-native";
 import type { NativeMouseEvent } from "react-native-macos";
 import { Button } from "@/components/Button";
 import { localAudioControls, localPlayerState$, type QueuedTrack, queue$ } from "@/components/LocalAudioPlayer";
+import { showToast } from "@/components/Toast";
 import { type TrackData, TrackItem } from "@/components/TrackItem";
 import { usePlaylistSelection } from "@/hooks/usePlaylistSelection";
 import { showContextMenu } from "@/native-modules/ContextMenu";
+import { isSupportedAudioFile, SUPPORTED_AUDIO_EXTENSIONS } from "@/systems/audioFormats";
 import {
     DragDropView,
     type NativeDragTrack,
@@ -41,7 +43,6 @@ import {
     type PlaylistDragData,
 } from "./dnd";
 import { useDragDrop } from "./dnd/DragDropContext";
-import { showToast } from "@/components/Toast";
 
 type PlaylistTrackWithSuggestions = TrackData & {
     queueEntryId: string;
@@ -77,13 +78,13 @@ const normalizeTrackPath = (path: string): string => {
 
 export function Playlist() {
     perfCount("Playlist.render");
-    const localMusicState = use$(localMusicState$);
-    const libraryPaths = use$(librarySettings$.paths);
-    const queueTracks = use$(queue$.tracks);
-    const currentTrackIndex = use$(localPlayerState$.currentIndex);
-    const currentTrack = use$(localPlayerState$.currentTrack);
-    const isPlayerActive = use$(localPlayerState$.isPlaying);
-    const playlistStyle = use$(settings$.general.playlistStyle);
+    const localMusicState = useValue(localMusicState$);
+    const libraryPaths = useValue(librarySettings$.paths);
+    const queueTracks = useValue(queue$.tracks);
+    const currentTrackIndex = useValue(localPlayerState$.currentIndex);
+    const currentTrack = useValue(localPlayerState$.currentTrack);
+    const isPlayerActive = useValue(localPlayerState$.isPlaying);
+    const playlistStyle = useValue(settings$.general.playlistStyle);
     const queueLength = queueTracks.length;
     const hasConfiguredLibrary = libraryPaths.length > 0;
     const hasLibraryTracks = localMusicState.tracks.length > 0;
@@ -294,12 +295,9 @@ export function Playlist() {
         [activeDropZone$, draggedItem$, queueLength, updateDropAreaWindowRect],
     );
 
-    const showDropFeedback = useCallback(
-        (feedback: DropFeedback) => {
-            showToast(feedback.message, feedback.type === "warning" ? "error" : "info");
-        },
-        [],
-    );
+    const showDropFeedback = useCallback((feedback: DropFeedback) => {
+        showToast(feedback.message, feedback.type === "warning" ? "error" : "info");
+    }, []);
 
     const handleAddLibraryTracks = useCallback(() => {
         perfLog("Playlist.openLibraryFromEmptyState");
@@ -647,15 +645,24 @@ export function Playlist() {
 
     const handleFileDrop = useCallback(
         async (files: string[]) => {
-            perfLog("Playlist.handleFileDrop", { fileCount: files.length });
+            const supportedFiles = files.filter((filePath) => isSupportedAudioFile(filePath));
+            const unsupportedCount = files.length - supportedFiles.length;
+            perfLog("Playlist.handleFileDrop", {
+                fileCount: files.length,
+                supportedCount: supportedFiles.length,
+            });
 
-            if (files.length === 0) {
-                debugPlaylistLog("No files to add to queue");
+            if (supportedFiles.length === 0) {
+                debugPlaylistLog("No supported files to add to queue");
+                showDropFeedback({
+                    type: "warning",
+                    message: "No supported audio files to add to the queue.",
+                });
                 return;
             }
 
             try {
-                const trackPromises = files.map((filePath) =>
+                const trackPromises = supportedFiles.map((filePath) =>
                     createLocalTrackFromFile(filePath).catch((error) => {
                         console.error(`Failed to load metadata for dropped file ${filePath}:`, error);
                         return null;
@@ -664,7 +671,8 @@ export function Playlist() {
 
                 const resolvedTracks = await Promise.all(trackPromises);
                 const tracksToAdd = resolvedTracks.filter((track): track is LocalTrack => track !== null);
-                const skipped = files.length - tracksToAdd.length;
+                const skippedMetadata = supportedFiles.length - tracksToAdd.length;
+                const skipped = unsupportedCount + skippedMetadata;
 
                 if (tracksToAdd.length === 0) {
                     showDropFeedback({
@@ -689,9 +697,12 @@ export function Playlist() {
                     : " Add a library folder in Settings to keep them around next time.";
 
                 if (skipped > 0) {
+                    const skippedFilesSummary = formatTrackCount(skipped);
                     showDropFeedback({
                         type: "warning",
-                        message: `${additionSummary} (skipped ${formatTrackCount(skipped)}).${persistenceHint}`,
+                        message:
+                            `${additionSummary} (skipped ${skippedFilesSummary} unsupported or unreadable files).` +
+                            `${persistenceHint}`,
                     });
                 } else {
                     showDropFeedback({
@@ -825,7 +836,7 @@ export function Playlist() {
             onLayout={() => {
                 requestAnimationFrame(updateDropAreaWindowRect);
             }}
-            allowedFileTypes={["mp3", "wav", "m4a", "aac", "flac"]}
+            allowedFileTypes={SUPPORTED_AUDIO_EXTENSIONS}
         >
             {emptyStateContent ? (
                 <View className="flex-1 items-center justify-center px-8 text-center">{emptyStateContent}</View>

@@ -1,7 +1,7 @@
 import "@/../global.css";
 import { VibrancyView } from "@fluentui-react-native/vibrancy-view";
 import { PortalProvider } from "@gorhom/portal";
-import { use$, useObserveEffect } from "@legendapp/state/react";
+import { useObserveEffect, useValue } from "@legendapp/state/react";
 import { useCallback, useEffect, useState } from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import Animated, {
@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
 function CurrentSongOverlayWindow() {
     const opacity = useSharedValue(0);
     const scale = useSharedValue(1);
-    const isOverlayExiting = use$(currentSongOverlay$.isExiting);
+    const isOverlayExiting = useValue(currentSongOverlay$.isExiting);
 
     const springConfig = {
         damping: OVERLAY_WINDOW_SPRING_DAMPING,
@@ -128,11 +128,11 @@ function CurrentSongOverlayWindow() {
 
         const targetHeight = isHovered ? OVERLAY_WINDOW_HEIGHT_EXPANDED : OVERLAY_WINDOW_HEIGHT_COMPACT;
         const targetWidth = isHovered ? OVERLAY_WINDOW_WIDTH_EXPANDED : OVERLAY_WINDOW_WIDTH_COMPACT;
-        setCurrentSongOverlayWindowHeight(targetHeight);
-        setCurrentSongOverlayWindowWidth(targetWidth);
+        // setCurrentSongOverlayWindowHeight(targetHeight);
+        // setCurrentSongOverlayWindowWidth(targetWidth);
     }, [isHovered, isOverlayExiting]);
 
-    useObserveEffect(() => {
+    useObserveEffect(async () => {
         const exiting = currentSongOverlay$.isExiting.get();
         const windowOpen = currentSongOverlay$.isWindowOpen.peek();
 
@@ -143,20 +143,22 @@ function CurrentSongOverlayWindow() {
                 console.error("Failed to animate overlay blur on hide:", error);
             }
 
-            opacity.value = withTiming(
-                0,
-                {
-                    duration: OVERLAY_WINDOW_HIDE_DURATION_MS,
-                    easing: Easing.in(Easing.cubic),
-                },
-                (finished) => {
-                    if (finished) {
-                        runOnJS(handleExitComplete)();
-                    }
-                },
+            opacity.set(
+                withTiming(
+                    0,
+                    {
+                        duration: OVERLAY_WINDOW_HIDE_DURATION_MS,
+                        easing: Easing.in(Easing.cubic),
+                    },
+                    (finished) => {
+                        if (finished) {
+                            runOnJS(handleExitComplete)();
+                        }
+                    },
+                ),
             );
 
-            scale.value = withSpring(1, springConfig);
+            scale.value.set(withSpring(1, springConfig));
 
             return;
         }
@@ -165,25 +167,25 @@ function CurrentSongOverlayWindow() {
             return;
         }
 
-        opacity.value = 0;
-        scale.value = OVERLAY_WINDOW_INITIAL_SCALE;
+        opacity.set(0);
+        scale.set(OVERLAY_WINDOW_INITIAL_SCALE);
 
-        opacity.value = withTiming(1, {
-            duration: OVERLAY_WINDOW_SHOW_DURATION_MS,
-            easing: Easing.out(Easing.cubic),
-        });
+        opacity.set(
+            withTiming(1, {
+                duration: OVERLAY_WINDOW_SHOW_DURATION_MS,
+                easing: Easing.out(Easing.cubic),
+            }),
+        );
 
-        scale.value = withSpring(1, springConfig);
+        scale.set(withSpring(1, springConfig));
 
         if (Platform.OS === "macos") {
-            void (async () => {
-                try {
-                    await setWindowBlur(WINDOW_ID, OVERLAY_WINDOW_MAX_BLUR_RADIUS, 0);
-                    await setWindowBlur(WINDOW_ID, 0, OVERLAY_WINDOW_SHOW_DURATION_MS);
-                } catch (error) {
-                    console.error("Failed to animate overlay blur on show:", error);
-                }
-            })();
+            try {
+                await setWindowBlur(WINDOW_ID, OVERLAY_WINDOW_MAX_BLUR_RADIUS, 0);
+                await setWindowBlur(WINDOW_ID, 0, OVERLAY_WINDOW_SHOW_DURATION_MS);
+            } catch (error) {
+                console.error("Failed to animate overlay blur on show:", error);
+            }
         }
     });
 

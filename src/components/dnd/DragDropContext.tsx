@@ -1,5 +1,5 @@
 import type { Observable } from "@legendapp/state";
-import { use$, useObservable } from "@legendapp/state/react";
+import { useObservable, useValue } from "@legendapp/state/react";
 import { createContext, type ReactNode, useContext, useRef } from "react";
 import { type LayoutRectangle, View } from "react-native";
 
@@ -67,7 +67,7 @@ export const DragDropProvider = ({ children }: DragDropProviderProps) => {
     const dropZonesRef = useRef<Map<string, DropZone>>(new Map());
 
     // Access current values
-    const activeDropZone = use$(activeDropZone$);
+    const activeDropZone = useValue(activeDropZone$);
 
     // Register a drop zone
     const registerDropZone = (

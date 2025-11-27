@@ -50,7 +50,7 @@ function SkiaSpinnerComponent({
     const rotation = useSharedValue(0);
 
     useEffect(() => {
-        rotation.value = withRepeat(withTiming(Math.PI * 2, { duration: speedMs, easing: Easing.linear }), -1, false);
+        rotation.set(withRepeat(withTiming(Math.PI * 2, { duration: speedMs, easing: Easing.linear }), -1, false));
     }, [rotation, speedMs]);
 
     const animatedTransform = useDerivedValue(() => [{ rotate: rotation.value }]);

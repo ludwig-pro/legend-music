@@ -19,7 +19,7 @@ LegendMusic is a React Native macOS application for local music library manageme
 ### State Management (Legend State)
 - Uses `@legendapp/state` for reactive state management throughout the app
 - Observable variables are suffixed with `$` (e.g., `settings$`, `library$`)
-- Access observable values in React components using `use$(observable)`
+- Access observable values in React components using `useValue(observable)`
 - Prefer `useObservable` over `useState` for local component state
 
 ### Key State Files

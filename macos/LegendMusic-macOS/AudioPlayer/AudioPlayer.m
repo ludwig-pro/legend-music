@@ -26,6 +26,13 @@
 + (nullable LMID3TagsResult *)readTagsForURL:(NSURL *)url error:(NSError * _Nullable * _Nullable)error;
 + (nullable NSNumber *)writeTagsForURL:(NSURL *)url fields:(NSDictionary *)fields error:(NSError * _Nullable * _Nullable)error;
 @end
+
+@interface LMSupportedAudioFormats : NSObject
++ (NSArray<NSString *> *)supportedExtensions;
++ (NSArray<NSString *> *)avFoundationAdditionalExtensions;
++ (BOOL)isSupportedExtension:(NSString *)extensionString;
++ (BOOL)isSupportedFileURL:(NSURL *)url;
+@end
 #endif
 #import <math.h>
 
@@ -44,6 +51,8 @@ static const float kVisualizerMinDecibels = -75.0f;
 static const float kVisualizerMaxDecibels = -12.0f;
 static const float kVisualizerHighFrequencyEmphasisExponent = 0.45f;
 static const float kVisualizerResponseGamma = 0.85f;
+static const NSTimeInterval kProgressIntervalVisibleSeconds = 5.0;
+static const NSTimeInterval kProgressIntervalOccludedSeconds = 20.0;
 
 static NSString *LMHashStringSHA256(NSString *input) {
     if (!input) {
@@ -110,6 +119,68 @@ static BOOL LMIsMP3URL(NSURL *fileURL) {
     }
     NSString *extension = [[fileURL pathExtension] lowercaseString];
     return [extension isEqualToString:@"mp3"];
+}
+
+static NSArray<NSString *> *LMDefaultAudioExtensions(void) {
+    return @[ @"mp3", @"wav", @"m4a", @"aac", @"flac", @"aif", @"aiff", @"aifc", @"caf" ];
+}
+
+static NSSet<NSString *> *LMSupportedAudioExtensions(void) {
+    static NSSet<NSString *> *extensions = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        NSMutableSet<NSString *> *normalized = [NSMutableSet setWithCapacity:LMDefaultAudioExtensions().count];
+        for (NSString *value in LMDefaultAudioExtensions()) {
+            NSString *lowercase = [value lowercaseString];
+            if (lowercase.length > 0) {
+                [normalized addObject:lowercase];
+            }
+        }
+        extensions = [normalized copy];
+    });
+
+    return extensions;
+}
+
+static NSSet<NSString *> *LMExtensionsFromOption(NSArray<NSString *> *options) {
+    if (![options isKindOfClass:[NSArray class]] || options.count == 0) {
+        return LMSupportedAudioExtensions();
+    }
+
+    NSMutableSet<NSString *> *normalized = [NSMutableSet setWithCapacity:options.count];
+    for (id value in options) {
+        if (![value isKindOfClass:[NSString class]]) {
+            continue;
+        }
+        NSString *lowercase = [(NSString *)value lowercaseString];
+        if (lowercase.length > 0) {
+            [normalized addObject:lowercase];
+        }
+    }
+
+    return normalized.count > 0 ? [normalized copy] : LMSupportedAudioExtensions();
+}
+
+static BOOL LMIsSupportedAudioExtensionString(NSString *extension, NSSet<NSString *> *allowedExtensions) {
+    if (!extension || extension.length == 0) {
+        return NO;
+    }
+
+    NSSet<NSString *> *extensions = allowedExtensions ?: LMSupportedAudioExtensions();
+    return [extensions containsObject:[extension lowercaseString]];
+}
+
+static BOOL LMIsSupportedAudioURLWithSet(NSURL *fileURL, NSSet<NSString *> *allowedExtensions) {
+    if (!fileURL) {
+        return NO;
+    }
+
+    NSString *extension = [[fileURL pathExtension] lowercaseString];
+    return LMIsSupportedAudioExtensionString(extension, allowedExtensions);
+}
+
+static BOOL LMIsSupportedAudioURL(NSURL *fileURL) {
+    return LMIsSupportedAudioURLWithSet(fileURL, LMSupportedAudioExtensions());
 }
 
 static NSNumber *LMMediaDurationProbe(NSURL *fileURL) {
@@ -250,7 +321,7 @@ static void LMCacheArtworkThumbnail(NSData *artworkData, NSURL *fileURL, NSStrin
     }
 }
 
-static NSDictionary *LMExtractAVMediaTags(NSURL *fileURL, NSString *cacheDirPath) {
+static NSDictionary *LMExtractAVMediaTags(NSURL *fileURL, NSString *cacheDirPath, BOOL includeArtwork) {
     if (!fileURL) {
         return @{};
     }
@@ -292,28 +363,30 @@ static NSDictionary *LMExtractAVMediaTags(NSURL *fileURL, NSString *cacheDirPath
         durationSeconds = LMReadDurationSeconds(fileURL);
     }
 
-    NSData *artworkData = nil;
-    NSArray<AVMetadataItem *> *artworkItems = [AVMetadataItem metadataItemsFromArray:commonMetadata withKey:AVMetadataCommonKeyArtwork keySpace:AVMetadataKeySpaceCommon];
-    if (artworkItems.count > 0) {
-        artworkData = [artworkItems.firstObject dataValue];
-    }
-    if (!artworkData) {
-        NSArray<AVMetadataItem *> *id3ArtworkItems = [AVMetadataItem metadataItemsFromArray:[asset metadataForFormat:AVMetadataFormatiTunesMetadata] withKey:AVMetadataiTunesMetadataKeyCoverArt keySpace:AVMetadataKeySpaceiTunes];
-        if (id3ArtworkItems.count == 0) {
-            id3ArtworkItems = [AVMetadataItem metadataItemsFromArray:[asset metadataForFormat:AVMetadataFormatiTunesMetadata] withKey:AVMetadataCommonKeyArtwork keySpace:AVMetadataKeySpaceCommon];
+    if (includeArtwork) {
+        NSData *artworkData = nil;
+        NSArray<AVMetadataItem *> *artworkItems = [AVMetadataItem metadataItemsFromArray:commonMetadata withKey:AVMetadataCommonKeyArtwork keySpace:AVMetadataKeySpaceCommon];
+        if (artworkItems.count > 0) {
+            artworkData = [artworkItems.firstObject dataValue];
         }
-        if (id3ArtworkItems.count > 0) {
-            artworkData = [id3ArtworkItems.firstObject dataValue];
+        if (!artworkData) {
+            NSArray<AVMetadataItem *> *id3ArtworkItems = [AVMetadataItem metadataItemsFromArray:[asset metadataForFormat:AVMetadataFormatiTunesMetadata] withKey:AVMetadataiTunesMetadataKeyCoverArt keySpace:AVMetadataKeySpaceiTunes];
+            if (id3ArtworkItems.count == 0) {
+                id3ArtworkItems = [AVMetadataItem metadataItemsFromArray:[asset metadataForFormat:AVMetadataFormatiTunesMetadata] withKey:AVMetadataCommonKeyArtwork keySpace:AVMetadataKeySpaceCommon];
+            }
+            if (id3ArtworkItems.count > 0) {
+                artworkData = [id3ArtworkItems.firstObject dataValue];
+            }
         }
-    }
-    if (!artworkData) {
-        NSArray<AVMetadataItem *> *id3Attached = [AVMetadataItem metadataItemsFromArray:[asset metadataForFormat:AVMetadataFormatID3Metadata] withKey:AVMetadataID3MetadataKeyAttachedPicture keySpace:AVMetadataKeySpaceID3];
-        if (id3Attached.count > 0) {
-            artworkData = [id3Attached.firstObject dataValue];
+        if (!artworkData) {
+            NSArray<AVMetadataItem *> *id3Attached = [AVMetadataItem metadataItemsFromArray:[asset metadataForFormat:AVMetadataFormatID3Metadata] withKey:AVMetadataID3MetadataKeyAttachedPicture keySpace:AVMetadataKeySpaceID3];
+            if (id3Attached.count > 0) {
+                artworkData = [id3Attached.firstObject dataValue];
+            }
         }
-    }
 
-    LMCacheArtworkThumbnail(artworkData, fileURL, cacheDirPath, &artworkPath, &artworkKey);
+        LMCacheArtworkThumbnail(artworkData, fileURL, cacheDirPath, &artworkPath, &artworkKey);
+    }
 
     NSMutableDictionary *result = [NSMutableDictionary dictionary];
     if (title.length > 0) {
@@ -328,17 +401,17 @@ static NSDictionary *LMExtractAVMediaTags(NSURL *fileURL, NSString *cacheDirPath
     if (durationSeconds) {
         result[@"durationSeconds"] = durationSeconds;
     }
-    if (artworkPath.length > 0) {
+    if (includeArtwork && artworkPath.length > 0) {
         result[@"artworkUri"] = artworkPath;
     }
-    if (artworkKey.length > 0) {
+    if (includeArtwork && artworkKey.length > 0) {
         result[@"artworkKey"] = artworkKey;
     }
 
     return result;
 }
 
-static NSDictionary *LMExtractID3MediaTags(NSURL *fileURL, NSString *cacheDirPath) {
+static NSDictionary *LMExtractID3MediaTags(NSURL *fileURL, NSString *cacheDirPath, BOOL includeArtwork) {
     NSError *error = nil;
     LMID3TagsResult *tags = [LMID3TagEditorBridge readTagsForURL:fileURL error:&error];
     if (!tags) {
@@ -362,7 +435,9 @@ static NSDictionary *LMExtractID3MediaTags(NSURL *fileURL, NSString *cacheDirPat
         durationSeconds = LMReadDurationSeconds(fileURL);
     }
 
-    LMCacheArtworkThumbnail(tags.artworkData, fileURL, cacheDirPath, &artworkUri, &artworkKey);
+    if (includeArtwork) {
+        LMCacheArtworkThumbnail(tags.artworkData, fileURL, cacheDirPath, &artworkUri, &artworkKey);
+    }
 
     NSMutableDictionary *result = [NSMutableDictionary dictionary];
     if (title) {
@@ -377,29 +452,34 @@ static NSDictionary *LMExtractID3MediaTags(NSURL *fileURL, NSString *cacheDirPat
     if (durationSeconds) {
         result[@"durationSeconds"] = durationSeconds;
     }
-    if (artworkUri) {
+    if (includeArtwork && artworkUri) {
         result[@"artworkUri"] = artworkUri;
     }
-    if (artworkKey) {
+    if (includeArtwork && artworkKey) {
         result[@"artworkKey"] = artworkKey;
     }
 
     return result;
 }
 
-static NSDictionary *LMExtractMediaTags(NSURL *fileURL, NSString *cacheDirPath) {
+static NSDictionary *LMExtractMediaTags(NSURL *fileURL, NSString *cacheDirPath, BOOL includeArtwork, NSSet<NSString *> *allowedExtensions) {
     if (!fileURL) {
         return @{};
     }
 
+    NSSet<NSString *> *extensions = allowedExtensions ?: LMSupportedAudioExtensions();
+    if (!LMIsSupportedAudioURLWithSet(fileURL, extensions)) {
+        return @{};
+    }
+
     if (LMIsMP3URL(fileURL)) {
-        NSDictionary *id3Tags = LMExtractID3MediaTags(fileURL, cacheDirPath);
+        NSDictionary *id3Tags = LMExtractID3MediaTags(fileURL, cacheDirPath, includeArtwork);
         if (id3Tags) {
             return id3Tags;
         }
     }
 
-    NSDictionary *fallback = LMExtractAVMediaTags(fileURL, cacheDirPath);
+    NSDictionary *fallback = LMExtractAVMediaTags(fileURL, cacheDirPath, includeArtwork);
     return fallback ?: @{};
 }
 
@@ -432,6 +512,10 @@ static NSDictionary *LMExtractMediaTags(NSURL *fileURL, NSString *cacheDirPath) 
 @property (nonatomic, assign) NSUInteger visualizerCPUOverrunFrames;
 @property (nonatomic, strong) dispatch_queue_t mediaScanQueue;
 @property (atomic, assign) BOOL isMediaScanning;
+@property (atomic, assign) BOOL progressEventsEnabled;
+@property (atomic, assign) NSTimeInterval lastProgressDurationSent;
+@property (atomic, assign) BOOL isWindowOccluded;
+@property (nonatomic, weak) NSWindow *observedWindow;
 
 - (void)configureVisualizerDefaults;
 - (void)installVisualizerTapIfNeeded;
@@ -541,6 +625,7 @@ RCT_EXPORT_MODULE();
         @"onLoadError",
         @"onPlaybackStateChanged",
         @"onProgress",
+        @"onOcclusionChanged",
         @"onCompletion",
         @"onRemoteCommand",
         @"onVisualizerFrame",
@@ -562,8 +647,13 @@ RCT_EXPORT_MODULE();
         _visualizerQueue = dispatch_queue_create("com.legendmusic.audio.visualizer", DISPATCH_QUEUE_SERIAL);
         _mediaScanQueue = dispatch_queue_create("com.legendmusic.audio.scanner", DISPATCH_QUEUE_SERIAL);
         _isMediaScanning = NO;
+        _progressEventsEnabled = YES;
+        _isWindowOccluded = NO;
+        _observedWindow = nil;
+        _lastProgressDurationSent = -1;
         [self configureVisualizerDefaults];
         [self setupRemoteCommands];
+        [self setupOcclusionObservers];
     }
     return self;
 }
@@ -597,6 +687,94 @@ RCT_EXPORT_MODULE();
                                              selector:@selector(playerItemFailedToPlay:)
                                                  name:AVPlayerItemFailedToPlayToEndTimeNotification
                                                object:nil];
+}
+
+- (NSTimeInterval)progressUpdateInterval
+{
+    return self.isWindowOccluded ? kProgressIntervalOccludedSeconds : kProgressIntervalVisibleSeconds;
+}
+
+- (void)setupOcclusionObservers
+{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
+        [center addObserver:self selector:@selector(handleWindowOcclusionChange:) name:NSWindowDidChangeOcclusionStateNotification object:nil];
+        [center addObserver:self selector:@selector(handleWindowDidBecomeKey:) name:NSWindowDidBecomeKeyNotification object:nil];
+        [center addObserver:self selector:@selector(handleWindowDidBecomeMain:) name:NSWindowDidBecomeMainNotification object:nil];
+        [self updateObservedWindow:NSApp.mainWindow ?: NSApp.keyWindow];
+    });
+}
+
+- (void)updateObservedWindow:(NSWindow *)window
+{
+    if (!window || window == self.observedWindow) {
+        return;
+    }
+    self.observedWindow = window;
+    [self applyOcclusionStateForWindow:window];
+}
+
+- (void)emitOcclusionEventWithState:(BOOL)isOccluded
+{
+    if (!self.hasListeners) {
+        return;
+    }
+
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (!self.hasListeners) {
+            return;
+        }
+        [self sendEventWithName:@"onOcclusionChanged" body:@{ @"isOccluded": @(isOccluded) }];
+    });
+}
+
+- (void)applyOcclusionStateForWindow:(NSWindow *)window
+{
+    if (!window) {
+        return;
+    }
+
+    BOOL visible = (window.occlusionState & NSWindowOcclusionStateVisible) == NSWindowOcclusionStateVisible;
+    BOOL nextOccluded = !visible;
+    BOOL changed = (nextOccluded != self.isWindowOccluded);
+    self.isWindowOccluded = nextOccluded;
+
+    if (changed) {
+        [self emitOcclusionEventWithState:nextOccluded];
+        // Rebuild observer with the new cadence and emit a fresh tick so UI can snap back when visible.
+        [self addTimeObserver];
+        [self emitProgressEventWithTime:self.currentTime forceDuration:YES allowWhilePaused:YES];
+    }
+}
+
+- (void)handleWindowOcclusionChange:(NSNotification *)notification
+{
+    NSWindow *window = notification.object;
+    if (![window isKindOfClass:[NSWindow class]]) {
+        return;
+    }
+    if (self.observedWindow == nil) {
+        self.observedWindow = window;
+    }
+    if (window == self.observedWindow) {
+        [self applyOcclusionStateForWindow:window];
+    }
+}
+
+- (void)handleWindowDidBecomeKey:(NSNotification *)notification
+{
+    NSWindow *window = notification.object;
+    if ([window isKindOfClass:[NSWindow class]]) {
+        [self updateObservedWindow:window];
+    }
+}
+
+- (void)handleWindowDidBecomeMain:(NSNotification *)notification
+{
+    NSWindow *window = notification.object;
+    if ([window isKindOfClass:[NSWindow class]]) {
+        [self updateObservedWindow:window];
+    }
 }
 
 - (NSUInteger)validatedFFTSizeFromRequested:(NSUInteger)requested
@@ -1324,6 +1502,8 @@ RCT_EXPORT_MODULE();
 {
     self.hasListeners = YES;
 
+    [self emitOcclusionEventWithState:self.isWindowOccluded];
+
     // Resume progress updates if playback is active and we do not yet observe time
     if (self.isPlaying && self.player && !self.timeObserver) {
         [self addTimeObserver];
@@ -1460,8 +1640,13 @@ RCT_EXPORT_METHOD(getMediaTags:(NSString *)filePath
                 return;
             }
 
+            if (!LMIsSupportedAudioURL(fileURL)) {
+                reject(@"UNSUPPORTED_FORMAT", @"Audio format is not supported", nil);
+                return;
+            }
+
             NSString *normalizedCacheDir = cacheDir ? LMNormalizePathString(cacheDir) : @"";
-            NSDictionary *result = LMExtractMediaTags(fileURL, normalizedCacheDir);
+            NSDictionary *result = LMExtractMediaTags(fileURL, normalizedCacheDir, YES, LMSupportedAudioExtensions());
             resolve(result ?: @{});
         }
     });
@@ -1558,7 +1743,10 @@ RCT_EXPORT_METHOD(scanMediaLibrary:(NSArray<NSString *> *)paths
             }
 
             BOOL includeHidden = [[options objectForKey:@"includeHidden"] boolValue];
-            NSString *normalizedCacheDir = cacheDir ? LMNormalizePathString(cacheDir) : @"";
+            BOOL includeArtwork = [[options objectForKey:@"includeArtwork"] boolValue];
+            NSString *normalizedCacheDir = (includeArtwork && cacheDir) ? LMNormalizePathString(cacheDir) : @"";
+            NSArray<NSString *> *allowedExtensionsOption = [options objectForKey:@"allowedExtensions"];
+            NSSet<NSString *> *allowedExtensions = LMExtensionsFromOption(allowedExtensionsOption);
 
             NSMutableDictionary<NSNumber *, NSMutableSet<NSString *> *> *skipLookup = [NSMutableDictionary dictionary];
             NSArray *skipEntries = [options objectForKey:@"skip"];
@@ -1672,7 +1860,7 @@ RCT_EXPORT_METHOD(scanMediaLibrary:(NSArray<NSString *> *)paths
                         }
 
                         NSString *extension = [[fileURL pathExtension] lowercaseString];
-                        if (![extension isEqualToString:@"mp3"]) {
+                        if (!LMIsSupportedAudioExtensionString(extension, allowedExtensions)) {
                             continue;
                         }
 
@@ -1704,7 +1892,7 @@ RCT_EXPORT_METHOD(scanMediaLibrary:(NSArray<NSString *> *)paths
                             continue;
                         }
 
-                        NSDictionary *tags = LMExtractMediaTags(fileURL, normalizedCacheDir);
+                        NSDictionary *tags = LMExtractMediaTags(fileURL, normalizedCacheDir, includeArtwork, allowedExtensions);
 
                         NSMutableDictionary *track = [@{
                             @"rootIndex": @(rootIndex),
@@ -1987,6 +2175,8 @@ RCT_EXPORT_METHOD(clearNowPlayingInfo)
 
             // Send success event
             [self sendEventWithName:@"onLoadSuccess" body:@{@"duration": @(self.duration)}];
+            self.lastProgressDurationSent = -1;
+            [self emitProgressEventWithTime:self.currentTime forceDuration:YES allowWhilePaused:YES];
             if (self.loadResolve) {
                 self.loadResolve(@{@"success": @YES});
                 self.loadResolve = nil;
@@ -2222,14 +2412,53 @@ RCT_EXPORT_METHOD(getCurrentState:(RCTPromiseResolveBlock)resolve
 
 #pragma mark - Time Observer
 
+- (void)emitProgressEventWithTime:(NSTimeInterval)time forceDuration:(BOOL)forceDuration allowWhilePaused:(BOOL)allowWhilePaused
+{
+    if (!self.progressEventsEnabled || !self.hasListeners) {
+        return;
+    }
+
+    if (!allowWhilePaused && !self.isPlaying) {
+        return;
+    }
+
+    NSTimeInterval duration = self.duration;
+    BOOL shouldIncludeDuration = forceDuration || fabs(duration - self.lastProgressDurationSent) >= 0.1;
+
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (!self.progressEventsEnabled || !self.hasListeners) {
+            return;
+        }
+        if (!allowWhilePaused && !self.isPlaying) {
+            return;
+        }
+
+        NSMutableDictionary *payload = [NSMutableDictionary dictionaryWithCapacity:shouldIncludeDuration ? 2 : 1];
+        payload[@"currentTime"] = @(time);
+
+        if (shouldIncludeDuration) {
+            payload[@"duration"] = @(duration);
+            self.lastProgressDurationSent = duration;
+        }
+
+        [self sendEventWithName:@"onProgress" body:payload];
+    });
+}
+
 - (void)addTimeObserver
 {
     [self removeTimeObserver];
 
+    if (!self.progressEventsEnabled) {
+        return;
+    }
+
+    self.lastProgressDurationSent = -1;
+
     __weak typeof(self) weakSelf = self;
-    // Throttle updates: emit every 2s on a background queue to minimize CPU impact
+    // Throttle updates: emit every 5s on a background queue to minimize CPU impact
     dispatch_queue_t backgroundQueue = dispatch_get_global_queue(QOS_CLASS_BACKGROUND, 0);
-    CMTime interval = CMTimeMakeWithSeconds(1.0, NSEC_PER_SEC);
+    CMTime interval = CMTimeMakeWithSeconds([self progressUpdateInterval], NSEC_PER_SEC);
     self.timeObserver = [self.player addPeriodicTimeObserverForInterval:interval
                                                                    queue:backgroundQueue
                                                               usingBlock:^(CMTime time) {
@@ -2238,17 +2467,11 @@ RCT_EXPORT_METHOD(getCurrentState:(RCTPromiseResolveBlock)resolve
             NSTimeInterval newTime = CMTimeGetSeconds(time);
 
             // Only send updates if time has changed significantly (avoid redundant events)
-            if (fabs(newTime - strongSelf.currentTime) >= 0.5) {
+            if (fabs(newTime - strongSelf.currentTime) >= 0.1) {
                 strongSelf.currentTime = newTime;
                 [strongSelf updateNowPlayingElapsedTime:strongSelf.currentTime];
 
-                // Dispatch event sending back to main queue
-                dispatch_async(dispatch_get_main_queue(), ^{
-                    [strongSelf sendEventWithName:@"onProgress" body:@{
-                        @"currentTime": @(strongSelf.currentTime),
-                        @"duration": @(strongSelf.duration)
-                    }];
-                });
+                [strongSelf emitProgressEventWithTime:strongSelf.currentTime forceDuration:NO allowWhilePaused:NO];
             }
         }
     }];

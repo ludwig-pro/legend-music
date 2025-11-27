@@ -1,5 +1,5 @@
 import type { Observable } from "@legendapp/state";
-import { use$ } from "@legendapp/state/react";
+import { useValue } from "@legendapp/state/react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { NativeMouseEvent } from "react-native-macos";
 
@@ -82,8 +82,8 @@ export function buildTrackItems({ tracks, selectedItem, searchQuery }: BuildTrac
 }
 
 export function useLibraryTrackList(searchQuery: string): UseLibraryTrackListResult {
-    const selectedItem = use$(libraryUI$.selectedItem);
-    const allTracks = use$(library$.tracks);
+    const selectedItem = useValue(libraryUI$.selectedItem);
+    const allTracks = useValue(library$.tracks);
     const skipClickRef = useRef(false);
 
     const { sourceTracks, trackItems } = useMemo(

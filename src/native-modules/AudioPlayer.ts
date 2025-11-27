@@ -93,13 +93,16 @@ export interface MediaScanOptions {
     batchSize?: number;
     includeHidden?: boolean;
     skip?: { rootIndex: number; relativePath: string }[];
+    includeArtwork?: boolean;
+    allowedExtensions?: readonly string[];
 }
 
 export interface AudioPlayerEvents {
     onLoadSuccess: (data: { duration: number }) => void;
     onLoadError: (data: { error: string }) => void;
     onPlaybackStateChanged: (data: { isPlaying: boolean }) => void;
-    onProgress: (data: { currentTime: number; duration: number }) => void;
+    onProgress: (data: { currentTime: number; duration?: number }) => void;
+    onOcclusionChanged: (data: { isOccluded: boolean }) => void;
     onCompletion: () => void;
     onRemoteCommand: (data: { command: RemoteCommand }) => void;
     onVisualizerFrame: (data: VisualizerFrame) => void;

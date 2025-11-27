@@ -1,6 +1,6 @@
-import { observer, use$, useObservable } from "@legendapp/state/react";
+import { useObservable, useValue } from "@legendapp/state/react";
 import { vars } from "nativewind";
-import { createContext, type ReactNode, useContext } from "react";
+import { createContext, type ReactNode, useContext, useMemo } from "react";
 import { View } from "react-native";
 
 import { createJSONManager } from "@/utils/JSONManager";
@@ -37,7 +37,7 @@ export const themeState$ = createJSONManager<ThemeSettings>({
 
 // Create theme variables for each theme
 const getThemes = (theme$: typeof themeState$) => {
-    const { dark } = use$(theme$.customColors);
+    const { dark } = useValue(theme$.customColors);
     return {
         dark: vars({
             "--background-primary": dark.background.primary,
@@ -60,37 +60,42 @@ const getThemes = (theme$: typeof themeState$) => {
 const ThemeContext = createContext<ThemeContextType>(undefined as any);
 
 // Theme provider component
-export const ThemeProvider = observer(({ children }: { children: ReactNode }) => {
-    const theme$ = useObservable(themeState$);
+export const ThemeProvider = ({ children }: { children: ReactNode }) => {
+    const currentTheme = useValue(themeState$.currentTheme);
+    const style = getThemes(themeState$).dark;
 
-    const currentTheme = theme$.currentTheme.get();
+    console.log("ZZZ theme provider", currentTheme);
+
     if (currentTheme !== "dark") {
-        theme$.currentTheme.set("dark");
+        themeState$.currentTheme.set("dark");
     }
 
     const setTheme = () => {
-        theme$.currentTheme.set("dark");
+        // themeState$.currentTheme.set("dark");
     };
 
     const resetTheme = () => {
-        theme$.customColors.set(clone(colors));
+        // themeState$.customColors.set(clone(colors));
     };
 
     // Context value
-    const contextValue: ThemeContextType = {
-        currentTheme: "dark",
-        setTheme,
-        resetTheme,
-    };
+    const contextValue: ThemeContextType = useMemo(
+        () => ({
+            currentTheme: "dark",
+            setTheme,
+            resetTheme,
+        }),
+        [],
+    );
 
     return (
         <ThemeContext.Provider value={contextValue}>
-            <View className="flex-1" style={getThemes(theme$).dark}>
+            <View className="flex-1" style={style}>
                 {children}
             </View>
         </ThemeContext.Provider>
     );
-});
+};
 
 // Hook to use theme
 export const useTheme = () => {

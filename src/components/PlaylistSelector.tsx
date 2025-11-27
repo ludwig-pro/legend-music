@@ -1,4 +1,4 @@
-import { use$ } from "@legendapp/state/react";
+import { useValue } from "@legendapp/state/react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { type LayoutChangeEvent, Text, useWindowDimensions, View } from "react-native";
 
@@ -30,9 +30,9 @@ const DEFAULT_BOTTOM_BAR_BUTTONS: BottomBarControlId[] = [
 ];
 
 export function PlaylistSelector() {
-    const localMusicState = use$(localMusicState$);
-    const library = use$(library$);
-    const queue = use$(queue$);
+    const localMusicState = useValue(localMusicState$);
+    const library = useValue(library$);
+    const queue = useValue(queue$);
     const { width: windowWidth } = useWindowDimensions();
     const [layoutWidth, setLayoutWidth] = useState(0);
     const handleLayout = useCallback((event: LayoutChangeEvent) => {

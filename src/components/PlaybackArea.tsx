@@ -1,5 +1,5 @@
 import type { Observable } from "@legendapp/state";
-import { use$, useObservable } from "@legendapp/state/react";
+import { useObservable, useValue } from "@legendapp/state/react";
 import { memo, useCallback, useEffect } from "react";
 import { type LayoutChangeEvent, Text, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
@@ -91,13 +91,13 @@ function formatTime(seconds: number, cache?: boolean): string {
 
 export function PlaybackArea({ showBorder = true, overlayMode }: PlaybackAreaProps = {}) {
     perfCount("PlaybackArea.render");
-    const currentTrack = use$(localPlayerState$.currentTrack);
-    const isPlaying = use$(localPlayerState$.isPlaying);
+    const currentTrack = useValue(localPlayerState$.currentTrack);
+    const isPlaying = useValue(localPlayerState$.isPlaying);
     const currentLocalTime$ = localPlayerState$.currentTime;
     const playbackControlsLayout = usePlaybackControlLayout();
-    const thumbnailVersion = use$(localMusicState$.thumbnailVersion);
-    const shuffleEnabled = use$(settings$.playback.shuffle);
-    const repeatMode = use$(settings$.playback.repeatMode);
+    const thumbnailVersion = useValue(localMusicState$.thumbnailVersion);
+    const shuffleEnabled = useValue(settings$.playback.shuffle);
+    const repeatMode = useValue(settings$.playback.repeatMode);
     const handleSlidingStart = useCallback(() => setIsScrubbing(true), []);
     const handleSlidingEnd = useCallback(() => setIsScrubbing(false), []);
     const overlayModeEnabled = overlayMode?.enabled ?? false;
@@ -107,17 +107,19 @@ export function PlaybackArea({ showBorder = true, overlayMode }: PlaybackAreaPro
 
     useEffect(() => {
         if (!overlayModeEnabled) {
-            overlayControlsProgress.value = 1;
+            overlayControlsProgress.set(1);
             return;
         }
 
-        overlayControlsProgress.value = withSpring(overlayControlsVisible ? 1 : 0, {
-            damping: OVERLAY_CONTENT_SPRING_DAMPING,
-            stiffness: OVERLAY_CONTENT_SPRING_STIFFNESS,
-            mass: OVERLAY_CONTENT_SPRING_MASS,
-            restDisplacementThreshold: OVERLAY_CONTENT_SPRING_REST_DISPLACEMENT,
-            restSpeedThreshold: OVERLAY_CONTENT_SPRING_REST_SPEED,
-        });
+        overlayControlsProgress.set(
+            withSpring(overlayControlsVisible ? 1 : 0, {
+                damping: OVERLAY_CONTENT_SPRING_DAMPING,
+                stiffness: OVERLAY_CONTENT_SPRING_STIFFNESS,
+                mass: OVERLAY_CONTENT_SPRING_MASS,
+                restDisplacementThreshold: OVERLAY_CONTENT_SPRING_REST_DISPLACEMENT,
+                restSpeedThreshold: OVERLAY_CONTENT_SPRING_REST_SPEED,
+            }),
+        );
     }, [overlayControlsVisible, overlayModeEnabled, overlayControlsProgress]);
 
     const controlsAnimatedStyle = useAnimatedStyle(() => {
@@ -236,7 +238,7 @@ export function PlaybackArea({ showBorder = true, overlayMode }: PlaybackAreaPro
 
     const handleSliderRowLayout = useCallback(
         (event: LayoutChangeEvent) => {
-            sliderRowHeight.value = event.nativeEvent.layout.height;
+            sliderRowHeight.set(event.nativeEvent.layout.height);
         },
         [sliderRowHeight],
     );

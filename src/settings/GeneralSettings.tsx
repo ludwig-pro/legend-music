@@ -1,4 +1,3 @@
-import { observer } from "@legendapp/state/react";
 import { Linking, Text, View } from "react-native";
 
 import { Button } from "@/components/Button";
@@ -7,7 +6,7 @@ import { SettingsPage, SettingsRow, SettingsSection } from "@/settings/component
 import { settings$ } from "@/systems/Settings";
 import packageJson from "../../package.json";
 
-export const GeneralSettings = observer(function GeneralSettings() {
+export const GeneralSettings = function GeneralSettings() {
     // const playlistStyleOptions = [
     //     { value: "compact", label: "Compact" },
     //     { value: "comfortable", label: "Comfortable" },
@@ -61,4 +60,4 @@ export const GeneralSettings = observer(function GeneralSettings() {
             </SettingsSection>
         </SettingsPage>
     );
-});
+};

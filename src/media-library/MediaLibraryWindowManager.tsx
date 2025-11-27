@@ -1,4 +1,4 @@
-import { use$ } from "@legendapp/state/react";
+import { useValue } from "@legendapp/state/react";
 import { useCallback, useEffect } from "react";
 import { Dimensions } from "react-native";
 
@@ -27,7 +27,7 @@ const clamp = (value: number, min: number, max: number) => {
 export const MediaLibraryWindowManager = () => {
     perfCount("MediaLibraryWindowManager.render");
     const windowManager = useWindowManager();
-    const isOpen = use$(stateSaved$.libraryIsOpen);
+    const isOpen = useValue(stateSaved$.libraryIsOpen);
 
     const toggleLibrary = useCallback(() => {
         perfLog("MediaLibraryWindowManager.toggleLibrary", { isOpen: stateSaved$.libraryIsOpen.get() });

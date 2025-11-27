@@ -1,6 +1,6 @@
 import { Callout } from "@fluentui-react-native/callout";
 import type { Observable } from "@legendapp/state";
-import { use$, useObservable } from "@legendapp/state/react";
+import { useObservable, useValue } from "@legendapp/state/react";
 import type { Component, ReactNode } from "react";
 import {
     cloneElement,
@@ -239,7 +239,7 @@ function Content({
 }: ContentProps) {
     const contextValue = useDropdownContext();
     const { isOpen$, triggerRef, close } = contextValue;
-    const isOpen = use$(isOpen$);
+    const isOpen = useValue(isOpen$);
 
     const calloutTarget = anchorRect ? undefined : (triggerRef as React.RefObject<Component>);
 
@@ -407,7 +407,7 @@ interface SubProps {
 function Sub({ children, className = "" }: SubProps) {
     const submenuId = useId();
     const [isOpen, setIsOpen] = useState(false);
-    const activeSubmenuId = use$(state$.activeSubmenuId);
+    const activeSubmenuId = useValue(state$.activeSubmenuId);
     const { level } = useContext(SubmenuContext);
     const subRef = useRef<View>(null);
 
@@ -490,7 +490,7 @@ function SubContent({
     directionalHint = "rightTopEdge",
 }: SubContentProps) {
     const [isOpen, setIsOpen] = useState(false);
-    const activeSubmenuId = use$(state$.activeSubmenuId);
+    const activeSubmenuId = useValue(state$.activeSubmenuId);
     const { parentRef, submenuId } = useContext(SubmenuContext);
     const contextValue = useDropdownContext();
 

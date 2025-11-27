@@ -1,5 +1,5 @@
 import type { Observable } from "@legendapp/state";
-import { use$, useObservable, useObserveEffect } from "@legendapp/state/react";
+import { useObservable, useObserveEffect, useValue } from "@legendapp/state/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { GestureResponderEvent, LayoutChangeEvent } from "react-native";
 import { PanResponder, Pressable, View } from "react-native";
@@ -37,11 +37,11 @@ export function CustomSlider({
 }: CustomSliderProps) {
     const isDragging$ = useObservable(false);
     const isHovered$ = useObservable(false);
-    const isHovered = use$(isHovered$);
-    const isDragging = use$(isDragging$);
+    const isHovered = useValue(isHovered$);
+    const isDragging = useValue(isDragging$);
     const [sliderWidth, setSliderWidth] = useState(0);
     const isDisabled$ = useObservableLatest(disabledProp);
-    const isDisabled = use$(isDisabled$);
+    const isDisabled = useValue(isDisabled$);
     const lastCommittedValueRef = useRef<number | null>(null);
 
     // Calculate progress percentage
@@ -59,7 +59,7 @@ export function CustomSlider({
 
     // Animate thumb height based on hover state
     useEffect(() => {
-        thumbHeight.value = withTiming(isHovered || isDragging ? 12 : 1, { duration: 150 });
+        thumbHeight.set(withTiming(isHovered || isDragging ? 12 : 1, { duration: 150 }));
     }, [isDragging, isHovered]);
 
     const updateValueFromLocation = useCallback(
@@ -211,7 +211,7 @@ export function useObservableSharedValue<T>(compute: () => T) {
     const sharedValue = useSharedValue(compute());
 
     useObserveEffect(() => {
-        sharedValue.value = compute();
+        sharedValue.set(compute());
     });
 
     return sharedValue;

@@ -1,5 +1,5 @@
 import type { Observable } from "@legendapp/state";
-import { use$, useObservable } from "@legendapp/state/react";
+import { useObservable, useValue } from "@legendapp/state/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { playlistNavigationState$ } from "@/state/playlistNavigationState";
@@ -23,9 +23,9 @@ export interface UseSearchDropdownStateResult {
 
 export function useSearchDropdownState(onOpenChange?: (open: boolean) => void): UseSearchDropdownStateResult {
     const searchQuery$ = useObservable("");
-    const searchQuery = use$(searchQuery$);
+    const searchQuery = useValue(searchQuery$);
     const isOpen$ = useObservable(false);
-    const isOpen = use$(isOpen$);
+    const isOpen = useValue(isOpen$);
 
     const handleOpenChange = useCallback(
         (open: boolean) => {

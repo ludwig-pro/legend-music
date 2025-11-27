@@ -227,10 +227,10 @@ const animatedStyle = useAnimatedStyle(() => ({
 
 // Toggle function
 const toggleLibrary = () => {
-  libraryHeight.value = withTiming(
+  libraryHeight.set(withTiming(
     libraryUI$.isOpen.get() ? 0 : LIBRARY_HEIGHT,
     { duration: 250 }
-  )
+  ))
   libraryUI$.isOpen.set(!libraryUI$.isOpen.get())
 }
 ```

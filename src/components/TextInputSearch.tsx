@@ -1,5 +1,5 @@
 import type { Observable } from "@legendapp/state";
-import { use$ } from "@legendapp/state/react";
+import { useValue } from "@legendapp/state/react";
 import { forwardRef, memo, useCallback, useImperativeHandle, useRef } from "react";
 import {
     findNodeHandle,
@@ -35,7 +35,7 @@ export const TextInputSearch = memo(
         { value$, value, defaultValue, onChangeText, ...rest },
         ref,
     ) {
-        const defaultText = defaultValue ?? (value$ ? use$(value$) : value) ?? "";
+        const defaultText = defaultValue ?? (value$ ? useValue(value$) : value) ?? "";
         const nativeRef = useRef<any>(null);
 
         useImperativeHandle(

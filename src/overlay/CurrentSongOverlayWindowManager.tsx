@@ -1,4 +1,4 @@
-import { use$ } from "@legendapp/state/react";
+import { useValue } from "@legendapp/state/react";
 import { useEffect, useRef } from "react";
 import { Dimensions } from "react-native";
 
@@ -30,11 +30,11 @@ const DEFAULT_HEIGHT = OVERLAY_WINDOW_HEIGHT_COMPACT;
 export const CurrentSongOverlayWindowManager = () => {
     perfCount("CurrentSongOverlayWindowManager.render");
     const windowManager = useWindowManager();
-    const isWindowOpen = use$(currentSongOverlay$.isWindowOpen);
-    const isOverlayExiting = use$(currentSongOverlay$.isExiting);
-    const overlayPosition = use$(settings$.overlay.position);
-    const windowHeight = use$(currentSongOverlay$.windowHeight) ?? OVERLAY_WINDOW_HEIGHT_COMPACT;
-    const windowWidth = use$(currentSongOverlay$.windowWidth) ?? OVERLAY_WINDOW_WIDTH_COMPACT;
+    const isWindowOpen = useValue(currentSongOverlay$.isWindowOpen);
+    const isOverlayExiting = useValue(currentSongOverlay$.isExiting);
+    const overlayPosition = useValue(settings$.overlay.position);
+    const windowHeight = useValue(currentSongOverlay$.windowHeight) ?? OVERLAY_WINDOW_HEIGHT_COMPACT;
+    const windowWidth = useValue(currentSongOverlay$.windowWidth) ?? OVERLAY_WINDOW_WIDTH_COMPACT;
     const horizontalPosition = overlayPosition?.horizontal ?? "center";
     const verticalPosition = overlayPosition?.vertical ?? "top";
     const previousDimensionsRef = useRef<{ width: number; height: number } | null>(null);

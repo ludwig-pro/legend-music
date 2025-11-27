@@ -1,5 +1,5 @@
 import { observable } from "@legendapp/state";
-import { use$ } from "@legendapp/state/react";
+import { useValue } from "@legendapp/state/react";
 import { useEffect, useRef } from "react";
 import { Animated, Easing, Text, View } from "react-native";
 
@@ -35,7 +35,7 @@ export function showToast(message: string, type: ToastType = "info") {
 }
 
 export function ToastProvider() {
-    const toast = use$(toast$);
+    const toast = useValue(toast$);
     const opacity = useRef(new Animated.Value(0)).current;
     const translateY = useRef(new Animated.Value(8)).current;
     const hideTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -80,13 +80,13 @@ export function ToastProvider() {
                 easing: Easing.out(Easing.cubic),
                 useNativeDriver: true,
             }),
-                Animated.timing(translateY, {
-                    toValue: 8,
-                    duration: 140,
-                    easing: Easing.out(Easing.cubic),
-                    useNativeDriver: true,
-                }),
-            ]).start();
+            Animated.timing(translateY, {
+                toValue: 8,
+                duration: 140,
+                easing: Easing.out(Easing.cubic),
+                useNativeDriver: true,
+            }),
+        ]).start();
     }, [toast.visible, toast.id, opacity, translateY]);
 
     if (!toast.visible) {
@@ -95,9 +95,7 @@ export function ToastProvider() {
 
     const containerClass = cn(
         "px-3 py-2 rounded-lg border shadow-lg max-w-xl",
-        toast.type === "error"
-            ? "bg-red-500/80 border-red-400/70"
-            : "bg-emerald-500/70 border-emerald-400/60",
+        toast.type === "error" ? "bg-red-500/80 border-red-400/70" : "bg-emerald-500/70 border-emerald-400/60",
     );
 
     return (
@@ -110,10 +108,7 @@ export function ToastProvider() {
                 className={containerClass}
             >
                 <Text
-                    className={cn(
-                        "text-xs font-medium",
-                        toast.type === "error" ? "text-red-50" : "text-emerald-50",
-                    )}
+                    className={cn("text-xs font-medium", toast.type === "error" ? "text-red-50" : "text-emerald-50")}
                     numberOfLines={2}
                 >
                     {toast.message}

@@ -1,14 +1,14 @@
 import { currentTime as currentTime$ } from "@legendapp/state/helpers/time";
-import { use$, useObservable } from "@legendapp/state/react";
+import { useObservable, useValue } from "@legendapp/state/react";
 import { Pressable, Text } from "react-native";
 import { settings$ } from "@/systems/Settings";
 import { state$ } from "@/systems/State";
 
 export function Unregistered() {
-    const isRegistered = use$(settings$.registration.isRegistered);
+    const isRegistered = useValue(settings$.registration.isRegistered);
     const startTime$ = useObservable(Date.now());
 
-    const visibilityState = use$(() => {
+    const visibilityState = useValue(() => {
         const elapsed = +currentTime$.get() - startTime$.get();
         const sixtyMinutes = 60 * 60 * 1000;
 

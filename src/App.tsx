@@ -38,43 +38,43 @@ function App(): React.JSX.Element | null {
         perfMark("App.useEffect");
         const initializeHandle = runAfterInteractionsWithLabel(() => {
             perfMark("App.initializeMenuManager");
-            // initializeMenuManager();
-            // perfMark("App.initializeLocalMusic.start");
-            // initializeLocalMusic();
-            // perfMark("App.initializeLocalMusic.end");
+            initializeMenuManager();
+            perfMark("App.initializeLocalMusic.start");
+            initializeLocalMusic();
+            perfMark("App.initializeLocalMusic.end");
         }, "App.initializeMenuManager");
 
-        // const hydrateHandle = runAfterInteractionsWithLabel(() => {
-        //     try {
-        //         perfMark("App.hydrateLibrary.start");
-        //         hydrateLibraryFromCache();
-        //         perfMark("App.hydrateLibrary.end");
-        //     } catch (error) {
-        //         console.warn("Failed to hydrate library cache:", error);
-        //     }
-        // }, "App.hydrateLibrary");
+        const hydrateHandle = runAfterInteractionsWithLabel(() => {
+            try {
+                perfMark("App.hydrateLibrary.start");
+                hydrateLibraryFromCache();
+                perfMark("App.hydrateLibrary.end");
+            } catch (error) {
+                console.warn("Failed to hydrate library cache:", error);
+            }
+        }, "App.hydrateLibrary");
 
-        // const prefetchHandle = runAfterInteractionsWithLabel(() => {
-        //     perfMark("App.prefetchWindows.start");
-        //     void WindowsNavigator.prefetch("SettingsWindow").catch((error) => {
-        //         console.warn("Failed to prefetch settings window:", error);
-        //     });
-        //     void WindowsNavigator.prefetch("MediaLibraryWindow").catch((error) => {
-        //         console.warn("Failed to prefetch media library window:", error);
-        //     });
-        //     void WindowsNavigator.prefetch("CurrentSongOverlayWindow").catch((error) => {
-        //         console.warn("Failed to prefetch current song overlay window:", error);
-        //     });
-        //     void WindowsNavigator.prefetch("VisualizerWindow").catch((error) => {
-        //         console.warn("Failed to prefetch visualizer window:", error);
-        //     });
-        //     perfMark("App.prefetchWindows.end");
-        // }, "App.prefetchWindows");
+        const prefetchHandle = runAfterInteractionsWithLabel(() => {
+            perfMark("App.prefetchWindows.start");
+            void WindowsNavigator.prefetch("SettingsWindow").catch((error) => {
+                console.warn("Failed to prefetch settings window:", error);
+            });
+            void WindowsNavigator.prefetch("MediaLibraryWindow").catch((error) => {
+                console.warn("Failed to prefetch media library window:", error);
+            });
+            void WindowsNavigator.prefetch("CurrentSongOverlayWindow").catch((error) => {
+                console.warn("Failed to prefetch current song overlay window:", error);
+            });
+            void WindowsNavigator.prefetch("VisualizerWindow").catch((error) => {
+                console.warn("Failed to prefetch visualizer window:", error);
+            });
+            perfMark("App.prefetchWindows.end");
+        }, "App.prefetchWindows");
 
         return () => {
-            // initializeHandle.cancel();
-            // hydrateHandle.cancel();
-            // prefetchHandle.cancel();
+            initializeHandle.cancel();
+            hydrateHandle.cancel();
+            prefetchHandle.cancel();
         };
     }, []);
 
@@ -103,11 +103,11 @@ function App(): React.JSX.Element | null {
                     </View>
                 </VibrancyView>
                 <TitleBar />
-                {/* <MediaLibraryWindowManager /> */}
-                {/* <SettingsWindowManager /> */}
-                {/* <CurrentSongOverlayWindowManager /> */}
-                {/* <CurrentSongOverlayController /> */}
-                {/* <VisualizerWindowManager /> */}
+                <MediaLibraryWindowManager />
+                <SettingsWindowManager />
+                <CurrentSongOverlayWindowManager />
+                <CurrentSongOverlayController />
+                <VisualizerWindowManager />
             </ThemeProvider>
         </WindowProvider>
     );

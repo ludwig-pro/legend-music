@@ -6,6 +6,7 @@ import AudioPlayer, {
     type MediaScanResult,
 } from "@/native-modules/AudioPlayer";
 import { addChangeListener, setWatchedDirectories } from "@/native-modules/FileSystemWatcher";
+import { isSupportedAudioFile, stripSupportedAudioExtension, SUPPORTED_AUDIO_EXTENSIONS } from "@/systems/audioFormats";
 import { DEBUG_LOCAL_MUSIC_LOGS } from "@/systems/constants";
 import {
     clearLibraryCache,
@@ -232,24 +233,6 @@ function buildThumbnailUri(baseUri: string, key?: string): string | undefined {
     return `${normalizedBase}/${key}.png`;
 }
 
-function extractThumbnailKeyFromPersisted(track: PersistedLibraryTrack | undefined): string | undefined {
-    if (!track) {
-        return undefined;
-    }
-
-    if (track.thumb?.length) {
-        return track.thumb;
-    }
-
-    if (track.thumbnail?.length) {
-        const fileName = track.thumbnail.split("/").pop() ?? track.thumbnail;
-        const [baseName] = fileName.split(".");
-        return baseName && baseName.length > 0 ? baseName : undefined;
-    }
-
-    return undefined;
-}
-
 function isLocalFileUri(uri: string): boolean {
     return uri.startsWith("file://") || uri.startsWith("/");
 }
@@ -435,7 +418,7 @@ function parseFilenameOnly(fileName: string): {
     artist: string;
 } {
     // Remove extension
-    let name = fileName.replace(/\.mp3$/i, "");
+    let name = stripSupportedAudioExtension(fileName);
 
     // Decode URL-encoded characters (like %20 for spaces)
     try {
@@ -476,6 +459,10 @@ function formatDuration(seconds: number): string {
 export async function createLocalTrackFromFile(filePath: string): Promise<LocalTrack> {
     const fileName = fileNameFromPath(filePath);
 
+    if (!isSupportedAudioFile(filePath)) {
+        throw new Error(`Unsupported audio format for ${fileName}`);
+    }
+
     try {
         const metadata = await extractId3Metadata(filePath, fileName);
 
@@ -505,10 +492,7 @@ export async function createLocalTrackFromFile(filePath: string): Promise<LocalT
     }
 }
 
-async function scanLibraryNative(
-    paths: string[],
-    thumbnailsDirUri: string,
-): Promise<{ tracks: LocalTrack[]; errors: string[] }> {
+async function scanLibraryNative(paths: string[]): Promise<{ tracks: LocalTrack[]; errors: string[] }> {
     if (paths.length === 0) {
         return { tracks: [], errors: [] };
     }
@@ -547,6 +531,10 @@ async function scanLibraryNative(
                 ? relativePath
                 : buildAbsolutePath(rootPath, relativePath);
 
+            if (!isSupportedAudioFile(absolutePath)) {
+                continue;
+            }
+
             if (seenPaths.has(absolutePath)) {
                 continue;
             }
@@ -565,12 +553,6 @@ async function scanLibraryNative(
                     ? nativeTrack.durationSeconds
                     : undefined;
 
-            const thumbnailKey = nativeTrack.artworkKey?.length
-                ? nativeTrack.artworkKey
-                : extractThumbnailKeyFromPersisted(cachedTrack);
-            const thumbnailUri =
-                buildThumbnailUri(thumbnailsDirUri, thumbnailKey) ??
-                (nativeTrack.artworkUri?.length ? nativeTrack.artworkUri : cachedTrack?.thumbnail);
             const duration =
                 durationSeconds != null ? formatDuration(durationSeconds) : (cachedTrack?.duration ?? "0:00");
 
@@ -580,8 +562,6 @@ async function scanLibraryNative(
                 artist,
                 album,
                 duration,
-                thumbnail: thumbnailUri,
-                thumbnailKey,
                 filePath: absolutePath,
                 fileName,
             });
@@ -621,9 +601,11 @@ async function scanLibraryNative(
     ];
 
     try {
-        const result = await AudioPlayer.scanMediaLibrary(normalizedRoots, thumbnailsDirUri, {
-            batchSize: 48,
+        const result = await AudioPlayer.scanMediaLibrary(normalizedRoots, "", {
+            batchSize: 100,
             skip: skipEntries,
+            includeArtwork: false,
+            allowedExtensions: SUPPORTED_AUDIO_EXTENSIONS,
         });
         const totalRoots = result.totalRoots && result.totalRoots > 0 ? result.totalRoots : normalizedRoots.length;
         const totalTracks = result.totalTracks ?? localMusicState$.scanTrackTotal.get();
@@ -672,9 +654,6 @@ export async function scanLocalMusic(): Promise<void> {
         return;
     }
 
-    const thumbnailsDir = getCacheDirectory("thumbnails");
-    ensureCacheDirectory(thumbnailsDir);
-
     const { existing: availablePaths, missing: missingPaths } = await validateLibraryPaths(paths);
     if (availablePaths.length === 0) {
         localMusicState$.scanTrackProgress.set(0);
@@ -695,7 +674,7 @@ export async function scanLocalMusic(): Promise<void> {
         let collectedTracks: LocalTrack[] = [];
         let scanErrors: string[] = [];
 
-        const nativeResult = await scanLibraryNative(availablePaths, thumbnailsDir.uri);
+        const nativeResult = await scanLibraryNative(availablePaths);
         collectedTracks = nativeResult.tracks;
         scanErrors = nativeResult.errors;
 
@@ -720,7 +699,7 @@ export async function scanLocalMusic(): Promise<void> {
             );
         }
 
-        debugLocalMusicLog(`Scan complete: Found ${dedupedTracks.length} total MP3 files`);
+        debugLocalMusicLog(`Scan complete: Found ${dedupedTracks.length} total audio files`);
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
         localMusicState$.error.set(`Scan failed: ${errorMessage}`);
