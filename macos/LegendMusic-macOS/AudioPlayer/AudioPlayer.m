@@ -132,22 +132,21 @@ static NSSet<NSString *> *LMSupportedAudioExtensions(void) {
             swiftExtensions = nil;
         }
 
-        if (![swiftExtensions isKindOfClass:[NSArray class]] || swiftExtensions.count == 0) {
-            swiftExtensions = @[ @"mp3", @"wav", @"m4a", @"aac", @"flac", @"aif", @"aiff", @"aifc", @"caf" ];
+        NSMutableSet<NSString *> *normalized = nil;
+        if ([swiftExtensions isKindOfClass:[NSArray class]] && swiftExtensions.count > 0) {
+            normalized = [NSMutableSet setWithCapacity:swiftExtensions.count];
+            for (id value in swiftExtensions) {
+                if (![value isKindOfClass:[NSString class]]) {
+                    continue;
+                }
+                NSString *lowercase = [(NSString *)value lowercaseString];
+                if (lowercase.length > 0) {
+                    [normalized addObject:lowercase];
+                }
+            }
         }
 
-        NSMutableSet<NSString *> *normalized = [NSMutableSet setWithCapacity:swiftExtensions.count];
-        for (id value in swiftExtensions) {
-            if (![value isKindOfClass:[NSString class]]) {
-                continue;
-            }
-            NSString *lowercase = [(NSString *)value lowercaseString];
-            if (lowercase.length > 0) {
-                [normalized addObject:lowercase];
-            }
-        }
-
-        extensions = [normalized copy];
+        extensions = normalized.count > 0 ? [normalized copy] : [NSSet set];
     });
 
     return extensions;
