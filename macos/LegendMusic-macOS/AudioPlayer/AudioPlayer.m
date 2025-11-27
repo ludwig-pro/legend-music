@@ -133,7 +133,7 @@ static NSSet<NSString *> *LMSupportedAudioExtensions(void) {
         }
 
         if (![swiftExtensions isKindOfClass:[NSArray class]] || swiftExtensions.count == 0) {
-            swiftExtensions = @[ @"mp3", @"wav", @"m4a", @"aac", @"flac" ];
+            swiftExtensions = @[ @"mp3", @"wav", @"m4a", @"aac", @"flac", @"aif", @"aiff", @"aifc", @"caf" ];
         }
 
         NSMutableSet<NSString *> *normalized = [NSMutableSet setWithCapacity:swiftExtensions.count];

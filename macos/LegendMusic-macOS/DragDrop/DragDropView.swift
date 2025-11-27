@@ -4,9 +4,10 @@ import React
 
 @objcMembers
 class LMSupportedAudioFormats: NSObject {
-    static let supportedExtensions: [String] = ["mp3", "wav", "m4a", "aac", "flac"]
-    // Additional formats AVFoundation can decode; not enabled for import yet.
+    private static let coreExtensions: [String] = ["mp3", "wav", "m4a", "aac", "flac"]
+    // AVFoundation supports these as well; we enable them by default.
     static let avFoundationAdditionalExtensions: [String] = ["aif", "aiff", "aifc", "caf"]
+    static var supportedExtensions: [String] { coreExtensions + avFoundationAdditionalExtensions }
 
     static func isSupportedExtension(_ extensionString: String?) -> Bool {
         guard let extensionString, !extensionString.isEmpty else {

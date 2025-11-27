@@ -1,13 +1,17 @@
-export const SUPPORTED_AUDIO_EXTENSIONS = ["mp3", "wav", "m4a", "aac", "flac"] as const;
-
-// AVFoundation also decodes these formats, but they are not enabled for import yet.
-export const AVFOUNDATION_COMPATIBLE_EXTENSIONS = [
-    ...SUPPORTED_AUDIO_EXTENSIONS,
+export const SUPPORTED_AUDIO_EXTENSIONS = [
+    "mp3",
+    "wav",
+    "m4a",
+    "aac",
+    "flac",
     "aif",
     "aiff",
     "aifc",
     "caf",
 ] as const;
+
+// AVFoundation supports these as well; currently the list matches SUPPORTED_AUDIO_EXTENSIONS.
+export const AVFOUNDATION_COMPATIBLE_EXTENSIONS = [...SUPPORTED_AUDIO_EXTENSIONS] as const;
 
 const supportedExtensionPattern = new RegExp(`\\.(${SUPPORTED_AUDIO_EXTENSIONS.join("|")})$`, "i");
 const supportedExtensionsSet = new Set<string>(SUPPORTED_AUDIO_EXTENSIONS);
