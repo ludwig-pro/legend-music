@@ -22,13 +22,17 @@ globalThis.__LEGEND_PERF_START__ = startTime;
 export const isPerfLoggingEnabled = (): boolean =>
     typeof globalThis.__LEGEND_PERF_LOG__ === "boolean" ? Boolean(globalThis.__LEGEND_PERF_LOG__) : false;
 
-export function perfLog(label: string, data?: string | Record<string, unknown>, ...args: any[]): void {
+export function perfLog(label: string, data?: string | Record<string, unknown> | unknown, ...args: any[]): void {
     perfMark(label, data, ...args);
     // if (!isPerfLoggingEnabled()) return;
     // console.log(`${Math.round(performance.now())} [PERF:${label}]`, ...args);
 }
 
-export function perfMark(label: string, data?: string | Record<string, unknown>, ...args: any[]): number | undefined {
+export function perfMark(
+    label: string,
+    data?: string | Record<string, unknown> | unknown,
+    ...args: any[]
+): number | undefined {
     if (!isPerfLoggingEnabled()) return undefined;
     const now = Date.now();
     const last = lastMarks[label];
@@ -37,7 +41,7 @@ export function perfMark(label: string, data?: string | Record<string, unknown>,
     const payload: Record<string, unknown> = isString(data)
         ? { data }
         : {
-              ...data,
+              ...(typeof data === "object" ? data : { data }),
           };
 
     const sinceStartMs = now - startTime;
