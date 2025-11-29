@@ -6,7 +6,7 @@ import AudioPlayer, {
     type MediaScanResult,
 } from "@/native-modules/AudioPlayer";
 import { addChangeListener, setWatchedDirectories } from "@/native-modules/FileSystemWatcher";
-import { isSupportedAudioFile, stripSupportedAudioExtension, SUPPORTED_AUDIO_EXTENSIONS } from "@/systems/audioFormats";
+import { isSupportedAudioFile, SUPPORTED_AUDIO_EXTENSIONS, stripSupportedAudioExtension } from "@/systems/audioFormats";
 import { DEBUG_LOCAL_MUSIC_LOGS } from "@/systems/constants";
 import {
     clearLibraryCache,
@@ -307,42 +307,46 @@ export async function ensureLocalTrackThumbnail(track: LocalTrack): Promise<stri
         thumbnailUri?.length && hasLocalThumbnail && !thumbnailFileExists(thumbnailUri),
     );
 
+    let returnValue: string | undefined;
+
     if (thumbnailUri?.length && !missingLocalThumbnail) {
-        return thumbnailUri;
+        returnValue = thumbnailUri;
     }
 
-    if (missingLocalThumbnail) {
-        track.thumbnail = undefined;
-    }
-
-    const thumbnailsDir = getCacheDirectory("thumbnails");
-    ensureCacheDirectory(thumbnailsDir);
-
-    const fromKey = buildThumbnailUri(thumbnailsDir.uri, track.thumbnailKey);
-    if (fromKey && thumbnailFileExists(fromKey)) {
-        track.thumbnail = fromKey;
+    if (!returnValue) {
         if (missingLocalThumbnail) {
-            bumpThumbnailVersion();
+            track.thumbnail = undefined;
         }
-        return fromKey;
+
+        const thumbnailsDir = getCacheDirectory("thumbnails");
+        ensureCacheDirectory(thumbnailsDir);
+
+        const fromKey = buildThumbnailUri(thumbnailsDir.uri, track.thumbnailKey);
+        if (fromKey && thumbnailFileExists(fromKey)) {
+            track.thumbnail = fromKey;
+            bumpThumbnailVersion();
+            returnValue = fromKey;
+        }
     }
 
-    try {
-        const metadata = await extractId3Metadata(track.filePath, track.fileName);
-        if (metadata.thumbnailKey && !track.thumbnailKey) {
-            track.thumbnailKey = metadata.thumbnailKey;
-        }
-        if (metadata.thumbnail) {
-            track.thumbnail = metadata.thumbnail;
-            if (missingLocalThumbnail) {
-                bumpThumbnailVersion();
+    if (!returnValue) {
+        try {
+            const metadata = await extractId3Metadata(track.filePath, track.fileName);
+            if (metadata.thumbnailKey && !track.thumbnailKey) {
+                track.thumbnailKey = metadata.thumbnailKey;
             }
+            if (metadata.thumbnail) {
+                track.thumbnail = metadata.thumbnail;
+                returnValue = metadata.thumbnail;
+            }
+        } catch (error) {
+            console.warn(`ensureLocalTrackThumbnail: Failed to resolve thumbnail for ${track.fileName}:`, error);
+            return undefined;
         }
-        return metadata.thumbnail;
-    } catch (error) {
-        console.warn(`ensureLocalTrackThumbnail: Failed to resolve thumbnail for ${track.fileName}:`, error);
-        return undefined;
     }
+
+    bumpThumbnailVersion();
+    return returnValue;
 }
 
 // Extract metadata from ID3 tags with filename fallback
