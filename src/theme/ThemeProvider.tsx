@@ -64,8 +64,6 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     const currentTheme = useValue(themeState$.currentTheme);
     const style = getThemes(themeState$).dark;
 
-    console.log("ZZZ theme provider", currentTheme);
-
     if (currentTheme !== "dark") {
         themeState$.currentTheme.set("dark");
     }

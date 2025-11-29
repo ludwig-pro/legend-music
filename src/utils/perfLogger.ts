@@ -12,7 +12,7 @@ declare global {
     var __LEGEND_PERF_START__: number | undefined;
 }
 
-globalThis.__LEGEND_PERF_LOG__ = true;
+globalThis.__LEGEND_PERF_LOG__ = false;
 
 const lastMarks = globalThis.__LEGEND_PERF_LAST_MARKS__ ?? {};
 globalThis.__LEGEND_PERF_LAST_MARKS__ = lastMarks;
