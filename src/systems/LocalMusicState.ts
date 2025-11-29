@@ -332,9 +332,6 @@ export async function ensureLocalTrackThumbnail(track: LocalTrack): Promise<stri
     if (!returnValue) {
         try {
             const metadata = await extractId3Metadata(track.filePath, track.fileName);
-            if (metadata.thumbnailKey && !track.thumbnailKey) {
-                track.thumbnailKey = metadata.thumbnailKey;
-            }
             if (metadata.thumbnail) {
                 track.thumbnail = metadata.thumbnail;
                 returnValue = metadata.thumbnail;
@@ -359,7 +356,6 @@ async function extractId3Metadata(
     album?: string;
     duration?: string;
     thumbnail?: string;
-    thumbnailKey?: string;
 }> {
     perfCount("LocalMusic.extractId3Metadata");
 
@@ -369,7 +365,6 @@ async function extractId3Metadata(
     let album: string | undefined;
     let duration: string | undefined;
     let thumbnail: string | undefined;
-    let thumbnailKey: string | undefined;
 
     const thumbnailsDir = getCacheDirectory("thumbnails");
     ensureCacheDirectory(thumbnailsDir);
@@ -395,7 +390,6 @@ async function extractId3Metadata(
             }
             const nativeThumbnailKey = nativeTags.artworkKey?.length ? nativeTags.artworkKey : undefined;
             if (nativeThumbnailKey) {
-                thumbnailKey = nativeThumbnailKey;
                 thumbnail = buildThumbnailUri(thumbnailsDirUri, nativeThumbnailKey) ?? thumbnail;
             }
             if (!thumbnail && nativeTags.artworkUri?.length) {
@@ -412,7 +406,6 @@ async function extractId3Metadata(
         album,
         duration,
         thumbnail,
-        thumbnailKey,
     };
 }
 
@@ -477,7 +470,6 @@ export async function createLocalTrackFromFile(filePath: string): Promise<LocalT
             album: metadata.album,
             duration: metadata.duration ?? "0:00",
             thumbnail: metadata.thumbnail,
-            thumbnailKey: metadata.thumbnailKey,
             filePath,
             fileName,
         };

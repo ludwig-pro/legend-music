@@ -62,7 +62,7 @@ function createQueueEntryId(seed: string): string {
 }
 
 const createQueuedTrackFromPersisted = (track: PersistedQueuedTrack): QueuedTrack => {
-    const { thumbnail, thumbnailKey } = resolveThumbnailFromFields(track);
+    const { thumbnail } = resolveThumbnailFromFields(track);
     const fileName = track.filePath.split("/").pop() || track.title || track.filePath;
     return {
         id: track.filePath,
@@ -73,7 +73,6 @@ const createQueuedTrackFromPersisted = (track: PersistedQueuedTrack): QueuedTrac
         filePath: track.filePath,
         fileName,
         thumbnail,
-        thumbnailKey,
         queueEntryId: createQueueEntryId(track.filePath),
     };
 };
@@ -484,8 +483,7 @@ async function loadTrackInternal(track: LocalTrack): Promise<void> {
             return;
         }
 
-        const thumbnailKey = track.thumbnailKey;
-        const updates: Partial<QueuedTrack> = thumbnailKey ? { thumbnail, thumbnailKey } : { thumbnail };
+        const updates: Partial<QueuedTrack> = { thumbnail };
 
         if (queueEntryId) {
             updateQueueEntry(queueEntryId, updates);
@@ -493,8 +491,7 @@ async function loadTrackInternal(track: LocalTrack): Promise<void> {
 
         const current = localPlayerState$.currentTrack.peek();
         const isCurrentTrack = current && current.id === track.id;
-        const hasNewThumbnail =
-            current && (current.thumbnail !== thumbnail || (thumbnailKey && current.thumbnailKey !== thumbnailKey));
+        const hasNewThumbnail = current && current.thumbnail !== thumbnail;
 
         if (isCurrentTrack && hasNewThumbnail) {
             localPlayerState$.currentTrack.set({ ...current, ...updates });

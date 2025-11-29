@@ -335,7 +335,6 @@ export const hydrateLibraryFromCache = (): boolean => {
             filePath,
             fileName: fileNameFromPath(filePath),
             thumbnail: resolvedThumbnail.thumbnail,
-            thumbnailKey: resolvedThumbnail.thumbnailKey,
         };
     });
 
