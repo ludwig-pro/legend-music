@@ -8,6 +8,7 @@ import { ensureLocalTrackThumbnail } from "@/systems/LocalMusicState";
 import { playbackInteractionState$ } from "@/systems/PlaybackInteractionState";
 import { type RepeatMode, settings$ } from "@/systems/Settings";
 import { stateSaved$ } from "@/systems/State";
+import { parseDurationToSeconds } from "@/utils/m3u";
 import { clearQueueM3U, loadQueueFromM3U, saveQueueToM3U } from "@/utils/m3uManager";
 import { perfCount, perfDelta, perfLog, perfMark } from "@/utils/perfLogger";
 import { runAfterInteractionsWithLabel } from "@/utils/runAfterInteractions";
@@ -224,6 +225,31 @@ function resetSavedPlaybackState(): void {
     }
     pendingPlaybackTime = null;
     stateSaved$.assign({ playbackIndex: -1, playbackTime: 0 });
+}
+
+function applyDurationFromTrack(track: LocalTrack): void {
+    const seconds = parseDurationToSeconds(track.duration);
+    if (seconds > 0) {
+        localPlayerState$.duration.set(seconds);
+    }
+}
+
+async function hydrateCurrentTrackMetadata(track: QueuedTrack): Promise<void> {
+    let thumbnail = track.thumbnail;
+    if (!thumbnail) {
+        thumbnail = await ensureLocalTrackThumbnail(track);
+    }
+
+    if (thumbnail && track.queueEntryId) {
+        updateQueueEntry(track.queueEntryId, { thumbnail });
+    }
+
+    const current = localPlayerState$.currentTrack.peek();
+    if (thumbnail && current && current.queueEntryId === track.queueEntryId && current.thumbnail !== thumbnail) {
+        localPlayerState$.currentTrack.set({ ...current, thumbnail });
+    }
+
+    applyDurationFromTrack(track);
 }
 
 const handleMissingTrackFile = (track: LocalTrack, queueEntryId?: string) => {
@@ -733,6 +759,7 @@ function initializeQueueFromCache(): void {
                 const currentTrack = queuedTracks[resolvedIndex];
                 localPlayerState$.currentTrack.set(currentTrack);
                 localPlayerState$.currentIndex.set(resolvedIndex);
+                applyDurationFromTrack(currentTrack);
                 if (savedPlaybackTime > 0) {
                     localPlayerState$.currentTime.set(savedPlaybackTime);
                 }
@@ -740,6 +767,7 @@ function initializeQueueFromCache(): void {
                     track: currentTrack,
                     playbackTime: savedPlaybackTime > 0 ? savedPlaybackTime : 0,
                 };
+                void hydrateCurrentTrackMetadata(currentTrack);
             } else {
                 localPlayerState$.currentTrack.set(null);
                 localPlayerState$.currentIndex.set(-1);

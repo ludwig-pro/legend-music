@@ -336,6 +336,9 @@ export async function ensureLocalTrackThumbnail(track: LocalTrack): Promise<stri
                 track.thumbnail = metadata.thumbnail;
                 returnValue = metadata.thumbnail;
             }
+            if (metadata.duration && (!track.duration || track.duration.trim().length === 0)) {
+                track.duration = metadata.duration;
+            }
         } catch (error) {
             console.warn(`ensureLocalTrackThumbnail: Failed to resolve thumbnail for ${track.fileName}:`, error);
             return undefined;
