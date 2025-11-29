@@ -1,6 +1,6 @@
 import { observable } from "@legendapp/state";
-import { useValue } from "@legendapp/state/react";
-import { useEffect, useRef } from "react";
+import { useObserveEffect, useValue } from "@legendapp/state/react";
+import { useRef } from "react";
 import { Animated, Easing, Text, View } from "react-native";
 
 import { cn } from "@/utils/cn";
@@ -40,8 +40,9 @@ export function ToastProvider() {
     const translateY = useRef(new Animated.Value(8)).current;
     const hideTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    useEffect(() => {
-        if (toast.visible) {
+    useObserveEffect(() => {
+        const { visible } = toast$.get();
+        if (visible) {
             if (hideTimeout.current) {
                 clearTimeout(hideTimeout.current);
             }
@@ -87,7 +88,7 @@ export function ToastProvider() {
                 useNativeDriver: true,
             }),
         ]).start();
-    }, [toast.visible, toast.id, opacity, translateY]);
+    });
 
     if (!toast.visible) {
         return null;

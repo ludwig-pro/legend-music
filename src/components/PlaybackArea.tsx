@@ -39,29 +39,13 @@ const DEFAULT_PLAYBACK_BUTTONS: PlaybackControlId[] = ["playPause", "next"];
 const formatTimeCache = new Map<number, string>();
 
 const CurrentTime = memo(function CurrentTime({ currentLocalTime$ }: { currentLocalTime$: Observable<number> }) {
-    const formattedTime$ = useObservable(formatTime(currentLocalTime$.get?.() ?? 0, false));
-
-    useEffect(() => {
-        const unsubscribe = currentLocalTime$.onChange(({ value }) => {
-            formattedTime$.set(formatTime(value ?? 0, false));
-        });
-
-        return () => unsubscribe();
-    }, [currentLocalTime$, formattedTime$]);
+    const formattedTime$ = useObservable(() => formatTime(currentLocalTime$.get?.() ?? 0, false));
 
     return <SkiaText text$={formattedTime$} fontSize={12} color="#ffffffb3" width={36} />;
 });
 
 const CurrentDuration = memo(function CurrentDuration() {
-    const duration$ = useObservable(formatTime(localPlayerState$.duration.get?.() ?? 0, true));
-
-    useEffect(() => {
-        const unsubscribe = localPlayerState$.duration.onChange(({ value }) => {
-            duration$.set(formatTime(value ?? 0, true));
-        });
-
-        return () => unsubscribe();
-    }, [duration$]);
+    const duration$ = useObservable(() => formatTime(localPlayerState$.duration.get?.() ?? 0, true));
 
     return <SkiaText text$={duration$} fontSize={12} color="#ffffffb3" width={36} align="right" />;
 });

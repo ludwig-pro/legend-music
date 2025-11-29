@@ -1,7 +1,7 @@
-import { useObserveEffect, useValue } from "@legendapp/state/react";
-import { useState } from "react";
-import { TextInput, View } from "react-native";
-
+import { isNumber, linked } from "@legendapp/state";
+import { useObservable, useValue } from "@legendapp/state/react";
+import { $TextInput } from "@legendapp/state/react-native";
+import { View } from "react-native";
 import { Checkbox } from "@/components/Checkbox";
 import { Select } from "@/components/Select";
 import { SettingsPage, SettingsRow, SettingsSection } from "@/settings/components";
@@ -24,36 +24,25 @@ const horizontalOptions = [
 ];
 
 export const OverlaySettings = function OverlaySettings() {
-    const durationSeconds = useValue(settings$.overlay.displayDurationSeconds);
+    const durationSeconds$ = settings$.overlay.displayDurationSeconds;
     const overlayEnabled = useValue(settings$.overlay.enabled);
-    const [durationDraft, setDurationDraft] = useState(String(durationSeconds));
+    const durationText$ = useObservable(
+        linked({
+            get: () => `${durationSeconds$.get()}`,
+            set: ({ value }) => {
+                const sanitized = value.replace(/[^0-9]/g, "");
 
-    useObserveEffect(() => {
-        setDurationDraft(String(settings$.overlay.displayDurationSeconds.get()));
-    });
-
-    const handleDurationChange = (text: string) => {
-        const sanitized = text.replace(/[^0-9]/g, "");
-        setDurationDraft(sanitized);
-
-        const parsed = Number.parseInt(sanitized, 10);
-        if (!Number.isNaN(parsed)) {
-            const clamped = Math.max(
-                OVERLAY_MIN_DISPLAY_DURATION_SECONDS,
-                Math.min(parsed, OVERLAY_MAX_DISPLAY_DURATION_SECONDS),
-            );
-            settings$.overlay.displayDurationSeconds.set(clamped);
-        }
-    };
-
-    const handleDurationBlur = () => {
-        const parsed = Number.parseInt(durationDraft, 10);
-        const clamped = Number.isNaN(parsed)
-            ? durationSeconds
-            : Math.max(OVERLAY_MIN_DISPLAY_DURATION_SECONDS, Math.min(parsed, OVERLAY_MAX_DISPLAY_DURATION_SECONDS));
-        settings$.overlay.displayDurationSeconds.set(clamped);
-        setDurationDraft(String(clamped));
-    };
+                const parsed = Number.parseInt(sanitized, 10);
+                if (isNumber(parsed)) {
+                    const clamped = Math.max(
+                        OVERLAY_MIN_DISPLAY_DURATION_SECONDS,
+                        Math.min(parsed, OVERLAY_MAX_DISPLAY_DURATION_SECONDS),
+                    );
+                    durationSeconds$.set(clamped);
+                }
+            },
+        }),
+    );
 
     return (
         <SettingsPage title="Overlay Settings">
@@ -68,10 +57,8 @@ export const OverlaySettings = function OverlaySettings() {
                     title="Display duration"
                     description={`Number of seconds the overlay remains visible (${OVERLAY_MIN_DISPLAY_DURATION_SECONDS} - ${OVERLAY_MAX_DISPLAY_DURATION_SECONDS})`}
                     control={
-                        <TextInput
-                            value={durationDraft}
-                            onChangeText={handleDurationChange}
-                            onBlur={handleDurationBlur}
+                        <$TextInput
+                            $value={durationText$}
                             keyboardType="numeric"
                             className="bg-background-primary text-text-primary border border-border-primary rounded-md px-3 py-1.5 w-20 text-center"
                             accessibilityLabel="Overlay display duration"

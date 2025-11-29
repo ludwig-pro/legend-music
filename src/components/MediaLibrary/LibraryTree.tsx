@@ -25,7 +25,6 @@ const MEDIA_LIBRARY_CONTEXT_MENU_ITEMS: ContextMenuItem[] = [
 
 export function LibraryTree({ searchQuery }: LibraryTreeProps) {
     perfCount("MediaLibrary.LibraryTree.render");
-    const selectedItem = useValue(libraryUI$.selectedItem);
     const selectedCollection = useValue(libraryUI$.selectedCollection);
     const artists = useValue(library$.artists);
     const albums = useValue(library$.albums);

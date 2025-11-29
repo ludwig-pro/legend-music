@@ -104,21 +104,16 @@ export function useLibraryTrackList(searchQuery: string): UseLibraryTrackListRes
         items: trackItems,
     });
 
-    const clearSelectionRef = useRef(clearSelection);
-    useEffect(() => {
-        clearSelectionRef.current = clearSelection;
-    }, [clearSelection]);
-
     useObserveEffect(() => {
         const selectedItemId = libraryUI$.selectedItem.get()?.id;
         const trackCount = library$.tracks.get().length;
         if (selectedItemId || trackCount >= 0) {
-            clearSelectionRef.current();
+            clearSelection();
         }
     });
 
     useEffect(() => {
-        clearSelectionRef.current();
+        clearSelection();
     }, [trackItems.length]);
 
     const handleTrackAction = useCallback(

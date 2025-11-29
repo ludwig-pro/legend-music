@@ -9,7 +9,6 @@ import {
     isValidElement,
     useCallback,
     useContext,
-    useEffect,
     useId,
     useImperativeHandle,
     useRef,
@@ -98,15 +97,16 @@ const Root = forwardRef<DropdownMenuRootRef, RootProps>(function Root(
         [open],
     );
 
-    useEffect(() => {
-        return isOpen$.onChange(({ value: open }) => {
-            state$.isDropdownOpen.set(open);
-            onOpenChange?.(open);
-            if (!open) {
+    useObserveEffect(isOpen$, (e) => {
+        if (e.previous !== undefined) {
+            const value = !!e.value;
+            state$.isDropdownOpen.set(value);
+            onOpenChange?.(value);
+            if (!value) {
                 openedWithMouseDown$.set(false);
             }
-        });
-    }, [onOpenChange]);
+        }
+    });
 
     const contextValue: DropdownContextValue = {
         isOpen$,

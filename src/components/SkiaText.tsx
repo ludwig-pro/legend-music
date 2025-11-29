@@ -1,13 +1,12 @@
 import type { Observable } from "@legendapp/state";
-import { useObservable, useValue } from "@legendapp/state/react";
+import { useObservable, useObserveEffect, useValue } from "@legendapp/state/react";
 import { Canvas, matchFont, type SkFont, Text as SkiaTextNode } from "@shopify/react-native-skia";
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { Platform, type StyleProp, StyleSheet, View, type ViewStyle } from "react-native";
 import { useSharedValue } from "react-native-reanimated";
 
 type SkiaTextProps = {
-    text$?: Observable<string>;
-    text?: string;
+    text$: Observable<string>;
     color?: string;
     fontFamily?: string;
     fontSize?: number;
@@ -39,7 +38,6 @@ function createFont(fontFamily: string | undefined, fontSize: number, fontWeight
 
 export function SkiaText({
     text$,
-    text,
     color = DEFAULT_COLOR,
     fontFamily,
     fontSize = DEFAULT_FONT_SIZE,
@@ -50,37 +48,17 @@ export function SkiaText({
     className,
     style,
 }: SkiaTextProps) {
-    const textShared = useSharedValue(text ?? "");
+    const textShared = useSharedValue("");
     const textWidth$ = useObservable({ width: 0, length: 0 });
     const { width: textWidth } = useValue(textWidth$);
 
-    useEffect(() => {
-        if (typeof text === "string") {
-            textShared.set(text);
+    useObserveEffect(text$, ({ value, previous }) => {
+        const next = value ?? "";
+        textShared.set(next);
+        if (next?.length !== previous?.length) {
+            textWidth$.set({ length: next.length, width: font.measureText(next).width });
         }
-    }, [text, textShared]);
-
-    useEffect(() => {
-        if (!text$) {
-            return;
-        }
-
-        const rawInitial = text$.get?.() ?? "";
-        const initial = typeof rawInitial === "string" ? rawInitial : String(rawInitial);
-        textShared.set(initial);
-        textWidth$.set({ length: initial.length, width: font.measureText(initial).width });
-
-        const unsubscribe = text$.onChange(({ value }) => {
-            const rawNext = value ?? "";
-            const next = typeof rawNext === "string" ? rawNext : String(rawNext);
-            textShared.set(next);
-            if (value.length !== next.length) {
-                textWidth$.set({ length: next.length, width: font.measureText(next).width });
-            }
-        });
-
-        return () => unsubscribe();
-    }, [text$, textShared]);
+    });
 
     const font = useMemo(() => createFont(fontFamily, fontSize, fontWeight), [fontFamily, fontSize, fontWeight]);
     const metrics = useMemo(() => font.getMetrics(), [font]);

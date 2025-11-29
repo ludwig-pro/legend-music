@@ -1,6 +1,6 @@
 import type { Observable } from "@legendapp/state";
-import { useObservable, useValue } from "@legendapp/state/react";
-import { createContext, type ReactNode, useCallback, useContext, useEffect, useRef } from "react";
+import { useMount, useObservable, useValue } from "@legendapp/state/react";
+import { createContext, type ReactNode, useCallback, useContext, useRef } from "react";
 import { type GestureResponderEvent, PanResponder, type PanResponderGestureState, View } from "react-native";
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 
@@ -279,7 +279,7 @@ function Panel({ children, id, minSize = 100, maxSize, defaultSize, order = 0, c
     const size = useValue(size$);
 
     // Register panel on mount
-    useEffect(() => {
+    useMount(() => {
         const panelConfig: PanelConfig = {
             id,
             size: size$.get(),
@@ -294,7 +294,7 @@ function Panel({ children, id, minSize = 100, maxSize, defaultSize, order = 0, c
         return () => {
             unregisterPanel(id);
         };
-    }, [id, minSize, maxSize, defaultSize, order, registerPanel, unregisterPanel, size$]);
+    });
 
     // Calculate style - use flexBasis for initial size and maxWidth/maxHeight for limits
     const isHorizontal = direction === "horizontal";

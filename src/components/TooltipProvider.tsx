@@ -1,6 +1,6 @@
 import { Portal } from "@gorhom/portal";
 import type { PropsWithChildren } from "react";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { Dimensions, Text, View } from "react-native";
 
 interface TooltipDetails {
@@ -22,18 +22,13 @@ export function TooltipProvider({ children }: PropsWithChildren) {
     const [tooltip, setTooltip] = useState<TooltipDetails | null>(null);
     const [tooltipSize, setTooltipSize] = useState({ width: 0, height: 0 });
 
-    useEffect(() => {
-        if (!tooltip) {
-            setTooltipSize({ width: 0, height: 0 });
-        }
-    }, [tooltip]);
-
     const showTooltip = useCallback((details: TooltipDetails) => {
         setTooltip(details);
     }, []);
 
     const hideTooltip = useCallback(() => {
         setTooltip(null);
+        setTooltipSize({ width: 0, height: 0 });
     }, []);
 
     const contextValue = useMemo(() => ({ showTooltip, hideTooltip }), [hideTooltip, showTooltip]);

@@ -1,6 +1,6 @@
 import { LegendList } from "@legendapp/list";
 import { useObserveEffect, useValue } from "@legendapp/state/react";
-import { type ElementRef, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type ElementRef, useCallback, useMemo, useRef, useState } from "react";
 import { findNodeHandle, type NativeSyntheticEvent, Platform, StyleSheet, Text, UIManager, View } from "react-native";
 import type { NativeMouseEvent } from "react-native-macos";
 import { Button } from "@/components/Button";

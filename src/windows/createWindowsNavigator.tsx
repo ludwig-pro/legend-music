@@ -1,6 +1,6 @@
-import { type ComponentType, useEffect, useState } from "react";
+import { useMount } from "@legendapp/state/react";
+import { type ComponentType, useState } from "react";
 import { AppRegistry } from "react-native";
-
 import {
     closeWindow as nativeCloseWindow,
     openWindow as nativeOpenWindow,
@@ -141,7 +141,7 @@ export function createWindowsNavigator<TConfig extends WindowsConfig>(config: TC
                     cachedComponent ? { component: cachedComponent } : null,
                 );
 
-                useEffect(() => {
+                useMount(() => {
                     let mounted = true;
                     if (!componentWrapper) {
                         resolveComponent().then((resolved) => {
@@ -154,7 +154,7 @@ export function createWindowsNavigator<TConfig extends WindowsConfig>(config: TC
                     return () => {
                         mounted = false;
                     };
-                }, [componentWrapper]);
+                });
 
                 if (!componentWrapper) {
                     return null;
