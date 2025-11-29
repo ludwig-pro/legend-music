@@ -115,7 +115,8 @@ export function PlaylistSelector() {
     return (
         <View className="px-1 border-t border-white/10" onLayout={handleLayout}>
             <View className="flex-row items-center">
-                <View className="flex-1">
+                <View className="flex-1" />
+                {/* <View className="flex-1">
                     <SelectLegendList
                         items={availablePlaylistIds}
                         selected$={selectedPlaylist$}
@@ -137,7 +138,7 @@ export function PlaylistSelector() {
                         directionalHint="topLeftEdge"
                         maxWidthMatchTrigger={true}
                     />
-                </View>
+                </View> */}
                 {bottomBarControls.map((controlId) => {
                     switch (controlId) {
                         case "search":
@@ -153,21 +154,21 @@ export function PlaylistSelector() {
                                     dropdownWidth={dropdownWidth}
                                 />
                             );
-                        case "savePlaylist":
-                            return (
-                                <Button
-                                    key="savePlaylist"
-                                    icon="square.and.arrow.down"
-                                    variant="icon"
-                                    size="small"
-                                    iconSize={14}
-                                    iconMarginTop={-4}
-                                    onClick={handleSavePlaylist}
-                                    className="ml-2 hover:bg-white/10"
-                                    disabled={queue.tracks.length === 0}
-                                    tooltip="Save playlist"
-                                />
-                            );
+                        // case "savePlaylist":
+                        //     return (
+                        //         <Button
+                        //             key="savePlaylist"
+                        //             icon="square.and.arrow.down"
+                        //             variant="icon"
+                        //             size="small"
+                        //             iconSize={14}
+                        //             iconMarginTop={-4}
+                        //             onClick={handleSavePlaylist}
+                        //             className="ml-2 hover:bg-white/10"
+                        //             disabled={queue.tracks.length === 0}
+                        //             tooltip="Save playlist"
+                        //         />
+                        //     );
                         case "toggleVisualizer":
                             return (
                                 <Button
