@@ -1,6 +1,7 @@
 import { observable } from "@legendapp/state";
 import { File } from "expo-file-system/next";
 import { showToast } from "@/components/Toast";
+import appExit from "@/native-modules/AppExit";
 import audioPlayerApi, { type NowPlayingInfoPayload } from "@/native-modules/AudioPlayer";
 import { appState$ } from "@/observables/appState";
 import { DEBUG_AUDIO_LOGS } from "@/systems/constants";
@@ -58,6 +59,7 @@ let lastNativeProgressTimestamp = 0;
 let isWindowOccluded = false;
 let latestPlaybackTime = 0;
 const stateSavedPersistPlugin = getPersistPlugin(stateSaved$);
+let appExitSubscription: { remove: () => void } | null = null;
 
 function createQueueEntryId(seed: string): string {
     queueEntryCounter += 1;
@@ -209,6 +211,7 @@ async function persistPlaybackTimeNow(): Promise<void> {
     const timeToPersist = Math.max(0, latestPlaybackTime);
     try {
         stateSaved$.playbackTime.set(timeToPersist);
+        console.log("persistPlaybackTimeNow", timeToPersist);
         await stateSavedPersistPlugin?.flush();
     } catch (error) {
         console.error("Failed to flush playback time", error);
@@ -327,6 +330,7 @@ localPlayerState$.currentIndex.onChange(({ value }) => {
 
 localPlayerState$.currentTime.onChange(({ value }) => {
     latestPlaybackTime = Math.max(0, typeof value === "number" ? value : 0);
+    console.log("localPlayerState$.currentTime.onChange", latestPlaybackTime, value);
 });
 
 localPlayerState$.isPlaying.onChange(({ value }) => {
@@ -335,11 +339,21 @@ localPlayerState$.isPlaying.onChange(({ value }) => {
     }
 });
 
-appState$.state.onChange(({ value }) => {
-    if (value !== "active") {
-        persistPlaybackTimeNow();
+function initializeAppExitHandler(): void {
+    if (appExitSubscription) {
+        return;
     }
-});
+
+    appExitSubscription = appExit.addListener("onAppExit", () => {
+        persistPlaybackTimeNow()
+            .catch((error) => {
+                console.error("Failed to persist playback time on exit", error);
+            })
+            .finally(() => {
+                appExit.completeExit(true);
+            });
+    });
+}
 
 function resetPlayerForEmptyQueue(): void {
     resetSavedPlaybackState();
@@ -759,7 +773,9 @@ function initializeQueueFromCache(): void {
                 localPlayerState$.currentIndex.set(resolvedIndex);
                 applyDurationFromTrack(currentTrack);
                 if (savedPlaybackTime > 0) {
-                    localPlayerState$.currentTime.set(savedPlaybackTime);
+                    localPlayerState$.currentTime.set(
+                        Math.min(savedPlaybackTime, parseDurationToSeconds(currentTrack.duration)),
+                    );
                 }
                 pendingInitialTrackRestore = {
                     track: currentTrack,
@@ -796,6 +812,7 @@ function initializeQueueFromCache(): void {
 
 // Initialize queue from cache on first run
 initializeQueueFromCache();
+initializeAppExitHandler();
 
 export const queueControls = {
     replace: queueReplace,

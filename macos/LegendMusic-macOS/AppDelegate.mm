@@ -1,5 +1,6 @@
 #import "AppDelegate.h"
 #import "WindowManager.h"
+#import "AppExit.h"
 
 #import <React/RCTBundleURLProvider.h>
 #import <React/RCTDevloadingViewSetEnabled.h>
@@ -11,6 +12,7 @@
 
 static NSString *const kMenuCommandTriggeredNotification = @"MenuCommandTriggered";
 static NSString *const kMenuCommandUpdateNotification = @"MenuCommandUpdate";
+NSString *const kLegendAppExitRequestedNotification = @"LegendAppExitRequested";
 
 static inline NSEventModifierFlags LegendMenuSanitizedModifiers(NSNumber *value, NSString *keyEquivalent) {
   if (!value) {
@@ -67,6 +69,7 @@ static inline NSAppearance *LegendDarkAppearance() {
 @property (nonatomic, assign) BOOL mainWindowFrameAdjusted;
 @property (nonatomic, strong) NSMutableDictionary<NSString *, NSMenuItem *> *menuCommandItems;
 @property (nonatomic, strong) id secondaryClickActivationMonitor;
+@property (nonatomic, copy) void (^pendingTerminateReply)(BOOL allow);
 @end
 
 
@@ -159,6 +162,39 @@ static inline NSAppearance *LegendDarkAppearance() {
     return NO;
   }
   return YES;
+}
+
+- (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)sender
+{
+  if (self.pendingTerminateReply) {
+    return NSTerminateLater;
+  }
+
+  __weak AppDelegate *weakSelf = self;
+  self.pendingTerminateReply = ^(BOOL allow) {
+    if (!weakSelf) {
+      return;
+    }
+    [NSApp replyToApplicationShouldTerminate:allow ? NSTerminateNow : NSTerminateCancel];
+    weakSelf.pendingTerminateReply = nil;
+  };
+
+  [[NSNotificationCenter defaultCenter] postNotificationName:kLegendAppExitRequestedNotification object:nil];
+
+  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+    if (weakSelf && weakSelf.pendingTerminateReply) {
+      weakSelf.pendingTerminateReply(YES);
+    }
+  });
+
+  return NSTerminateLater;
+}
+
+- (void)completeAppExit:(BOOL)allow
+{
+  if (self.pendingTerminateReply) {
+    self.pendingTerminateReply(allow);
+  }
 }
 
 - (void)loadReactNativeWindow:(NSDictionary *)launchOptions

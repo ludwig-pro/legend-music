@@ -40,6 +40,7 @@ class ObservablePersistExpoFS implements ObservablePersistPlugin {
     private directory: FileSystemNext.Directory;
     private extension: string;
     private readonly timeoutPrefix: string;
+    private isFlushing = false;
 
     constructor(configuration: ExpoFSPersistPluginOptions) {
         this.configuration = configuration;
@@ -173,7 +174,15 @@ class ObservablePersistExpoFS implements ObservablePersistPlugin {
     private async save(table: string) {
         console.log("save", table);
 
-        timeoutOnce(this.getTimeoutName(table), () => this.saveDebounced(table), this.configuration.saveTimeout || 100);
+        if (this.isFlushing) {
+            this.saveDebounced(table);
+        } else {
+            timeoutOnce(
+                this.getTimeoutName(table),
+                () => this.saveDebounced(table),
+                this.configuration.saveTimeout || 100,
+            );
+        }
     }
 
     private getTimeoutName(table: string): string {
@@ -181,6 +190,7 @@ class ObservablePersistExpoFS implements ObservablePersistPlugin {
     }
 
     public async flush(): Promise<void> {
+        this.isFlushing = true;
         await flushTimeoutOnce((name) => name.startsWith(this.timeoutPrefix));
     }
 
