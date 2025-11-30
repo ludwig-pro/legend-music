@@ -126,6 +126,9 @@ export function Playlist() {
     const playlist: PlaylistTrackWithSuggestions[] = useMemo(
         () =>
             queueTracks.map((track, index) => {
+                const isNowPlaying =
+                    (currentTrackQueueEntryId && track.queueEntryId === currentTrackQueueEntryId) ||
+                    index === currentTrackIndex;
                 const normalizedPath = normalizeTrackPath(track.filePath);
                 const isMissing =
                     track.isMissing ||
@@ -139,12 +142,12 @@ export function Playlist() {
                     filePath: track.filePath,
                     fileName: track.fileName,
                     index,
-                    isPlaying: index === currentTrackIndex && isPlayerActive,
+                    isPlaying: isNowPlaying,
                     queueEntryId: track.queueEntryId,
                     isMissing,
                 };
             }),
-        [queueTracks, currentTrackIndex, isPlayerActive, hasLibraryTracks, existingTrackPathSet],
+        [queueTracks, currentTrackIndex, currentTrackQueueEntryId, hasLibraryTracks, existingTrackPathSet],
     );
 
     const playlistContextMenuItems = useMemo(
