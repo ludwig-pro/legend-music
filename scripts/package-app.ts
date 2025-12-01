@@ -4,6 +4,8 @@ import { spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path, { join, resolve } from "node:path";
 
+const ENABLE_CHANGELOG = false;
+
 // Types
 interface AppConfig {
     APP_NAME: string;
@@ -29,6 +31,44 @@ function execCommand(command: string, args: string[], errorMessage: string) {
 
 function log(message: string) {
     console.log(`=== ${message} ===`);
+}
+
+function getBundleVersion(version: string) {
+    const sanitized = version.replace(/\./g, "");
+    return sanitized.length > 0 ? sanitized : version;
+}
+
+function ensureInfoPlistVersion(plistPath: string, shortVersion: string, bundleVersion: string, label: string) {
+    if (!existsSync(plistPath)) {
+        console.error(`Error: Info.plist not found at ${plistPath}`);
+        process.exit(1);
+    }
+
+    const replaceKey = (content: string, key: string, value: string) => {
+        const pattern = new RegExp(`(<key>${key}</key>\\s*<string>)([^<]*)(</string>)`);
+
+        if (!pattern.test(content)) {
+            console.error(`Error: ${key} not found in Info.plist at ${plistPath}`);
+            process.exit(1);
+        }
+
+        const updated = content.replace(pattern, `$1${value}$3`);
+        return { updated, changed: updated !== content };
+    };
+
+    let plistContent = readFileSync(plistPath, "utf-8");
+
+    const shortResult = replaceKey(plistContent, "CFBundleShortVersionString", shortVersion);
+    plistContent = shortResult.updated;
+    const bundleResult = replaceKey(plistContent, "CFBundleVersion", bundleVersion);
+    plistContent = bundleResult.updated;
+
+    if (shortResult.changed || bundleResult.changed) {
+        writeFileSync(plistPath, plistContent, "utf-8");
+        log(`Updated ${label} Info.plist versions to ${shortVersion} / ${bundleVersion}`);
+    } else {
+        log(`${label} Info.plist versions already set to ${shortVersion} / ${bundleVersion}`);
+    }
 }
 
 // Get configuration
@@ -137,6 +177,7 @@ function notarizeApp(appPath: string, config: AppConfig, safeAppName: string) {
 // Function to create a version info file for Sparkle
 function createVersionInfoFile(distDir: string, config: AppConfig, zipFileName: string) {
     const infoPath = join(distDir, "sparkle-version-info.plist");
+    const bundleVersion = getBundleVersion(config.version);
     const content = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -144,7 +185,7 @@ function createVersionInfoFile(distDir: string, config: AppConfig, zipFileName: 
     <key>CFBundleShortVersionString</key>
     <string>${config.version}</string>
     <key>CFBundleVersion</key>
-    <string>${config.version.split(".").join("")}</string>
+    <string>${bundleVersion}</string>
     <key>FileName</key>
     <string>${zipFileName}</string>
 </dict>
@@ -172,6 +213,7 @@ function generateChangelogHtml(distDir: string, config: AppConfig, appName: stri
     const versionRegex = /## (\d+\.\d+\.\d+)\s+([\s\S]*?)(?=## \d+\.\d+\.\d+|$)/g;
     let match: RegExpExecArray | null = null;
 
+    // biome-ignore lint/suspicious/noAssignInExpressions: whatevs
     while ((match = versionRegex.exec(changelogContent)) !== null) {
         const version = match[1];
         const notes = match[2].trim();
@@ -274,9 +316,14 @@ function main() {
     const config = loadConfig();
 
     const appName = config.APP_NAME;
+    const bundleVersion = getBundleVersion(config.version);
+    const projectInfoPlistPath = join(PROJECT_ROOT, "macos", `${appName}-macOS`, "Info.plist");
+    ensureInfoPlistVersion(projectInfoPlistPath, config.version, bundleVersion, "project");
 
-    // Check if this version exists in the changelog before proceeding
-    checkVersionInChangelog(config);
+    if (ENABLE_CHANGELOG) {
+        // Check if this version exists in the changelog before proceeding
+        checkVersionInChangelog(config);
+    }
 
     // Setup paths
     const builtAppPath = join(PROJECT_ROOT, "macos/build/Build/Products/Release", `${appName}.app`);
@@ -296,6 +343,8 @@ function main() {
         console.error(`Make sure to build the app first with 'bun run build'`);
         process.exit(1);
     }
+    const builtInfoPlistPath = join(builtAppPath, "Contents", "Info.plist");
+    ensureInfoPlistVersion(builtInfoPlistPath, config.version, bundleVersion, "built app");
 
     // Create dist directory if needed
     if (!existsSync(distDir)) {
@@ -323,6 +372,8 @@ function main() {
         console.error("Error copying app to dist directory:", error);
         process.exit(1);
     }
+    const distInfoPlistPath = join(distAppPath, "Contents", "Info.plist");
+    ensureInfoPlistVersion(distInfoPlistPath, config.version, bundleVersion, "packaged app");
 
     // Notarize the copied app
     notarizeApp(distAppPath, config, appName);
@@ -342,8 +393,10 @@ function main() {
     // Create version info file for Sparkle
     createVersionInfoFile(distDir, config, zipFileName);
 
-    // Generate HTML update files from CHANGELOG.md
-    generateChangelogHtml(distDir, config, appName);
+    if (ENABLE_CHANGELOG) {
+        // Generate HTML update files from CHANGELOG.md
+        generateChangelogHtml(distDir, config, appName);
+    }
 
     // Generate appcast
     generateAppcast(distDir, config);
