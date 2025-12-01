@@ -157,7 +157,7 @@ function CurrentSongOverlayWindow() {
                 ),
             );
 
-            scale.value.set(withSpring(1, springConfig));
+            scale.set(withSpring(1, springConfig));
 
             return;
         }
@@ -182,9 +182,7 @@ function CurrentSongOverlayWindow() {
             try {
                 await setWindowBlur(WINDOW_ID, OVERLAY_WINDOW_MAX_BLUR_RADIUS, 0);
                 await setWindowBlur(WINDOW_ID, 0, OVERLAY_WINDOW_SHOW_DURATION_MS);
-            } catch (error) {
-                console.error("Failed to animate overlay blur on show:", error);
-            }
+            } catch {}
         }
     });
 
