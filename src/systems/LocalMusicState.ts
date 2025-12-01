@@ -491,6 +491,170 @@ export async function createLocalTrackFromFile(filePath: string): Promise<LocalT
     }
 }
 
+export async function loadTracksForDirectories(directories: string[]): Promise<LocalTrack[]> {
+    const normalizedDirectories = Array.from(
+        new Set(
+            directories
+                .map((path) => normalizeRootPath(path))
+                .filter((path): path is string => Boolean(path && path.length > 0)),
+        ),
+    );
+
+    if (normalizedDirectories.length === 0) {
+        return [];
+    }
+
+    const directoryMatchers = normalizedDirectories.map((path) => {
+        const lower = path.toLowerCase();
+        return lower.endsWith("/") ? lower.slice(0, -1) : lower;
+    });
+
+    const matchesDirectory = (filePath?: string): boolean => {
+        if (!filePath) {
+            return false;
+        }
+        const normalized = normalizeRootPath(filePath);
+        if (!normalized) {
+            return false;
+        }
+        const lower = normalized.toLowerCase();
+        return directoryMatchers.some((directory) => lower === directory || lower.startsWith(`${directory}/`));
+    };
+
+    const tracks: LocalTrack[] = [];
+    const seenPaths = new Set<string>();
+
+    for (const track of localMusicState$.tracks.get()) {
+        const normalizedPath = normalizeRootPath(track.filePath);
+        if (!matchesDirectory(normalizedPath)) {
+            continue;
+        }
+
+        const key = normalizedPath.toLowerCase();
+        if (seenPaths.has(key)) {
+            continue;
+        }
+
+        seenPaths.add(key);
+        tracks.push(track);
+    }
+
+    const existingLibraryPaths = new Set(
+        librarySettings$.paths
+            .get()
+            .map((path) => normalizeRootPath(path))
+            .filter(Boolean),
+    );
+
+    const hasNewDirectories = normalizedDirectories.some((directory) => !existingLibraryPaths.has(directory));
+    const shouldScanDirectories = hasNewDirectories || tracks.length === 0;
+
+    if (!shouldScanDirectories) {
+        return tracks;
+    }
+
+    const scannedTracks = await scanDirectoriesForTracks(normalizedDirectories, seenPaths, matchesDirectory);
+    return [...tracks, ...scannedTracks];
+}
+
+async function scanDirectoriesForTracks(
+    normalizedRoots: string[],
+    seenPaths: Set<string>,
+    matchesDirectory: (filePath?: string) => boolean,
+): Promise<LocalTrack[]> {
+    const tracks: LocalTrack[] = [];
+
+    if (normalizedRoots.length === 0) {
+        return tracks;
+    }
+
+    const handleBatch = (event: MediaScanBatchEvent) => {
+        if (!event || !Array.isArray(event.tracks)) {
+            return;
+        }
+
+        const rootIndex = event.rootIndex ?? -1;
+        const rootPath = normalizedRoots[rootIndex];
+        if (!rootPath) {
+            return;
+        }
+
+        for (const nativeTrack of event.tracks) {
+            const relativePath = nativeTrack.relativePath?.length
+                ? nativeTrack.relativePath
+                : nativeTrack.filePath?.length
+                  ? nativeTrack.filePath
+                  : nativeTrack.fileName ?? "";
+
+            if (!relativePath) {
+                continue;
+            }
+
+            const absolutePath = relativePath.startsWith("/")
+                ? normalizeRootPath(relativePath)
+                : normalizeRootPath(buildAbsolutePath(rootPath, relativePath));
+
+            if (!absolutePath || !isSupportedAudioFile(absolutePath) || !matchesDirectory(absolutePath)) {
+                continue;
+            }
+
+            const key = absolutePath.toLowerCase();
+            if (seenPaths.has(key)) {
+                continue;
+            }
+
+            const fileName = nativeTrack.fileName ?? fileNameFromPath(absolutePath);
+            const fallback = parseFilenameOnly(fileName);
+
+            const title = nativeTrack.title?.trim() || fallback.title;
+            const artist = nativeTrack.artist?.trim() || fallback.artist;
+            const album = nativeTrack.album?.trim() || undefined;
+            const durationSeconds =
+                Number.isFinite(nativeTrack.durationSeconds) && nativeTrack.durationSeconds != null
+                    ? nativeTrack.durationSeconds
+                    : undefined;
+            const duration = durationSeconds != null ? formatDuration(durationSeconds) : "0:00";
+
+            tracks.push({
+                id: absolutePath,
+                title,
+                artist,
+                album,
+                duration,
+                filePath: absolutePath,
+                fileName,
+            });
+
+            seenPaths.add(key);
+        }
+    };
+
+    const subscriptions = [
+        AudioPlayer.addListener("onMediaScanBatch", handleBatch),
+        AudioPlayer.addListener("onMediaScanComplete", () => {}),
+    ];
+
+    try {
+        await AudioPlayer.scanMediaLibrary(normalizedRoots, "", {
+            batchSize: 200,
+            includeArtwork: false,
+            allowedExtensions: SUPPORTED_AUDIO_EXTENSIONS,
+        });
+    } catch (error) {
+        console.error("Failed to scan directories for dropped folders:", error);
+    } finally {
+        for (const subscription of subscriptions) {
+            try {
+                subscription?.remove?.();
+            } catch (error) {
+                console.warn("Failed to remove directory scan listener", error);
+            }
+        }
+    }
+
+    return tracks;
+}
+
 async function scanLibraryNative(paths: string[]): Promise<{ tracks: LocalTrack[]; errors: string[] }> {
     if (paths.length === 0) {
         return { tracks: [], errors: [] };

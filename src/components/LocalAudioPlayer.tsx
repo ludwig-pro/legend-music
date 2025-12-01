@@ -330,7 +330,6 @@ localPlayerState$.currentIndex.onChange(({ value }) => {
 
 localPlayerState$.currentTime.onChange(({ value }) => {
     latestPlaybackTime = Math.max(0, typeof value === "number" ? value : 0);
-    console.log("localPlayerState$.currentTime.onChange", latestPlaybackTime, value);
 });
 
 localPlayerState$.isPlaying.onChange(({ value }) => {

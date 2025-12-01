@@ -24,6 +24,7 @@ import {
     DEFAULT_LOCAL_PLAYLIST_ID,
     ensureLocalTrackThumbnail,
     librarySettings$,
+    loadTracksForDirectories,
     localMusicState$,
     scanLocalMusic,
     setCurrentPlaylist,
@@ -618,24 +619,41 @@ export function Playlist() {
                 return [...paths, ...additions];
             });
 
-            if (addedPaths.length === 0) {
-                showDropFeedback({
-                    type: "warning",
-                    message: "All dropped folders are already in your library.",
-                });
-                return;
+            let queuedTracks: LocalTrack[] = [];
+            try {
+                queuedTracks = await loadTracksForDirectories(normalized);
+            } catch (error) {
+                console.error("Failed to load tracks from dropped folders:", error);
             }
 
-            showDropFeedback({
-                type: "success",
-                message: `Added ${formatFolderCount(addedPaths.length)} to the library.`,
-            });
+            if (queuedTracks.length > 0) {
+                localAudioControls.queue.append(queuedTracks);
+                queuedTracks.forEach((track) => {
+                    void ensureLocalTrackThumbnail(track);
+                });
+                showDropFeedback({
+                    type: "success",
+                    message: `Added ${formatTrackCount(queuedTracks.length)} to the queue.`,
+                });
+            } else {
+                showDropFeedback({
+                    type: "warning",
+                    message: "No audio tracks found in dropped folders.",
+                });
+            }
 
-            scanLocalMusic().catch((error) => {
-                console.error("Failed to re-scan library after adding folders:", error);
-            });
+            if (addedPaths.length > 0) {
+                showDropFeedback({
+                    type: "success",
+                    message: `Added ${formatFolderCount(addedPaths.length)} to the library.`,
+                });
+
+                scanLocalMusic().catch((error) => {
+                    console.error("Failed to re-scan library after adding folders:", error);
+                });
+            }
         },
-        [showDropFeedback],
+        [loadTracksForDirectories, showDropFeedback],
     );
 
     const handleFileDrop = useCallback(
