@@ -1,92 +1,92 @@
 {
-    "name": "LegendMusic",
-    "version": "0.0.3",
-    "private": true,
-    "scripts": {
-        "bootstrap": "bun i && cd macos && pod install",
-        "mac": "react-native run-macos",
-        "start": "react-native start --client-logs",
-        "test": "jest",
-        "lint": "bunx biome check ./src && bunx biome format ./src",
-        "lint:compiler": "bunx eslint src --max-warnings=0",
-        "lint:fix": "bunx biome lint --write ./src && bunx biome format --write ./src && bunx biome check --write ./src",
-        "build": "bun scripts/build.ts",
-        "package": "bun scripts/package-app.ts",
-        "publish": "bun run build && bun run package"
-    },
-    "dependencies": {
-        "@fluentui-react-native/callout": "^0.27.3",
-        "@fluentui-react-native/vibrancy-view": "^0.3.0",
-        "@gorhom/portal": "^1.0.14",
-        "@legendapp/list": "^3.0.0-beta.2",
-        "@legendapp/motion": "^2.5.3",
-        "@legendapp/state": "^3.0.0-beta.42",
-        "@shopify/react-native-skia": "^2.3.7",
-        "babel-plugin-react-compiler": "^1.0.0",
-        "clsx": "^2.1.1",
-        "expo": "~53.0.9",
-        "nativewind": "^4.1.23",
-        "react": "19.0.0",
-        "react-native": "0.78.2",
-        "react-native-macos": "^0.78.3",
-        "react-native-reanimated": "^3.18.0",
-        "tailwind-merge": "^3.4.0",
-        "tailwindcss": "^3.4.17"
-    },
-    "devDependencies": {
-        "@babel/core": "^7.28.5",
-        "@babel/preset-env": "^7.28.5",
-        "@babel/runtime": "^7.28.4",
-        "@biomejs/biome": "^2.3.8",
-        "@react-native-community/cli": "15.0.1",
-        "@react-native-community/cli-platform-android": "15.0.1",
-        "@react-native-community/cli-platform-ios": "15.0.1",
-        "@react-native/babel-preset": "0.78.2",
-        "@react-native/metro-config": "0.78.2",
-        "@react-native/typescript-config": "0.78.2",
-        "@types/jest": "^29.5.13",
-        "@types/node": "20",
-        "@types/react": "^19.0.0",
-        "@types/react-test-renderer": "^19.0.0",
-        "@typescript-eslint/parser": "^8.48.0",
-        "babel-plugin-module-resolver": "^5.0.2",
-        "babel-plugin-transform-remove-console": "^6.9.4",
-        "eslint": "^9.39.1",
-        "eslint-plugin-react-compiler": "^19.1.0-rc.2",
-        "jest": "^29.6.3",
-        "react-native-dotenv": "^3.4.11",
-        "react-test-renderer": "19.0.0",
-        "typescript": "5.9.3"
-    },
-    "engines": {
-        "node": ">=18"
-    },
-    "patchedDependencies": {
-        "@fluentui-react-native/vibrancy-view@0.3.0": "patches/@fluentui-react-native%2Fvibrancy-view@0.3.0.patch",
-        "@shopify/react-native-skia@2.3.7": "patches/@shopify%2Freact-native-skia@2.3.7.patch"
-    },
-    "expo": {
-        "autolinking": {
-            "exclude": [
-                "expo",
-                "expo-asset",
-                "expo-checkbox",
-                "expo-constants",
-                "expo-font",
-                "expo-keep-awake",
-                "expo-linking",
-                "expo-modules-autolinking",
-                "expo-navigation-bar",
-                "expo-router",
-                "expo-splash-screen",
-                "expo-sqlite",
-                "expo-status-bar",
-                "expo-system-ui"
-            ]
-        }
-    },
-    "trustedDependencies": [
-        "@shopify/react-native-skia"
-    ],
-    "resolutions": {}
+  "name": "LegendMusic",
+  "version": "0.0.4",
+  "private": true,
+  "scripts": {
+    "bootstrap": "bun i && cd macos && pod install",
+    "mac": "react-native run-macos",
+    "start": "react-native start --client-logs",
+    "test": "jest",
+    "lint": "bunx biome check ./src && bunx biome format ./src",
+    "lint:compiler": "bunx eslint src --max-warnings=0",
+    "lint:fix": "bunx biome lint --write ./src && bunx biome format --write ./src && bunx biome check --write ./src",
+    "build": "bun scripts/build.ts",
+    "package": "bun scripts/package-app.ts",
+    "publish": "bun run build && bun run package"
+  },
+  "dependencies": {
+    "@fluentui-react-native/callout": "^0.27.3",
+    "@fluentui-react-native/vibrancy-view": "^0.3.0",
+    "@gorhom/portal": "^1.0.14",
+    "@legendapp/list": "^3.0.0-beta.2",
+    "@legendapp/motion": "^2.5.3",
+    "@legendapp/state": "^3.0.0-beta.42",
+    "@shopify/react-native-skia": "^2.3.7",
+    "babel-plugin-react-compiler": "^1.0.0",
+    "clsx": "^2.1.1",
+    "expo": "~53.0.9",
+    "nativewind": "^4.1.23",
+    "react": "19.0.0",
+    "react-native": "0.78.2",
+    "react-native-macos": "^0.78.3",
+    "react-native-reanimated": "^3.18.0",
+    "tailwind-merge": "^3.4.0",
+    "tailwindcss": "^3.4.17"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.28.5",
+    "@babel/preset-env": "^7.28.5",
+    "@babel/runtime": "^7.28.4",
+    "@biomejs/biome": "^2.3.8",
+    "@react-native-community/cli": "15.0.1",
+    "@react-native-community/cli-platform-android": "15.0.1",
+    "@react-native-community/cli-platform-ios": "15.0.1",
+    "@react-native/babel-preset": "0.78.2",
+    "@react-native/metro-config": "0.78.2",
+    "@react-native/typescript-config": "0.78.2",
+    "@types/jest": "^29.5.13",
+    "@types/node": "20",
+    "@types/react": "^19.0.0",
+    "@types/react-test-renderer": "^19.0.0",
+    "@typescript-eslint/parser": "^8.48.0",
+    "babel-plugin-module-resolver": "^5.0.2",
+    "babel-plugin-transform-remove-console": "^6.9.4",
+    "eslint": "^9.39.1",
+    "eslint-plugin-react-compiler": "^19.1.0-rc.2",
+    "jest": "^29.6.3",
+    "react-native-dotenv": "^3.4.11",
+    "react-test-renderer": "19.0.0",
+    "typescript": "5.9.3"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "patchedDependencies": {
+    "@fluentui-react-native/vibrancy-view@0.3.0": "patches/@fluentui-react-native%2Fvibrancy-view@0.3.0.patch",
+    "@shopify/react-native-skia@2.3.7": "patches/@shopify%2Freact-native-skia@2.3.7.patch"
+  },
+  "expo": {
+    "autolinking": {
+      "exclude": [
+        "expo",
+        "expo-asset",
+        "expo-checkbox",
+        "expo-constants",
+        "expo-font",
+        "expo-keep-awake",
+        "expo-linking",
+        "expo-modules-autolinking",
+        "expo-navigation-bar",
+        "expo-router",
+        "expo-splash-screen",
+        "expo-sqlite",
+        "expo-status-bar",
+        "expo-system-ui"
+      ]
+    }
+  },
+  "trustedDependencies": [
+    "@shopify/react-native-skia"
+  ],
+  "resolutions": {}
 }
