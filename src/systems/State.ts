@@ -12,6 +12,7 @@ export const state$ = observable({
     showSettingsPage: undefined as SettingsPage | undefined,
     songId: undefined as string | undefined,
     listeningForKeyPress: false,
+    isWindowHovered: false,
 });
 
 type SavedState = {

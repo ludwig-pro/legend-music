@@ -5,7 +5,7 @@ import { useMemo } from "react";
 import { Platform, type StyleProp, StyleSheet, View, type ViewStyle } from "react-native";
 import { useSharedValue } from "react-native-reanimated";
 
-type SkiaTextProps = {
+export type SkiaTextProps = {
     text$: Observable<string>;
     color?: string;
     fontFamily?: string;

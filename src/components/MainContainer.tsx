@@ -6,6 +6,7 @@ import { PlaylistSelector } from "@/components/PlaylistSelector";
 import { Unregistered } from "@/components/Unregistered";
 import { SUPPORT_ACCOUNTS } from "@/systems/constants";
 import { useOnHotkeys } from "@/systems/keyboard/Keyboard";
+import { state$ } from "@/systems/State";
 import { perfCount, perfLog } from "@/utils/perfLogger";
 import { preloadPersistence } from "@/utils/preloadPersistence";
 
@@ -32,7 +33,11 @@ export function MainContainer() {
     });
 
     return (
-        <View className="flex-1 flex-row items-stretch">
+        <View
+            className="flex-1 flex-row items-stretch"
+            onMouseEnter={() => state$.isWindowHovered.set(true)}
+            onMouseLeave={() => state$.isWindowHovered.set(false)}
+        >
             <View className="flex-1">
                 <PlaybackArea />
                 <Playlist />
