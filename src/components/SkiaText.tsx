@@ -52,6 +52,12 @@ export function SkiaText({
     const textWidth$ = useObservable({ width: 0, length: 0 });
     const { width: textWidth } = useValue(textWidth$);
 
+    const font = useMemo(() => createFont(fontFamily, fontSize, fontWeight), [fontFamily, fontSize, fontWeight]);
+    const metrics = useMemo(() => font.getMetrics(), [font]);
+    const canvasHeight = height ?? Math.ceil(metrics.descent - metrics.ascent);
+    const baseWidth = width ?? Math.ceil(fontSize * 3);
+    const canvasWidth = Math.max(baseWidth, Math.ceil(textWidth));
+
     useObserveEffect(text$, ({ value, previous }) => {
         const next = value ?? "";
         textShared.set(next);
@@ -59,12 +65,6 @@ export function SkiaText({
             textWidth$.set({ length: next.length, width: font.measureText(next).width });
         }
     });
-
-    const font = useMemo(() => createFont(fontFamily, fontSize, fontWeight), [fontFamily, fontSize, fontWeight]);
-    const metrics = useMemo(() => font.getMetrics(), [font]);
-    const canvasHeight = height ?? Math.ceil(metrics.descent - metrics.ascent);
-    const baseWidth = width ?? Math.ceil(fontSize * 3);
-    const canvasWidth = Math.max(baseWidth, Math.ceil(textWidth));
 
     const x = useMemo(() => {
         if (align === "right") {
