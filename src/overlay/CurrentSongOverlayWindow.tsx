@@ -127,8 +127,8 @@ function CurrentSongOverlayWindow() {
 
         const targetHeight = isHovered ? OVERLAY_WINDOW_HEIGHT_EXPANDED : OVERLAY_WINDOW_HEIGHT_COMPACT;
         const targetWidth = isHovered ? OVERLAY_WINDOW_WIDTH_EXPANDED : OVERLAY_WINDOW_WIDTH_COMPACT;
-        // setCurrentSongOverlayWindowHeight(targetHeight);
-        // setCurrentSongOverlayWindowWidth(targetWidth);
+        setCurrentSongOverlayWindowHeight(targetHeight);
+        setCurrentSongOverlayWindowWidth(targetWidth);
     }, [isHovered]);
 
     useObserveEffect(async () => {

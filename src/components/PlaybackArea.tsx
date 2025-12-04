@@ -249,10 +249,7 @@ export function PlaybackArea({ showBorder = true, overlayMode }: PlaybackAreaPro
                 </View>
             </View>
             {overlayModeEnabled ? (
-                <Animated.View
-                    pointerEvents={overlayControlsVisible ? "auto" : "none"}
-                    style={[sliderAnimatedStyle, { overflow: "hidden" }]}
-                >
+                <Animated.View pointerEvents={overlayControlsVisible ? "auto" : "none"} style={sliderAnimatedStyle}>
                     {sliderRowNode}
                 </Animated.View>
             ) : (

@@ -120,10 +120,11 @@ export function PlaybackTimeline({
     onSlidingEnd,
 }: PlaybackTimelineProps) {
     return (
-        <View className={cn("pb-1", disabled && "opacity-0")} onLayout={onLayout} mouseDownCanMoveWindow={false}>
-            <View className="absolute right-0 -top-2 flex-row items-center" pointerEvents="none">
-                <CurrentTime currentLocalTime$={currentLocalTime$} duration$={duration$} overlayMode={!!overlayMode} />
-            </View>
+        <View
+            className={cn("pb-1 pt-3 -mt-2", disabled && "opacity-0")}
+            onLayout={onLayout}
+            mouseDownCanMoveWindow={false}
+        >
             <CustomSlider
                 style={{ height: 24, width: "100%" }}
                 minimumValue={0}
@@ -136,6 +137,9 @@ export function PlaybackTimeline({
                 maximumTrackTintColor="#ffffff40"
                 disabled={disabled}
             />
+            <View className="absolute right-0 top-1 flex-row items-center" pointerEvents="none">
+                <CurrentTime currentLocalTime$={currentLocalTime$} duration$={duration$} overlayMode={!!overlayMode} />
+            </View>
         </View>
     );
 }
