@@ -10,7 +10,7 @@ import { WindowsNavigator } from "@/windows";
 
 const MEDIA_LIBRARY_WINDOW_KEY = "MediaLibraryWindow" as const;
 const MEDIA_LIBRARY_WINDOW_ID = WindowsNavigator.getIdentifier(MEDIA_LIBRARY_WINDOW_KEY);
-const MEDIA_LIBRARY_WIDTH = 420;
+const MEDIA_LIBRARY_DEFAULT_WIDTH = 640;
 const MEDIA_LIBRARY_MIN_WIDTH = 360;
 const MEDIA_LIBRARY_MIN_HEIGHT = 400;
 const MEDIA_LIBRARY_DEFAULT_HEIGHT = 600;
@@ -64,7 +64,7 @@ export const MediaLibraryWindowManager = () => {
                 if (storedSize.width > 0) {
                     preferredWidth = storedSize.width;
                 } else {
-                    preferredWidth = MEDIA_LIBRARY_WIDTH;
+                    preferredWidth = MEDIA_LIBRARY_DEFAULT_WIDTH;
                 }
 
                 let preferredHeight: number;
