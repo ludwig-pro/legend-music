@@ -204,7 +204,7 @@ static inline NSAppearance *LegendDarkAppearance() {
                                                          launchOptions:launchOptions];
 
   // Create window with default size - autosave will override if available
-  NSRect defaultFrame = NSMakeRect(0, 0, 1280, 720);
+  NSRect defaultFrame = NSMakeRect(0, 0, 360, 640);
   self.window = [[NSWindow alloc] initWithContentRect:defaultFrame
                                            styleMask:NSWindowStyleMaskTitled | NSWindowStyleMaskResizable | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable
                                              backing:NSBackingStoreBuffered
