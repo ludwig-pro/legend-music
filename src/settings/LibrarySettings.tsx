@@ -43,29 +43,6 @@ export const LibrarySettings = function LibrarySettings() {
         });
     };
 
-    const handleChangeLibraryPath = async (index: number) => {
-        const currentPath = librarySettings.paths[index];
-        const directory = await selectDirectory({ directoryURL: currentPath });
-
-        if (!directory) {
-            return;
-        }
-
-        librarySettings$.paths.set((paths) => {
-            if (index < 0 || index >= paths.length) {
-                return paths;
-            }
-
-            if (paths[index] === directory) {
-                return paths;
-            }
-
-            const next = [...paths];
-            next[index] = directory;
-            return next;
-        });
-    };
-
     const handleAddLibraryPath = async () => {
         const directory = await selectDirectory();
 
@@ -100,26 +77,14 @@ export const LibrarySettings = function LibrarySettings() {
                             >
                                 <Text className="text-text-secondary text-sm font-mono break-all flex-1">{path}</Text>
 
-                                <View className="flex-row items-center gap-2">
-                                    <Button
-                                        icon="folder"
-                                        variant="icon"
-                                        size="medium"
-                                        tooltip="Choose folder"
-                                        iconMarginTop={-1}
-                                        onClick={() => {
-                                            void handleChangeLibraryPath(index);
-                                        }}
-                                    />
-                                    <Button
-                                        icon="trash"
-                                        variant="icon"
-                                        size="medium"
-                                        tooltip="Remove path"
-                                        iconMarginTop={-1}
-                                        onClick={() => handleRemoveLibraryPath(index)}
-                                    />
-                                </View>
+                                <Button
+                                    icon="trash"
+                                    variant="icon"
+                                    size="medium"
+                                    tooltip="Remove path"
+                                    iconMarginTop={-1}
+                                    onClick={() => handleRemoveLibraryPath(index)}
+                                />
                             </View>
                         ))}
                     </View>
@@ -129,9 +94,6 @@ export const LibrarySettings = function LibrarySettings() {
                     </View>
                 )}
 
-                <Text className="text-text-tertiary text-xs mt-3">
-                    Currently configured library paths for local music scanning
-                </Text>
                 <View className="flex-row items-center gap-3">
                     <Button
                         variant="primary"
