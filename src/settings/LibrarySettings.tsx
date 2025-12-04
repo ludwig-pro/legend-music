@@ -152,9 +152,7 @@ export const LibrarySettings = function LibrarySettings() {
                         size="medium"
                         iconMarginTop={-1}
                         className="self-start"
-                        onClick={() => {
-                            void handleAddLibraryPath();
-                        }}
+                        onClick={handleAddLibraryPath}
                     >
                         <Text className="text-text-primary font-medium text-sm">Add Library Folder</Text>
                     </Button>

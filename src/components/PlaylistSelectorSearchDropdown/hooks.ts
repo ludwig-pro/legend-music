@@ -62,36 +62,50 @@ export function buildSearchResults({
         return [];
     }
 
+    const MAX_RESULTS = 20;
     const lowerQuery = trimmed.toLowerCase();
     const results: SearchResult[] = [];
 
-    const matchingPlaylists = playlists
-        .filter((playlist) => playlist.name.toLowerCase().includes(lowerQuery))
-        .slice(0, 5)
-        .map((playlist): SearchResult => ({ type: "playlist", item: playlist }));
+    for (const track of tracks) {
+        if (results.length >= MAX_RESULTS) {
+            break;
+        }
+        const title = track.title.toLowerCase();
+        const artist = track.artist.toLowerCase();
+        const album = track.album?.toLowerCase();
+        if (title.includes(lowerQuery) || artist.includes(lowerQuery) || album?.includes(lowerQuery)) {
+            results.push({ type: "track", item: track });
+        }
+    }
 
-    const matchingTracks = tracks
-        .filter(
-            (track) =>
-                track.title.toLowerCase().includes(lowerQuery) ||
-                track.artist.toLowerCase().includes(lowerQuery) ||
-                track.album?.toLowerCase().includes(lowerQuery),
-        )
-        .slice(0, 6)
-        .map((track): SearchResult => ({ type: "track", item: track }));
+    for (const playlist of playlists) {
+        if (results.length >= MAX_RESULTS) {
+            break;
+        }
+        if (playlist.name.toLowerCase().includes(lowerQuery)) {
+            results.push({ type: "playlist", item: playlist });
+        }
+    }
 
-    const matchingAlbums = albums
-        .filter((album) => album.name.toLowerCase().includes(lowerQuery))
-        .slice(0, 3)
-        .map((album): SearchResult => ({ type: "library", item: album }));
+    for (const artist of artists) {
+        if (results.length >= MAX_RESULTS) {
+            break;
+        }
+        if (artist.name.toLowerCase().includes(lowerQuery)) {
+            results.push({ type: "library", item: artist });
+        }
+    }
 
-    const matchingArtists = artists
-        .filter((artist) => artist.name.toLowerCase().includes(lowerQuery))
-        .slice(0, 3)
-        .map((artist): SearchResult => ({ type: "library", item: artist }));
+    for (const album of albums) {
+        if (results.length >= MAX_RESULTS) {
+            break;
+        }
+        if (album.name.toLowerCase().includes(lowerQuery)) {
+            results.push({ type: "library", item: album });
+        }
+    }
 
-    results.push(...matchingTracks, ...matchingPlaylists, ...matchingArtists, ...matchingAlbums);
-    return results.slice(0, 20);
+    return results;
 }
 
 interface UsePlaylistSearchResultsOptions {
