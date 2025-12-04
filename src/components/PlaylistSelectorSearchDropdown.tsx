@@ -129,6 +129,60 @@ export const PlaylistSelectorSearchDropdown = forwardRef<DropdownMenuRootRef, Pl
             [modifierStateRef],
         );
 
+        const keyExtractor = useCallback((result: SearchResult) => `${result.type}-${result.item.id}`, []);
+
+        const getFixedItemSize = useCallback(
+            (_index: number, item: SearchResult) => (item.type === "track" ? 32 : 52),
+            [],
+        );
+
+        const getItemType = useCallback((item: SearchResult) => item.type, []);
+
+        const handleItemSelect = useCallback(
+            (result: SearchResult, action: QueueAction) => {
+                handleSearchResultAction(result, action);
+                resetModifiers();
+                handleOpenChange(false);
+            },
+            [handleOpenChange, handleSearchResultAction, resetModifiers],
+        );
+
+        const renderItem = useCallback(
+            ({ item: result, index }: { item: SearchResult; index: number }) => {
+                const isHighlighted = highlightedIndex === index;
+
+                const handleDropdownSelect = (event?: NativeMouseEvent | GestureResponderEvent) => {
+                    const action = getActionFromEvent(event);
+                    handleItemSelect(result, action);
+                };
+
+                const handleContentSelect = (action: QueueAction) => {
+                    handleItemSelect(result, action);
+                };
+
+                return (
+                    <DropdownMenu.Item
+                        key={`${result.type}-${result.item.id}`}
+                        variant="unstyled"
+                        onSelect={handleDropdownSelect}
+                        className={cn(
+                            "hover:bg-white/10 rounded-md w-full overflow-hidden",
+                            isHighlighted && "bg-white/20",
+                        )}
+                    >
+                        <SearchResultContent
+                            result={result}
+                            index={index}
+                            highlighted={isHighlighted}
+                            onSelect={handleContentSelect}
+                            getActionFromEvent={getActionFromEvent}
+                        />
+                    </DropdownMenu.Item>
+                );
+            },
+            [getActionFromEvent, handleItemSelect, highlightedIndex],
+        );
+
         return (
             <DropdownMenu.Root ref={ref} isOpen$={isOpen$} onOpenChange={handleDropdownOpenChange}>
                 <DropdownMenu.Trigger asChild>
@@ -165,37 +219,12 @@ export const PlaylistSelectorSearchDropdown = forwardRef<DropdownMenuRootRef, Pl
                                     <View style={{ maxHeight: 256 }}>
                                         <LegendList
                                             data={searchResults}
-                                            keyExtractor={(result) => `${result.type}-${result.item.id}`}
+                                            keyExtractor={keyExtractor}
                                             style={{ maxHeight: 256 }}
                                             extraData={{ highlightedIndex }}
-                                            renderItem={({ item: result, index }) => (
-                                                <DropdownMenu.Item
-                                                    key={`${result.type}-${result.item.id}`}
-                                                    variant="unstyled"
-                                                    onSelect={(event) => {
-                                                        const action = getActionFromEvent(event);
-                                                        handleSearchResultAction(result, action);
-                                                        resetModifiers();
-                                                        handleOpenChange(false);
-                                                    }}
-                                                    className={cn(
-                                                        "hover:bg-white/10 rounded-md w-full overflow-hidden",
-                                                        highlightedIndex === index && "bg-white/20",
-                                                    )}
-                                                >
-                                                    <SearchResultContent
-                                                        result={result}
-                                                        index={index}
-                                                        highlighted={highlightedIndex === index}
-                                                        onSelect={(action) => {
-                                                            handleSearchResultAction(result, action);
-                                                            resetModifiers();
-                                                            handleOpenChange(false);
-                                                        }}
-                                                        getActionFromEvent={getActionFromEvent}
-                                                    />
-                                                </DropdownMenu.Item>
-                                            )}
+                                            getFixedItemSize={getFixedItemSize}
+                                            getItemType={getItemType}
+                                            renderItem={renderItem}
                                         />
                                     </View>
                                 ) : (
