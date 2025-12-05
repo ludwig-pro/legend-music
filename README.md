@@ -58,5 +58,5 @@ https://github.com/user-attachments/assets/061cae41-c47a-4977-b095-27d007b9d0e9
 1. Prereqs: macOS 13+, Xcode 15+ CLI tools, Node 18+, [Bun](https://bun.sh/), Ruby + Bundler + CocoaPods; Watchman recommended.
 2. Install dependencies and pods: `bun bootstrap`.
 3. Start Metro in one terminal: `bun run start`.
-4. Launch the macOS app in another: `bun run mac` (opens `LegendMusic.app`).
+4. Launch the macOS app in another: `bun run mac` (opens `Legend Music.app`).
 5. Open **Settings → Library** and add your music folders.

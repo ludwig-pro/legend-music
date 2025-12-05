@@ -171,6 +171,6 @@ class WindowControls: RCTEventEmitter {
         if window.frameAutosaveName == "MainWindow" {
             return true
         }
-        return window.title == "LegendMusic"
+        return window.title == "Legend Music"
     }
 }

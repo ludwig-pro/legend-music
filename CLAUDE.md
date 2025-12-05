@@ -14,7 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture Overview
 
-LegendMusic is a React Native macOS application for local music library management and playback. The app is built around these core architectural patterns:
+Legend Music is a React Native macOS application for local music library management and playback. The app is built around these core architectural patterns:
 
 ### State Management (Legend State)
 - Uses `@legendapp/state` for reactive state management throughout the app

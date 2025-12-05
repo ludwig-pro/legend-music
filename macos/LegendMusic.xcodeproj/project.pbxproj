@@ -43,10 +43,10 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		13B07F961A680F5B00A75B9A /* LegendMusic.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LegendMusic.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		13B07F961A680F5B00A75B9A /* Legend Music.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Legend Music.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		1F6FF62D68604C0C2E7B146C /* Pods-LegendMusic-macOS.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-LegendMusic-macOS.release.xcconfig"; path = "Target Support Files/Pods-LegendMusic-macOS/Pods-LegendMusic-macOS.release.xcconfig"; sourceTree = "<group>"; };
 		4B0899793A92BA664E42A82B /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-LegendMusic-macOS/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
-		514201492437B4B30078DB4F /* LegendMusic.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LegendMusic.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		514201492437B4B30078DB4F /* Legend Music.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Legend Music.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		514201512437B4B40078DB4F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		514201542437B4B40078DB4F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		514201562437B4B40078DB4F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -316,8 +316,8 @@
 		83CBBA001A601CBA00E9B192 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				13B07F961A680F5B00A75B9A /* LegendMusic.app */,
-				514201492437B4B30078DB4F /* LegendMusic.app */,
+				13B07F961A680F5B00A75B9A /* Legend Music.app */,
+				514201492437B4B30078DB4F /* Legend Music.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -357,8 +357,8 @@
 			dependencies = (
 			);
 			name = "LegendMusic-iOS";
-			productName = LegendMusic;
-			productReference = 13B07F961A680F5B00A75B9A /* LegendMusic.app */;
+			productName = "Legend Music";
+			productReference = 13B07F961A680F5B00A75B9A /* Legend Music.app */;
 			productType = "com.apple.product-type.application";
 		};
 		514201482437B4B30078DB4F /* LegendMusic-macOS */ = {
@@ -382,8 +382,8 @@
 			packageProductDependencies = (
 				B3C4A1422FF0A8B500A2C1E9 /* ID3TagEditor */,
 			);
-			productName = LegendMusic;
-			productReference = 514201492437B4B30078DB4F /* LegendMusic.app */;
+			productName = "Legend Music";
+			productReference = 514201492437B4B30078DB4F /* Legend Music.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -645,7 +645,8 @@
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = com.legendapp.LegendMusic;
-				PRODUCT_NAME = LegendMusic;
+				PRODUCT_NAME = "Legend Music";
+				PRODUCT_MODULE_NAME = LegendMusic;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -670,7 +671,8 @@
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
 				PRODUCT_BUNDLE_IDENTIFIER = com.legendapp.LegendMusic;
-				PRODUCT_NAME = LegendMusic;
+				PRODUCT_NAME = "Legend Music";
+				PRODUCT_MODULE_NAME = LegendMusic;
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
 			};
@@ -700,7 +702,8 @@
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = com.legendapp.LegendMusic;
-				PRODUCT_NAME = LegendMusic;
+				PRODUCT_NAME = "Legend Music";
+				PRODUCT_MODULE_NAME = LegendMusic;
 				SDKROOT = macosx;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -734,7 +737,8 @@
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
 				PRODUCT_BUNDLE_IDENTIFIER = com.legendapp.LegendMusic;
-				PRODUCT_NAME = LegendMusic;
+				PRODUCT_NAME = "Legend Music";
+				PRODUCT_MODULE_NAME = LegendMusic;
 				SDKROOT = macosx;
 				STRIP_INSTALLED_PRODUCT = YES;
 				STRIP_STYLE = "non-global";

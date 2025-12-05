@@ -120,6 +120,14 @@ function notarizeApp(appPath: string, config: AppConfig, safeAppName: string) {
     log(`Starting notarization process for ${appPath}`);
 
     const appName = config.APP_NAME;
+    const targetBaseName = appName.replace(/\s+/g, "");
+    const targetFolderName = `${targetBaseName}-macOS`;
+    const entitlementsPath = join(
+        PROJECT_ROOT,
+        "macos",
+        targetFolderName,
+        `${targetBaseName}-macOS.entitlements`,
+    );
 
     // Step 1: Code Sign the app
     log("Code signing app");
@@ -129,7 +137,7 @@ function notarizeApp(appPath: string, config: AppConfig, safeAppName: string) {
             "--force",
             "--deep",
             "--entitlements",
-            join(PROJECT_ROOT, `macos/${appName}-macOS/${appName}-macOS.entitlements`),
+            entitlementsPath,
             "--sign",
             `Developer ID Application: ${config.TEAM_NAME} (${config.TEAM_ID})`,
             "--options",
@@ -318,7 +326,9 @@ function main() {
 
     const appName = config.APP_NAME;
     const bundleVersion = getBundleVersion(config.version);
-    const projectInfoPlistPath = join(PROJECT_ROOT, "macos", `${appName}-macOS`, "Info.plist");
+    const targetBaseName = appName.replace(/\s+/g, "");
+    const targetFolderName = `${targetBaseName}-macOS`;
+    const projectInfoPlistPath = join(PROJECT_ROOT, "macos", targetFolderName, "Info.plist");
     ensureInfoPlistVersion(projectInfoPlistPath, config.version, bundleVersion, "project");
 
     if (ENABLE_CHANGELOG) {
@@ -331,6 +341,7 @@ function main() {
     const distDir = join(PROJECT_ROOT, "dist");
 
     const appNameForZip = appName.replace(/\s+/g, "-");
+    const safeAppName = appName.replace(/\s+/g, "_");
 
     // Use the same base filename both for the app and zip
     const versionedAppName = `${appName}.app`;
@@ -377,7 +388,7 @@ function main() {
     ensureInfoPlistVersion(distInfoPlistPath, config.version, bundleVersion, "packaged app");
 
     // Notarize the copied app
-    notarizeApp(distAppPath, config, appName);
+    notarizeApp(distAppPath, config, safeAppName);
 
     // Create final zip
     log(`Packaging ${appName} v${config.version}`);

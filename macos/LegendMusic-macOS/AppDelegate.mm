@@ -12,6 +12,7 @@
 
 static NSString *const kMenuCommandTriggeredNotification = @"MenuCommandTriggered";
 static NSString *const kMenuCommandUpdateNotification = @"MenuCommandUpdate";
+static NSString *const kLegendAppName = @"Legend Music";
 NSString *const kLegendAppExitRequestedNotification = @"LegendAppExitRequested";
 
 static inline NSEventModifierFlags LegendMenuSanitizedModifiers(NSNumber *value, NSString *keyEquivalent) {
@@ -99,7 +100,7 @@ static inline NSAppearance *LegendDarkAppearance() {
 
 - (void)applicationDidFinishLaunching:(NSNotification *)notification
 {
-  self.moduleName = @"LegendMusic";
+  self.moduleName = kLegendAppName;
   // You can add your custom initial props in the dictionary below.
   // They will be passed down to the ViewController used by React Native.
   self.initialProps = @{};
@@ -257,8 +258,8 @@ static inline NSAppearance *LegendDarkAppearance() {
   }
 
   // Set up menu items
-  [self setupMenuCommand:@"settings" itemTitle:@"Settings…" inMenu:@"LegendMusic"];
-  [self setupMenuCommand:@"checkForUpdates" itemTitle:@"Check for Updates..." inMenu:@"LegendMusic"];
+  [self setupMenuCommand:@"settings" itemTitle:@"Settings…" inMenu:kLegendAppName];
+  [self setupMenuCommand:@"checkForUpdates" itemTitle:@"Check for Updates..." inMenu:kLegendAppName];
   [self setupMenuCommand:@"jump" itemTitle:@"Jump" inMenu:@"File"];
   [self setupPlaybackMenu];
   [self normalizeMenuKeyEquivalents:mainMenu];

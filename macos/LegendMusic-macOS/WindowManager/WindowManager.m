@@ -565,7 +565,7 @@ RCT_EXPORT_METHOD(setMainWindowFrame:(NSDictionary *)frameDict
     return;
   }
 
-  [self sendEventWithName:@"onWindowFocused" body:@{ @"identifier": @"main", @"moduleName": @"LegendMusic" }];
+  [self sendEventWithName:@"onWindowFocused" body:@{ @"identifier": @"main", @"moduleName": @"Legend Music" }];
 }
 
 

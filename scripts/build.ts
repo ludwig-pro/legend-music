@@ -33,7 +33,7 @@ function main() {
     log("Changed directory to macos");
 
     // Remove previous Release outputs if they exist
-    for (const artifact of ["LegendMusic.app", "LegendMusic.app.dSYM"]) {
+    for (const artifact of ["Legend Music.app", "Legend Music.app.dSYM"]) {
         const artifactPath = join(RELEASE_PRODUCTS_DIR, artifact);
         if (existsSync(artifactPath)) {
             log(`Removing previous ${artifact}`);
