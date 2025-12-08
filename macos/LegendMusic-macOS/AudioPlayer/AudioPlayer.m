@@ -428,11 +428,18 @@ static NSDictionary *LMExtractID3MediaTags(NSURL *fileURL, NSString *cacheDirPat
     NSString *artworkUri = nil;
     NSString *artworkKey = nil;
 
-    if (!durationSeconds) {
+    // Normalize duration: treat non-positive as missing and fall back to probes.
+    BOOL hasValidDuration = (durationSeconds && durationSeconds.doubleValue > 0);
+    if (!hasValidDuration) {
         durationSeconds = LMMediaDurationProbe(fileURL);
+        hasValidDuration = (durationSeconds && durationSeconds.doubleValue > 0);
     }
-    if (!durationSeconds) {
+    if (!hasValidDuration) {
         durationSeconds = LMReadDurationSeconds(fileURL);
+        hasValidDuration = (durationSeconds && durationSeconds.doubleValue > 0);
+    }
+    if (!hasValidDuration) {
+        durationSeconds = nil;
     }
 
     if (includeArtwork) {
@@ -449,7 +456,7 @@ static NSDictionary *LMExtractID3MediaTags(NSURL *fileURL, NSString *cacheDirPat
     if (album) {
         result[@"album"] = album;
     }
-    if (durationSeconds) {
+    if (durationSeconds && durationSeconds.doubleValue > 0) {
         result[@"durationSeconds"] = durationSeconds;
     }
     if (includeArtwork && artworkUri) {
@@ -1916,8 +1923,9 @@ RCT_EXPORT_METHOD(scanMediaLibrary:(NSArray<NSString *> *)paths
                         }
 
                         id durationValue = tags[@"durationSeconds"];
-                        if (durationValue) {
-                            track[@"durationSeconds"] = durationValue;
+                        NSNumber *durationSeconds = ([durationValue isKindOfClass:[NSNumber class]] ? durationValue : nil);
+                        if (durationSeconds && durationSeconds.doubleValue > 0) {
+                            track[@"durationSeconds"] = durationSeconds;
                         }
 
                         id artworkUri = tags[@"artworkUri"];

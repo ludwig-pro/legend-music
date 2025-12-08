@@ -465,13 +465,14 @@ export async function createLocalTrackFromFile(filePath: string): Promise<LocalT
 
     try {
         const metadata = await extractId3Metadata(filePath, fileName);
+        const duration = metadata.duration ?? "0:00";
 
         return {
             id: filePath,
             title: metadata.title,
             artist: metadata.artist,
             album: metadata.album,
-            duration: metadata.duration ?? "0:00",
+            duration,
             thumbnail: metadata.thumbnail,
             filePath,
             fileName,
