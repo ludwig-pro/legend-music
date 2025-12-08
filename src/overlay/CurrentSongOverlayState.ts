@@ -32,7 +32,6 @@ const getDisplayDurationMs = () => {
         OVERLAY_MAX_DISPLAY_DURATION_SECONDS,
     );
 
-    console.log("clampedSeconds", clampedSeconds, configuredSeconds);
     return clampedSeconds * 1000;
 };
 

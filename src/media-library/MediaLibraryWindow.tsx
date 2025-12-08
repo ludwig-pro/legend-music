@@ -22,8 +22,6 @@ export default function MediaLibraryWindow() {
         }
     }, []);
 
-    console.log("ZZZ media window");
-
     return (
         <WindowProvider id={MEDIA_LIBRARY_WINDOW_ID}>
             <VibrancyView blendingMode="behindWindow" material="sidebar" style={styles.vibrancy}>
