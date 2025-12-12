@@ -882,7 +882,7 @@ export function markLibraryChangeUserInitiated(): void {
 
 const toFilePath = (value: string): string => (value.startsWith("file://") ? new URL(value).pathname : value);
 
-const sanitizePlaylistFileName = (name: string): string => {
+export const sanitizePlaylistFileName = (name: string): string => {
     const trimmed = name.trim();
     const sanitized = trimmed
         .replace(/[\\/:*?"<>|]+/g, "-")
@@ -1083,13 +1083,28 @@ export async function loadLocalPlaylists(): Promise<void> {
 }
 
 export async function createLocalPlaylist(name: string): Promise<LocalPlaylist> {
-    const playlistName = name.trim() || "New Playlist";
-    const fileBase = sanitizePlaylistFileName(playlistName);
-    const fileName = `${fileBase}.m3u`;
+    const desiredName = name.trim() || "New Playlist";
 
     const directory = getCacheDirectory("data");
     ensureCacheDirectory(directory);
-    const file = new File(directory, fileName);
+    const maxAttempts = 50;
+    let playlistName = desiredName;
+    let file: File | null = null;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        playlistName = attempt === 0 ? desiredName : `${desiredName} (${attempt + 1})`;
+        const fileBase = sanitizePlaylistFileName(playlistName);
+        const fileName = `${fileBase}.m3u`;
+        const candidate = new File(directory, fileName);
+        if (!candidate.exists) {
+            file = candidate;
+            break;
+        }
+    }
+
+    if (!file) {
+        throw new Error(`Unable to create playlist: too many existing playlists named "${desiredName}"`);
+    }
     file.write("#EXTM3U\n");
 
     const filePath = toFilePath(file.uri);
