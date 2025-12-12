@@ -55,6 +55,7 @@ export function MediaLibrarySidebar() {
             filePath: "",
             trackPaths: [],
             trackCount: 0,
+            source: "cache",
         });
         setTempPlaylistId(id);
         setTempPlaylistName(defaultName);

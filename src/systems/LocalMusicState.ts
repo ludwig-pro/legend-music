@@ -17,7 +17,7 @@ import {
 import { settings$ } from "@/systems/Settings";
 import { stateSaved$ } from "@/systems/State";
 import { ensureCacheDirectory, getCacheDirectory } from "@/utils/cacheDirectories";
-import { writeM3U } from "@/utils/m3u";
+import { parseM3U, writeM3U } from "@/utils/m3u";
 import { loadQueueFromM3U } from "@/utils/m3uManager";
 import { perfCount, perfLog } from "@/utils/perfLogger";
 import { runAfterInteractions, runAfterInteractionsWithLabel } from "@/utils/runAfterInteractions";
@@ -42,6 +42,8 @@ export interface LocalPlaylist {
     filePath: string;
     trackPaths: string[];
     trackCount: number;
+    source: "cache" | "library-folder";
+    originRoot?: string;
 }
 
 export interface LocalMusicState {
@@ -890,6 +892,107 @@ const sanitizePlaylistFileName = (name: string): string => {
     return sanitized.length > 0 ? sanitized : "New Playlist";
 };
 
+const PLAYLIST_EXTENSIONS = [".m3u", ".m3u8"];
+const isPlaylistFileName = (name: string): boolean => {
+    const lower = name.toLowerCase();
+    return PLAYLIST_EXTENSIONS.some((ext) => lower.endsWith(ext));
+};
+
+const isQueuePlaylistFileName = (name: string): boolean => name.toLowerCase() === "queue.m3u";
+
+const directoryFromPath = (path: string): string => {
+    const filePath = toFilePath(path);
+    const lastSlash = filePath.lastIndexOf("/");
+    return lastSlash === -1 ? filePath : filePath.slice(0, lastSlash);
+};
+
+const resolveTrackPathForPlaylist = (playlistFilePath: string, entryPath: string): string => {
+    const filePath = toFilePath(entryPath);
+    if (filePath.startsWith("/")) {
+        return filePath;
+    }
+
+    if (/^[a-z][a-z0-9+.-]*:\/\//i.test(filePath)) {
+        return filePath;
+    }
+
+    const baseDir = directoryFromPath(playlistFilePath);
+    return `${baseDir}/${filePath}`.replace(/\/{2,}/g, "/");
+};
+
+const readPlaylistTrackPaths = (file: File): string[] => {
+    const content = file.text();
+    const parsed = parseM3U(content);
+    return parsed.songs.map((track) => resolveTrackPathForPlaylist(file.uri, track.filePath));
+};
+
+export async function findM3UFilesInLibraryRoots(
+    roots: string[],
+): Promise<Array<{ filePath: string; originRoot: string }>> {
+    const normalizedRoots = roots.map((root) => root.trim()).filter(Boolean);
+    if (normalizedRoots.length === 0) {
+        return [];
+    }
+
+    const discovered = new Map<string, string>();
+    const maxDepth = 6;
+    const maxEntriesPerDirectory = 2000;
+
+    const walk = (directory: Directory, depth: number, originRoot: string) => {
+        if (depth > maxDepth) {
+            return;
+        }
+
+        let entries: (Directory | File)[] = [];
+        try {
+            entries = directory.list();
+        } catch {
+            return;
+        }
+
+        if (entries.length > maxEntriesPerDirectory) {
+            return;
+        }
+
+        for (const entry of entries) {
+            if (entry instanceof File) {
+                if (!isPlaylistFileName(entry.name) || isQueuePlaylistFileName(entry.name)) {
+                    continue;
+                }
+
+                const filePath = toFilePath(entry.uri);
+                if (!discovered.has(filePath)) {
+                    discovered.set(filePath, originRoot);
+                }
+                continue;
+            }
+
+            if (entry instanceof Directory) {
+                if (entry.name.startsWith(".")) {
+                    continue;
+                }
+
+                walk(entry, depth + 1, originRoot);
+            }
+        }
+    };
+
+    for (const root of normalizedRoots) {
+        try {
+            const directory = new Directory(root);
+            if (!directory.exists) {
+                continue;
+            }
+
+            walk(directory, 0, toFilePath(root));
+        } catch (error) {
+            console.warn(`Failed to scan playlists in library root: ${root}`, error);
+        }
+    }
+
+    return Array.from(discovered.entries()).map(([filePath, originRoot]) => ({ filePath, originRoot }));
+}
+
 export async function loadLocalPlaylists(): Promise<void> {
     perfLog("LocalMusic.loadLocalPlaylists.start");
 
@@ -905,42 +1008,75 @@ export async function loadLocalPlaylists(): Promise<void> {
         return;
     }
 
-    const playlists: LocalPlaylist[] = [];
+    const cachePlaylists: LocalPlaylist[] = [];
 
     for (const entry of entries) {
         if (!(entry instanceof File)) {
             continue;
         }
 
-        if (!entry.name.toLowerCase().endsWith(".m3u")) {
+        if (!isPlaylistFileName(entry.name)) {
             continue;
         }
 
-        if (entry.name.toLowerCase() === "queue.m3u") {
+        if (isQueuePlaylistFileName(entry.name)) {
             continue;
         }
 
         try {
-            const content = entry.text();
-            const trackPaths = content
-                .split(/\r?\n/)
-                .map((line) => line.trim())
-                .filter((line) => line.length > 0 && !line.startsWith("#"))
-                .map((line) => toFilePath(line));
-
-            playlists.push({
+            const trackPaths = readPlaylistTrackPaths(entry);
+            cachePlaylists.push({
                 id: toFilePath(entry.uri),
-                name: entry.name.replace(/\.m3u$/i, ""),
+                name: entry.name.replace(/\.(m3u|m3u8)$/i, ""),
                 filePath: toFilePath(entry.uri),
                 trackPaths,
                 trackCount: trackPaths.length,
+                source: "cache",
             });
         } catch (error) {
             console.warn(`Failed to read playlist ${entry.uri}:`, error);
         }
     }
 
-    playlists.sort((a, b) => a.name.localeCompare(b.name));
+    const discoveredPlaylists = await findM3UFilesInLibraryRoots(librarySettings$.paths.get());
+    const cachePlaylistIds = new Set(cachePlaylists.map((playlist) => playlist.id));
+    const libraryPlaylists: LocalPlaylist[] = [];
+
+    for (const discovered of discoveredPlaylists) {
+        const filePath = discovered.filePath;
+        if (cachePlaylistIds.has(filePath)) {
+            continue;
+        }
+
+        try {
+            const file = new File(filePath);
+            if (!file.exists) {
+                continue;
+            }
+
+            const trackPaths = readPlaylistTrackPaths(file);
+            libraryPlaylists.push({
+                id: toFilePath(file.uri),
+                name: file.name.replace(/\.(m3u|m3u8)$/i, ""),
+                filePath: toFilePath(file.uri),
+                trackPaths,
+                trackCount: trackPaths.length,
+                source: "library-folder",
+                originRoot: discovered.originRoot,
+            });
+        } catch (error) {
+            console.warn(`Failed to read library playlist ${filePath}:`, error);
+        }
+    }
+
+    const playlists = [...cachePlaylists, ...libraryPlaylists];
+    playlists.sort((a, b) => {
+        if (a.source !== b.source) {
+            return a.source === "cache" ? -1 : 1;
+        }
+
+        return a.name.localeCompare(b.name);
+    });
 
     localMusicState$.playlists.set(playlists);
     perfLog("LocalMusic.loadLocalPlaylists.end", { total: playlists.length });
@@ -963,6 +1099,7 @@ export async function createLocalPlaylist(name: string): Promise<LocalPlaylist> 
         filePath,
         trackPaths: [],
         trackCount: 0,
+        source: "cache",
     };
 
     const currentPlaylists = localMusicState$.playlists.peek();

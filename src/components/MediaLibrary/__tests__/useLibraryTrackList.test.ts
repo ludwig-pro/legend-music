@@ -105,6 +105,7 @@ describe("buildTrackItems", () => {
                 filePath: "/cache/data/test.m3u",
                 trackPaths: ["/music/song-b.mp3", "/music/missing.mp3", "/music/song-a.mp3"],
                 trackCount: 3,
+                source: "cache",
             },
         ];
 

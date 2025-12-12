@@ -24,7 +24,14 @@ const tracks: LocalTrack[] = [
 ];
 
 const playlists: LocalPlaylist[] = [
-    { id: "pl-1", name: "Ambient Mix", filePath: "/playlists/ambient.m3u", trackPaths: [], trackCount: 10 },
+    {
+        id: "pl-1",
+        name: "Ambient Mix",
+        filePath: "/playlists/ambient.m3u",
+        trackPaths: [],
+        trackCount: 10,
+        source: "cache",
+    },
 ];
 
 const albums: LibraryItem[] = [{ id: "album-1", type: "album", name: "Album Alpha", trackCount: 12 }];
