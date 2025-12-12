@@ -6,13 +6,24 @@ import { Platform, Text, View } from "react-native";
 import type { NativeMouseEvent } from "react-native-macos";
 
 import { Button } from "@/components/Button";
-import { DraggableItem, MEDIA_LIBRARY_DRAG_ZONE_ID, type MediaLibraryDragData } from "@/components/dnd";
+import {
+    DraggableItem,
+    DroppableZone,
+    LOCAL_PLAYLIST_DRAG_ZONE_ID,
+    MEDIA_LIBRARY_DRAG_ZONE_ID,
+    type DragData,
+    type DraggedItem,
+    type LocalPlaylistDragData,
+    type MediaLibraryDragData,
+} from "@/components/dnd";
 import { localPlayerState$ } from "@/components/LocalAudioPlayer";
 import type { TrackData } from "@/components/TrackItem";
 import { Table, TableCell, TableHeader, TableRow, type TableColumnSpec } from "@/components/Table";
 import { useListItemStyles } from "@/hooks/useListItemStyles";
 import { type ContextMenuItem, showContextMenu } from "@/native-modules/ContextMenu";
 import { type NativeDragTrack, TrackDragSource } from "@/native-modules/TrackDragSource";
+import { libraryUI$ } from "@/systems/LibraryState";
+import { localMusicState$, saveLocalPlaylistTracks } from "@/systems/LocalMusicState";
 import type { QueueAction } from "@/utils/queueActions";
 import { cn } from "@/utils/cn";
 import { useLibraryTrackList } from "./useLibraryTrackList";
@@ -28,10 +39,27 @@ export function TrackList(_props: TrackListProps) {
         handleTrackDoubleClick,
         handleTrackContextMenu,
         handleTrackQueueAction,
+        syncSelectionAfterReorder,
         handleNativeDragStart,
         buildDragData,
         keyExtractor,
     } = useLibraryTrackList();
+
+    const selectedView = useValue(libraryUI$.selectedView);
+    const selectedPlaylistId = useValue(libraryUI$.selectedPlaylistId);
+    const searchQuery = useValue(libraryUI$.searchQuery);
+    const playlists = useValue(localMusicState$.playlists);
+
+    const selectedPlaylist = useMemo(() => {
+        if (selectedView !== "playlist" || !selectedPlaylistId) {
+            return null;
+        }
+
+        return playlists.find((pl) => pl.id === selectedPlaylistId) ?? null;
+    }, [playlists, selectedPlaylistId, selectedView]);
+
+    const isPlaylistEditable =
+        selectedView === "playlist" && selectedPlaylist !== null && searchQuery.trim().length === 0;
 
     const columns = useMemo<TableColumnSpec[]>(
         () => [
@@ -45,13 +73,83 @@ export function TrackList(_props: TrackListProps) {
         [],
     );
 
+    const allowPlaylistDrop = useCallback(
+        (item: DraggedItem<DragData>) => {
+            if (!isPlaylistEditable || !selectedPlaylist) {
+                return false;
+            }
+
+            const data = item.data;
+            if (!data) {
+                return false;
+            }
+
+            if (data.type === "local-playlist-track" && item.sourceZoneId === LOCAL_PLAYLIST_DRAG_ZONE_ID) {
+                return data.playlistId === selectedPlaylist.id;
+            }
+
+            if (data.type === "media-library-tracks" && item.sourceZoneId === MEDIA_LIBRARY_DRAG_ZONE_ID) {
+                return data.tracks.length > 0;
+            }
+
+            return false;
+        },
+        [isPlaylistEditable, selectedPlaylist],
+    );
+
+    const handleDropAtPosition = useCallback(
+        async (item: DraggedItem<DragData>, targetPosition: number) => {
+            if (!isPlaylistEditable || !selectedPlaylist) {
+                return;
+            }
+
+            const data = item.data;
+            const currentPaths = selectedPlaylist.trackPaths;
+            const boundedTarget = Math.max(0, Math.min(targetPosition, currentPaths.length));
+
+            if (data.type === "local-playlist-track") {
+                if (data.playlistId !== selectedPlaylist.id) {
+                    return;
+                }
+
+                const sourceIndex = Math.max(0, Math.min(data.sourceIndex, currentPaths.length - 1));
+                if (
+                    sourceIndex === boundedTarget ||
+                    (sourceIndex < boundedTarget && sourceIndex + 1 === boundedTarget)
+                ) {
+                    return;
+                }
+
+                const nextPaths = currentPaths.slice();
+                const [movedPath] = nextPaths.splice(sourceIndex, 1);
+                const insertIndex = boundedTarget > sourceIndex ? boundedTarget - 1 : boundedTarget;
+                nextPaths.splice(insertIndex, 0, movedPath);
+
+                await saveLocalPlaylistTracks(selectedPlaylist, nextPaths);
+                syncSelectionAfterReorder(sourceIndex, boundedTarget);
+                return;
+            }
+
+            if (data.type === "media-library-tracks") {
+                const insertPaths = data.tracks.map((track) => track.filePath);
+                const nextPaths = currentPaths.slice();
+                nextPaths.splice(boundedTarget, 0, ...insertPaths);
+                await saveLocalPlaylistTracks(selectedPlaylist, nextPaths);
+            }
+        },
+        [isPlaylistEditable, selectedPlaylist, syncSelectionAfterReorder],
+    );
+
     const renderTrack = useCallback(
         ({ item, index }: { item: TrackData; index: number }) => {
             if (item.isSeparator) {
                 return <LibrarySeparatorRow title={item.title} />;
             }
 
-            return (
+            const trackPathForPlaylist =
+                isPlaylistEditable && selectedPlaylist ? selectedPlaylist.trackPaths[index] ?? item.id : null;
+
+            const trackRow = (
                 <LibraryTrackRow
                     track={item}
                     index={index}
@@ -63,16 +161,38 @@ export function TrackList(_props: TrackListProps) {
                     selectedIndices$={selectedIndices$}
                     buildDragData={buildDragData}
                     onNativeDragStart={handleNativeDragStart}
+                    isPlaylistEditable={isPlaylistEditable}
+                    playlistId={selectedPlaylist?.id ?? null}
+                    trackPath={trackPathForPlaylist}
                 />
             );
+
+            if (isPlaylistEditable && Platform.OS !== "macos") {
+                return (
+                    <View>
+                        {trackRow}
+                        <LocalPlaylistDropZone
+                            position={index + 1}
+                            allowDrop={allowPlaylistDrop}
+                            onDrop={handleDropAtPosition}
+                        />
+                    </View>
+                );
+            }
+
+            return trackRow;
         },
         [
+            allowPlaylistDrop,
             buildDragData,
             handleTrackClick,
             handleTrackDoubleClick,
             handleTrackContextMenu,
             handleTrackQueueAction,
             handleNativeDragStart,
+            handleDropAtPosition,
+            isPlaylistEditable,
+            selectedPlaylist,
             selectedIndices$,
             columns,
         ],
@@ -85,6 +205,15 @@ export function TrackList(_props: TrackListProps) {
                     data={tracks}
                     keyExtractor={keyExtractor}
                     renderItem={renderTrack}
+                    ListHeaderComponent={
+                        isPlaylistEditable && Platform.OS !== "macos" ? (
+                            <LocalPlaylistDropZone
+                                position={0}
+                                allowDrop={allowPlaylistDrop}
+                                onDrop={handleDropAtPosition}
+                            />
+                        ) : undefined
+                    }
                     style={{ flex: 1 }}
                     contentContainerStyle={
                         tracks.length
@@ -123,6 +252,33 @@ function LibrarySeparatorRow({ title }: { title: string }) {
     );
 }
 
+interface LocalPlaylistDropZoneProps {
+    position: number;
+    allowDrop: (item: DraggedItem<DragData>) => boolean;
+    onDrop: (item: DraggedItem<DragData>, position: number) => void;
+}
+
+function LocalPlaylistDropZone({ position, allowDrop, onDrop }: LocalPlaylistDropZoneProps) {
+    const dropId = `local-playlist-drop-${position}`;
+    const isFirstZone = position === 0;
+
+    return (
+        <DroppableZone
+            id={dropId}
+            allowDrop={(item) => allowDrop(item as DraggedItem<DragData>)}
+            onDrop={(item) => onDrop(item as DraggedItem<DragData>, position)}
+        >
+            {(isActive) => (
+                <View
+                    pointerEvents="none"
+                    className={cn("h-[3px] rounded-full bg-blue-500", isFirstZone ? "-mb-[3px]" : "-mt-[3px]")}
+                    style={{ opacity: isActive ? 1 : 0 }}
+                />
+            )}
+        </DroppableZone>
+    );
+}
+
 interface LibraryTrackRowProps {
     track: TrackData;
     index: number;
@@ -134,6 +290,9 @@ interface LibraryTrackRowProps {
     selectedIndices$: Observable<Set<number>>;
     buildDragData: (activeIndex: number) => MediaLibraryDragData;
     onNativeDragStart: () => void;
+    isPlaylistEditable: boolean;
+    playlistId: string | null;
+    trackPath: string | null;
 }
 
 const TRACK_ROW_MENU_ITEMS: ContextMenuItem[] = [
@@ -153,6 +312,9 @@ function LibraryTrackRow({
     selectedIndices$,
     buildDragData,
     onNativeDragStart,
+    isPlaylistEditable,
+    playlistId,
+    trackPath,
 }: LibraryTrackRowProps) {
     const dragData = buildDragData(index);
     const listItemStyles = useListItemStyles();
@@ -232,6 +394,26 @@ function LibraryTrackRow({
             >
                 {row}
             </TrackDragSource>
+        );
+    }
+
+    if (isPlaylistEditable && playlistId && trackPath) {
+        const playlistDragData = {
+            type: "local-playlist-track",
+            playlistId,
+            trackPath,
+            sourceIndex: index,
+        } satisfies LocalPlaylistDragData;
+
+        return (
+            <DraggableItem
+                id={`local-playlist-track-${playlistId}-${index}`}
+                zoneId={LOCAL_PLAYLIST_DRAG_ZONE_ID}
+                data={playlistDragData}
+                className="flex-1"
+            >
+                {row}
+            </DraggableItem>
         );
     }
 

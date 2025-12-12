@@ -8,6 +8,7 @@ import { localAudioControls } from "@/components/LocalAudioPlayer";
 import type { TrackData } from "@/components/TrackItem";
 import { usePlaylistSelection } from "@/hooks/usePlaylistSelection";
 import { showContextMenu } from "@/native-modules/ContextMenu";
+import { localMusicState$, saveLocalPlaylistTracks, type LocalPlaylist } from "@/systems/LocalMusicState";
 import {
     getArtistKey,
     library$,
@@ -17,6 +18,7 @@ import {
     type LibraryView,
 } from "@/systems/LibraryState";
 import { getQueueAction, type QueueAction } from "@/utils/queueActions";
+import { buildTrackLookup } from "@/utils/trackResolution";
 import { buildTrackContextMenuItems, handleTrackContextMenuSelection } from "@/utils/trackContextMenu";
 
 type TrackListItem = TrackData;
@@ -29,6 +31,7 @@ interface UseLibraryTrackListResult {
     handleTrackDoubleClick: (index: number, event?: NativeMouseEvent) => void;
     handleTrackContextMenu: (index: number, event: NativeMouseEvent) => Promise<void>;
     handleTrackQueueAction: (index: number, action: QueueAction) => void;
+    syncSelectionAfterReorder: (fromIndex: number, toIndex: number) => void;
     handleNativeDragStart: () => void;
     buildDragData: (activeIndex: number) => MediaLibraryDragData;
     keyExtractor: (item: TrackData) => string;
@@ -36,14 +39,20 @@ interface UseLibraryTrackListResult {
 
 interface BuildTrackItemsInput {
     tracks: LibraryTrack[];
+    playlists: LocalPlaylist[];
     selectedView: LibraryView;
     selectedPlaylistId: string | null;
     searchQuery: string;
 }
 
-export function buildTrackItems({ tracks, selectedView, selectedPlaylistId, searchQuery }: BuildTrackItemsInput) {
+export function buildTrackItems({
+    tracks,
+    playlists,
+    selectedView,
+    selectedPlaylistId,
+    searchQuery,
+}: BuildTrackItemsInput) {
     const normalizedQuery = searchQuery.trim().toLowerCase();
-    void selectedPlaylistId;
 
     const toTrackItem = (track: LibraryTrack, viewIndex: number): LibraryTrackListItem => ({
         id: track.id,
@@ -153,6 +162,40 @@ export function buildTrackItems({ tracks, selectedView, selectedPlaylistId, sear
         return { trackItems };
     }
 
+    if (selectedView === "playlist") {
+        if (!selectedPlaylistId) {
+            return { trackItems: [] as LibraryTrackListItem[] };
+        }
+
+        const playlist = playlists.find((pl) => pl.id === selectedPlaylistId);
+        if (!playlist) {
+            return { trackItems: [] as LibraryTrackListItem[] };
+        }
+
+        const trackLookup = buildTrackLookup(tracks);
+        const makeMissingTrack = (path: string): LibraryTrack => {
+            const fileName = path.split("/").pop() || path;
+            return {
+                id: path,
+                title: fileName,
+                artist: "Missing Track",
+                album: "",
+                duration: "",
+                filePath: path,
+                fileName,
+                isMissing: true,
+            };
+        };
+
+        const orderedTracks: LibraryTrack[] = playlist.trackPaths.map(
+            (path) => (trackLookup.get(path) as LibraryTrack | undefined) ?? makeMissingTrack(path),
+        );
+
+        return {
+            trackItems: orderedTracks.map((track, index) => toTrackItem(track, index)),
+        };
+    }
+
     return {
         trackItems: tracks.map((track, index) => toTrackItem(track, index)),
     };
@@ -163,26 +206,51 @@ export function useLibraryTrackList(): UseLibraryTrackListResult {
     const selectedPlaylistId = useValue(libraryUI$.selectedPlaylistId);
     const searchQuery = useValue(libraryUI$.searchQuery);
     const allTracks = useValue(library$.tracks);
+    const playlists = useValue(localMusicState$.playlists);
     const skipClickRef = useRef(false);
 
     const { trackItems } = useMemo(
         () =>
             buildTrackItems({
                 tracks: allTracks,
+                playlists,
                 selectedView,
                 selectedPlaylistId,
                 searchQuery,
             }),
-        [allTracks, searchQuery, selectedPlaylistId, selectedView],
+        [allTracks, playlists, searchQuery, selectedPlaylistId, selectedView],
     );
+
+    const isSearchActive = searchQuery.trim().length > 0;
+    const selectedPlaylist =
+        selectedView === "playlist" && selectedPlaylistId
+            ? playlists.find((pl) => pl.id === selectedPlaylistId) ?? null
+            : null;
+
+    const handleDeleteSelection = useCallback(
+        (indices: number[]) => {
+            if (!selectedPlaylist || isSearchActive || selectedView !== "playlist") {
+                return;
+            }
+
+            const indicesToRemove = new Set(indices);
+            const nextPaths = selectedPlaylist.trackPaths.filter((_path, index) => !indicesToRemove.has(index));
+            saveLocalPlaylistTracks(selectedPlaylist, nextPaths);
+        },
+        [isSearchActive, selectedPlaylist, selectedView],
+    );
+
+    const selectionOptions =
+        selectedView === "playlist" && selectedPlaylist && !isSearchActive
+            ? { items: trackItems, onDeleteSelection: handleDeleteSelection }
+            : { items: trackItems };
 
     const {
         selectedIndices$,
         handleTrackClick: handleSelectionClick,
         clearSelection,
-    } = usePlaylistSelection({
-        items: trackItems,
-    });
+        syncSelectionAfterReorder,
+    } = usePlaylistSelection(selectionOptions);
 
     useObserveEffect(() => {
         libraryUI$.selectedView.get();
@@ -321,6 +389,7 @@ export function useLibraryTrackList(): UseLibraryTrackListResult {
         handleTrackDoubleClick,
         handleTrackContextMenu,
         handleTrackQueueAction: handleTrackAction,
+        syncSelectionAfterReorder,
         handleNativeDragStart,
         buildDragData,
         keyExtractor,

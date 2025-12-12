@@ -10,7 +10,15 @@ export type MediaLibraryDragData = {
     tracks: LocalTrack[];
 };
 
-export type DragData = PlaylistDragData | MediaLibraryDragData;
+export type LocalPlaylistDragData = {
+    type: "local-playlist-track";
+    playlistId: string;
+    trackPath: string;
+    sourceIndex: number;
+};
+
+export type DragData = PlaylistDragData | MediaLibraryDragData | LocalPlaylistDragData;
 
 export const PLAYLIST_DRAG_ZONE_ID = "playlist-tracks";
 export const MEDIA_LIBRARY_DRAG_ZONE_ID = "media-library-tracks";
+export const LOCAL_PLAYLIST_DRAG_ZONE_ID = "local-playlist-tracks";

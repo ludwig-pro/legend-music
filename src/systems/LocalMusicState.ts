@@ -17,6 +17,7 @@ import {
 import { settings$ } from "@/systems/Settings";
 import { stateSaved$ } from "@/systems/State";
 import { ensureCacheDirectory, getCacheDirectory } from "@/utils/cacheDirectories";
+import { writeM3U } from "@/utils/m3u";
 import { loadQueueFromM3U } from "@/utils/m3uManager";
 import { perfCount, perfLog } from "@/utils/perfLogger";
 import { runAfterInteractions, runAfterInteractionsWithLabel } from "@/utils/runAfterInteractions";
@@ -970,6 +971,34 @@ export async function createLocalPlaylist(name: string): Promise<LocalPlaylist> 
     localMusicState$.playlists.set(nextPlaylists);
 
     return playlist;
+}
+
+export async function saveLocalPlaylistTracks(playlist: LocalPlaylist, trackPaths: string[]): Promise<void> {
+    try {
+        const m3uTracks = trackPaths.map((filePath) => ({
+            id: filePath,
+            duration: -1,
+            title: filePath.split("/").pop() || filePath,
+            filePath,
+        }));
+        const m3uContent = writeM3U({ songs: m3uTracks, suggestions: [] });
+
+        const file = new File(playlist.filePath);
+        file.write(m3uContent);
+
+        const nextPlaylists = localMusicState$.playlists.peek().map((pl) =>
+            pl.id === playlist.id
+                ? {
+                      ...pl,
+                      trackPaths: [...trackPaths],
+                      trackCount: trackPaths.length,
+                  }
+                : pl,
+        );
+        localMusicState$.playlists.set(nextPlaylists);
+    } catch (error) {
+        console.error("Failed to save local playlist tracks:", error);
+    }
 }
 
 // Set current playlist selection
