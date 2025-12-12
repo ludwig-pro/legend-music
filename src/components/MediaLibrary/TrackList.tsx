@@ -48,6 +48,7 @@ export function TrackList(_props: TrackListProps) {
     const selectedView = useValue(libraryUI$.selectedView);
     const selectedPlaylistId = useValue(libraryUI$.selectedPlaylistId);
     const searchQuery = useValue(libraryUI$.searchQuery);
+    const playlistSort = useValue(libraryUI$.playlistSort);
     const playlists = useValue(localMusicState$.playlists);
 
     const selectedPlaylist = useMemo(() => {
@@ -59,7 +60,11 @@ export function TrackList(_props: TrackListProps) {
     }, [playlists, selectedPlaylistId, selectedView]);
 
     const isPlaylistEditable =
-        selectedView === "playlist" && selectedPlaylist !== null && searchQuery.trim().length === 0;
+        selectedView === "playlist" &&
+        selectedPlaylist !== null &&
+        selectedPlaylist.source === "cache" &&
+        playlistSort === "playlist-order" &&
+        searchQuery.trim().length === 0;
 
     const columns = useMemo<TableColumnSpec[]>(
         () => [
@@ -71,6 +76,31 @@ export function TrackList(_props: TrackListProps) {
             { id: "actions", width: 28, align: "center" },
         ],
         [],
+    );
+
+    const handlePlaylistSortClick = useCallback(
+        async (event: NativeMouseEvent) => {
+            if (selectedView !== "playlist" || !selectedPlaylist) {
+                return;
+            }
+
+            const x = event.pageX ?? event.x ?? 0;
+            const y = event.pageY ?? event.y ?? 0;
+            const selection = await showContextMenu(PLAYLIST_SORT_MENU_ITEMS, { x, y });
+            if (!selection) {
+                return;
+            }
+
+            if (
+                selection === "playlist-order" ||
+                selection === "title" ||
+                selection === "artist" ||
+                selection === "album"
+            ) {
+                libraryUI$.playlistSort.set(selection);
+            }
+        },
+        [selectedPlaylist, selectedView],
     );
 
     const allowPlaylistDrop = useCallback(
@@ -200,6 +230,36 @@ export function TrackList(_props: TrackListProps) {
 
     return (
         <View className="flex-1 min-h-0">
+            {selectedView === "playlist" && selectedPlaylist ? (
+                <View className="px-3 py-2 border-b border-white/10 flex-row items-center gap-2">
+                    <View className="flex-1 min-w-0">
+                        <Text className="text-sm font-semibold text-text-primary" numberOfLines={1}>
+                            {selectedPlaylist.name}
+                        </Text>
+                        <Text className="text-xs text-text-secondary" numberOfLines={1}>
+                            {selectedPlaylist.trackCount} {selectedPlaylist.trackCount === 1 ? "track" : "tracks"}
+                        </Text>
+                    </View>
+                    <Button
+                        size="small"
+                        variant="secondary"
+                        className={cn("px-2", searchQuery.trim().length > 0 ? "opacity-50" : "")}
+                        disabled={searchQuery.trim().length > 0}
+                        onClick={handlePlaylistSortClick}
+                    >
+                        <Text className="text-xs text-text-primary">
+                            Sort:{" "}
+                            {playlistSort === "playlist-order"
+                                ? "Playlist order"
+                                : playlistSort === "title"
+                                  ? "Title"
+                                  : playlistSort === "artist"
+                                    ? "Artist"
+                                    : "Album"}
+                        </Text>
+                    </Button>
+                </View>
+            ) : null}
             <Table header={<TableHeader columns={columns} />}>
                 <LegendList
                     data={tracks}
@@ -299,6 +359,13 @@ const TRACK_ROW_MENU_ITEMS: ContextMenuItem[] = [
     { id: "play-now", title: "Play Now" },
     { id: "play-next", title: "Play Next" },
     { id: "star", title: "Star", enabled: false },
+];
+
+const PLAYLIST_SORT_MENU_ITEMS: ContextMenuItem[] = [
+    { id: "playlist-order", title: "Playlist order" },
+    { id: "title", title: "Title" },
+    { id: "artist", title: "Artist" },
+    { id: "album", title: "Album" },
 ];
 
 function LibraryTrackRow({

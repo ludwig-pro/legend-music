@@ -40,6 +40,7 @@ describe("buildTrackItems", () => {
             selectedView: "songs",
             selectedPlaylistId: null,
             searchQuery: "",
+            playlistSort: "playlist-order",
         });
 
         expect(result.trackItems.map((track) => track.id)).toEqual(["1", "2", "3"]);
@@ -52,6 +53,7 @@ describe("buildTrackItems", () => {
             selectedView: "artists",
             selectedPlaylistId: null,
             searchQuery: "",
+            playlistSort: "playlist-order",
         });
 
         expect(result.trackItems.map((item) => item.title)).toEqual([
@@ -71,6 +73,7 @@ describe("buildTrackItems", () => {
             selectedView: "albums",
             selectedPlaylistId: null,
             searchQuery: "",
+            playlistSort: "playlist-order",
         });
 
         expect(result.trackItems.map((item) => item.title)).toEqual([
@@ -91,6 +94,7 @@ describe("buildTrackItems", () => {
             selectedView: "artists",
             selectedPlaylistId: null,
             searchQuery: "album y",
+            playlistSort: "playlist-order",
         });
 
         expect(result.trackItems.map((item) => item.title)).toEqual(["— Artist 2 —", "Song B"]);
@@ -115,6 +119,7 @@ describe("buildTrackItems", () => {
             selectedView: "playlist",
             selectedPlaylistId: playlists[0].id,
             searchQuery: "",
+            playlistSort: "playlist-order",
         });
 
         expect(result.trackItems.map((item) => item.id)).toEqual(["2", "/music/missing.mp3", "1"]);
@@ -128,6 +133,7 @@ describe("buildTrackItems", () => {
             selectedView: "songs",
             selectedPlaylistId: null,
             searchQuery: "",
+            playlistSort: "playlist-order",
         });
 
         const songA = result.trackItems.find((track) => track.id === "1");

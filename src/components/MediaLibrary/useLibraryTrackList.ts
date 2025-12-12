@@ -18,6 +18,7 @@ import {
     normalizeArtistName,
     type LibraryTrack,
     type LibraryView,
+    type PlaylistSortMode,
 } from "@/systems/LibraryState";
 import { getQueueAction, type QueueAction } from "@/utils/queueActions";
 import { buildTrackLookup } from "@/utils/trackResolution";
@@ -47,6 +48,7 @@ interface BuildTrackItemsInput {
     selectedView: LibraryView;
     selectedPlaylistId: string | null;
     searchQuery: string;
+    playlistSort: PlaylistSortMode;
 }
 
 export function buildTrackItems({
@@ -55,6 +57,7 @@ export function buildTrackItems({
     selectedView,
     selectedPlaylistId,
     searchQuery,
+    playlistSort,
 }: BuildTrackItemsInput) {
     const normalizedQuery = searchQuery.trim().toLowerCase();
     const matchesQuery = (track: LibraryTrack): boolean => {
@@ -192,9 +195,31 @@ export function buildTrackItems({
         const orderedTracks: LibraryTrack[] = playlist.trackPaths.map(
             (path) => (trackLookup.get(path) as LibraryTrack | undefined) ?? makeMissingTrack(path),
         );
+        const shouldApplySort = !normalizedQuery && playlistSort !== "playlist-order";
+        const displayTracks = shouldApplySort
+            ? [...orderedTracks].sort((a, b) => {
+                  const valueA =
+                      playlistSort === "artist"
+                          ? a.artist
+                          : playlistSort === "album"
+                            ? a.album ?? ""
+                            : a.title;
+                  const valueB =
+                      playlistSort === "artist"
+                          ? b.artist
+                          : playlistSort === "album"
+                            ? b.album ?? ""
+                            : b.title;
+                  const compare = (valueA ?? "").localeCompare(valueB ?? "");
+                  if (compare !== 0) {
+                      return compare;
+                  }
+                  return (a.title ?? "").localeCompare(b.title ?? "");
+              })
+            : orderedTracks;
 
         return {
-            trackItems: (normalizedQuery ? orderedTracks.filter(matchesQuery) : orderedTracks).map((track, index) =>
+            trackItems: (normalizedQuery ? displayTracks.filter(matchesQuery) : displayTracks).map((track, index) =>
                 toTrackItem(track, index),
             ),
         };
@@ -209,6 +234,7 @@ export function useLibraryTrackList(): UseLibraryTrackListResult {
     const selectedView = useValue(libraryUI$.selectedView);
     const selectedPlaylistId = useValue(libraryUI$.selectedPlaylistId);
     const searchQuery = useValue(libraryUI$.searchQuery);
+    const playlistSort = useValue(libraryUI$.playlistSort);
     const allTracks = useValue(library$.tracks);
     const playlists = useValue(localMusicState$.playlists);
     const skipClickRef = useRef(false);
@@ -221,8 +247,9 @@ export function useLibraryTrackList(): UseLibraryTrackListResult {
                 selectedView,
                 selectedPlaylistId,
                 searchQuery,
+                playlistSort,
             }),
-        [allTracks, playlists, searchQuery, selectedPlaylistId, selectedView],
+        [allTracks, playlists, playlistSort, searchQuery, selectedPlaylistId, selectedView],
     );
 
     const isSearchActive = searchQuery.trim().length > 0;
@@ -230,10 +257,16 @@ export function useLibraryTrackList(): UseLibraryTrackListResult {
         selectedView === "playlist" && selectedPlaylistId
             ? playlists.find((pl) => pl.id === selectedPlaylistId) ?? null
             : null;
+    const isPlaylistEditable =
+        selectedView === "playlist" &&
+        selectedPlaylist !== null &&
+        selectedPlaylist.source === "cache" &&
+        !isSearchActive &&
+        playlistSort === "playlist-order";
 
     const handleDeleteSelection = useCallback(
         (indices: number[]) => {
-            if (!selectedPlaylist || isSearchActive || selectedView !== "playlist") {
+            if (!selectedPlaylist || !isPlaylistEditable || selectedView !== "playlist") {
                 return;
             }
 
@@ -261,11 +294,11 @@ export function useLibraryTrackList(): UseLibraryTrackListResult {
                 },
             );
         },
-        [isSearchActive, selectedPlaylist, selectedView],
+        [isPlaylistEditable, selectedPlaylist, selectedView],
     );
 
     const selectionOptions =
-        selectedView === "playlist" && selectedPlaylist && !isSearchActive
+        selectedView === "playlist" && selectedPlaylist && isPlaylistEditable
             ? { items: trackItems, onDeleteSelection: handleDeleteSelection }
             : { items: trackItems };
 
@@ -279,6 +312,7 @@ export function useLibraryTrackList(): UseLibraryTrackListResult {
     useObserveEffect(() => {
         libraryUI$.selectedView.get();
         libraryUI$.selectedPlaylistId.get();
+        libraryUI$.playlistSort.get();
         library$.tracks.get().length;
         clearSelection();
     });

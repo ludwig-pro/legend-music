@@ -21,11 +21,13 @@ export interface LibraryTrack extends LocalTrack {
 }
 
 export type LibraryView = "songs" | "artists" | "albums" | "starred" | "playlist";
+export type PlaylistSortMode = "playlist-order" | "title" | "artist" | "album";
 
 export interface LibraryUIState {
     selectedView: LibraryView;
     selectedPlaylistId: string | null;
     searchQuery: string;
+    playlistSort: PlaylistSortMode;
 }
 
 // Library UI state (persistent)
@@ -33,6 +35,7 @@ export const libraryUI$ = observable<LibraryUIState>({
     selectedView: "songs",
     selectedPlaylistId: null,
     searchQuery: "",
+    playlistSort: "playlist-order",
 });
 
 export function selectLibraryView(view: LibraryView): void {
