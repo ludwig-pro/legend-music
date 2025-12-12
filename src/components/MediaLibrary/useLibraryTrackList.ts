@@ -20,6 +20,7 @@ interface UseLibraryTrackListResult {
     handleTrackClick: (index: number, event?: NativeMouseEvent) => void;
     handleTrackDoubleClick: (index: number, event?: NativeMouseEvent) => void;
     handleTrackContextMenu: (index: number, event: NativeMouseEvent) => Promise<void>;
+    handleTrackQueueAction: (index: number, action: QueueAction) => void;
     handleNativeDragStart: () => void;
     buildDragData: (activeIndex: number) => MediaLibraryDragData;
     keyExtractor: (item: TrackData) => string;
@@ -228,6 +229,7 @@ export function useLibraryTrackList(): UseLibraryTrackListResult {
         handleTrackClick,
         handleTrackDoubleClick,
         handleTrackContextMenu,
+        handleTrackQueueAction: handleTrackAction,
         handleNativeDragStart,
         buildDragData,
         keyExtractor,
