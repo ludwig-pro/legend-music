@@ -1,10 +1,18 @@
 import { useValue } from "@legendapp/state/react";
 import { useCallback, useRef, useState } from "react";
-import { ScrollView, Text, TextInput, View } from "react-native";
+import { Platform, ScrollView, Text, TextInput, View } from "react-native";
 
 import { Button } from "@/components/Button";
+import {
+    DroppableZone,
+    MEDIA_LIBRARY_DRAG_ZONE_ID,
+    type DraggedItem,
+    type MediaLibraryDragData,
+} from "@/components/dnd";
 import type { TextInputSearchRef } from "@/components/TextInputSearch";
+import { showToast } from "@/components/Toast";
 import { useListItemStyles } from "@/hooks/useListItemStyles";
+import { DragDropView } from "@/native-modules/DragDropView";
 import { SUPPORT_PLAYLISTS } from "@/systems/constants";
 import {
     libraryUI$,
@@ -12,6 +20,7 @@ import {
     selectLibraryView,
     type LibraryView,
 } from "@/systems/LibraryState";
+import { addTracksToPlaylist } from "@/systems/LocalPlaylists";
 import { createLocalPlaylist, localMusicState$ } from "@/systems/LocalMusicState";
 import { cn } from "@/utils/cn";
 import { perfCount } from "@/utils/perfLogger";
@@ -34,6 +43,7 @@ export function MediaLibrarySidebar() {
     const searchInputRef = useRef<TextInputSearchRef | null>(null);
     const [tempPlaylistId, setTempPlaylistId] = useState<string | null>(null);
     const [tempPlaylistName, setTempPlaylistName] = useState("");
+    const [activeNativeDropPlaylistId, setActiveNativeDropPlaylistId] = useState<string | null>(null);
 
     const handleSelectView = useCallback(
         (view: LibraryView) => {
@@ -87,6 +97,21 @@ export function MediaLibrarySidebar() {
             selectLibraryView("songs");
         }
     }, [tempPlaylistId, tempPlaylistName]);
+
+    const handleAddTracks = useCallback(async (playlistId: string, trackPaths: string[]) => {
+        try {
+            const { addedPaths, playlist } = await addTracksToPlaylist(playlistId, trackPaths);
+            const addedCount = addedPaths.length;
+            if (addedCount > 0) {
+                showToast(`Added ${addedCount} ${addedCount === 1 ? "track" : "tracks"} to ${playlist.name}`, "info");
+            } else {
+                showToast("No new tracks to add", "info");
+            }
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "Failed to add tracks to playlist";
+            showToast(message, "error");
+        }
+    }, []);
 
     return (
         <View className="flex-1 min-h-0">
@@ -149,6 +174,9 @@ export function MediaLibrarySidebar() {
                                 const isSelected =
                                     selectedView === "playlist" && selectedPlaylistId === playlist.id;
                                 const isTemp = playlist.id === tempPlaylistId;
+                                const isDroppable = playlist.source === "cache" && Boolean(playlist.filePath);
+                                const isNativeDropActive =
+                                    Platform.OS === "macos" && isDroppable && activeNativeDropPlaylistId === playlist.id;
 
                                 if (isTemp) {
                                     return (
@@ -174,13 +202,15 @@ export function MediaLibrarySidebar() {
                                     );
                                 }
 
-                                return (
+                                const renderRow = (className?: string) => (
                                     <Button
-                                        key={playlist.id}
-                                        className={listItemStyles.getRowClassName({
-                                            variant: "compact",
-                                            isSelected,
-                                        })}
+                                        className={cn(
+                                            listItemStyles.getRowClassName({
+                                                variant: "compact",
+                                                isSelected,
+                                            }),
+                                            className,
+                                        )}
                                         onClick={() => selectLibraryPlaylist(playlist.id)}
                                     >
                                         <View className="flex-1 flex-row items-center justify-between overflow-hidden">
@@ -200,6 +230,85 @@ export function MediaLibrarySidebar() {
                                             </Text>
                                         </View>
                                     </Button>
+                                );
+
+                                if (Platform.OS === "macos") {
+                                    return (
+                                        <DragDropView
+                                            key={playlist.id}
+                                            className={cn(
+                                                "relative",
+                                                isNativeDropActive ? "bg-blue-500/15 border border-blue-400/50" : "",
+                                            )}
+                                            onTrackDragEnter={() => {
+                                                if (isDroppable) {
+                                                    setActiveNativeDropPlaylistId(playlist.id);
+                                                }
+                                            }}
+                                            onTrackDragLeave={() => {
+                                                setActiveNativeDropPlaylistId((prev) =>
+                                                    prev === playlist.id ? null : prev,
+                                                );
+                                            }}
+                                            onTrackDrop={(event) => {
+                                                setActiveNativeDropPlaylistId((prev) =>
+                                                    prev === playlist.id ? null : prev,
+                                                );
+                                                const tracks = event.nativeEvent.tracks ?? [];
+                                                const trackPaths = tracks
+                                                    .map((track) => track.filePath ?? track.id)
+                                                    .filter((path): path is string => Boolean(path));
+                                                if (isDroppable && trackPaths.length > 0) {
+                                                    void handleAddTracks(playlist.id, trackPaths);
+                                                }
+                                            }}
+                                        >
+                                            {renderRow()}
+                                        </DragDropView>
+                                    );
+                                }
+
+                                if (!isDroppable) {
+                                    return <View key={playlist.id}>{renderRow()}</View>;
+                                }
+
+                                return (
+                                    <View key={playlist.id} className="relative">
+                                        <DroppableZone
+                                            id={`library-playlist-drop-${playlist.id}`}
+                                            className="absolute inset-0"
+                                            allowDrop={(item: DraggedItem) => {
+                                                if (item.sourceZoneId !== MEDIA_LIBRARY_DRAG_ZONE_ID) {
+                                                    return false;
+                                                }
+
+                                                const data = item.data as MediaLibraryDragData;
+                                                return data?.type === "media-library-tracks" && data.tracks.length > 0;
+                                            }}
+                                            onDrop={(item: DraggedItem) => {
+                                                const data = item.data as MediaLibraryDragData;
+                                                if (data?.type !== "media-library-tracks") {
+                                                    return;
+                                                }
+
+                                                const trackPaths = data.tracks
+                                                    .map((track) => track.filePath)
+                                                    .filter((path): path is string => Boolean(path));
+                                                if (trackPaths.length === 0) {
+                                                    return;
+                                                }
+
+                                                void handleAddTracks(playlist.id, trackPaths);
+                                            }}
+                                        >
+                                            {(isActive) =>
+                                                isActive ? (
+                                                    <View className="absolute inset-0 rounded-md bg-blue-500/15 border border-blue-400/50" />
+                                                ) : null
+                                            }
+                                        </DroppableZone>
+                                        {renderRow()}
+                                    </View>
                                 );
                             })
                         )}
