@@ -20,18 +20,33 @@ export interface LibraryItem {
 export interface LibraryTrack extends LocalTrack {
 }
 
+export type LibraryView = "songs" | "artists" | "albums" | "starred" | "playlist" | "search";
+
 export interface LibraryUIState {
-    selectedItem: LibraryItem | null;
+    selectedView: LibraryView;
+    selectedPlaylistId: string | null;
     searchQuery: string;
-    selectedCollection: "artists" | "albums" | "playlists";
 }
 
 // Library UI state (persistent)
 export const libraryUI$ = observable<LibraryUIState>({
-    selectedItem: null,
+    selectedView: "songs",
+    selectedPlaylistId: null,
     searchQuery: "",
-    selectedCollection: "artists",
 });
+
+export function selectLibraryView(view: LibraryView): void {
+    libraryUI$.selectedView.set(view);
+
+    if (view !== "playlist") {
+        libraryUI$.selectedPlaylistId.set(null);
+    }
+}
+
+export function selectLibraryPlaylist(playlistId: string | null): void {
+    libraryUI$.selectedView.set("playlist");
+    libraryUI$.selectedPlaylistId.set(playlistId);
+}
 
 // Library data derived from local music state
 export const library$ = observable({

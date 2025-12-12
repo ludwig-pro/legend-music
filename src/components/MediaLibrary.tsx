@@ -1,63 +1,18 @@
 import { useValue } from "@legendapp/state/react";
-import { useRef } from "react";
 import { Text, View } from "react-native";
 
-import { Button } from "@/components/Button";
 import { Panel, PanelGroup, ResizeHandle } from "@/components/ResizablePanels";
-import type { TextInputSearchRef } from "@/components/TextInputSearch";
-import { SUPPORT_PLAYLISTS } from "@/systems/constants";
-import { libraryUI$ } from "@/systems/LibraryState";
 import { settings$ } from "@/systems/Settings";
-import type { SFSymbols } from "@/types/SFSymbols";
-import { ax } from "@/utils/ax";
-import { cn } from "@/utils/cn";
 import { perfCount } from "@/utils/perfLogger";
-import { LibraryTree } from "./MediaLibrary/LibraryTree";
-import { MediaLibrarySearchBar } from "./MediaLibrary/SearchBar";
+import { MediaLibrarySidebar } from "./MediaLibrary/Sidebar";
 import { TrackList } from "./MediaLibrary/TrackList";
-
-const collectionTabs = ax([
-    { id: "artists", label: "Artists", icon: "person.crop.square" as SFSymbols, marginTop: -7 },
-    { id: "albums", label: "Albums", icon: "rectangle.stack.person.crop" as SFSymbols, marginTop: -9 },
-    SUPPORT_PLAYLISTS && { id: "playlists", label: "Playlists", icon: "music.note.list" as SFSymbols, marginTop: -7 },
-] as const);
-
-function LibraryCollectionTabs() {
-    const selectedCollection = useValue(libraryUI$.selectedCollection);
-
-    return (
-        <View className="flex-row gap-1 px-2 pb-3">
-            {collectionTabs.map((tab) => (
-                <Button
-                    key={tab.id}
-                    variant="primary"
-                    size="small"
-                    icon={tab.icon}
-                    iconSize={14}
-                    iconMarginTop={tab.marginTop}
-                    className={cn(
-                        "flex-1 h-7",
-                        selectedCollection === tab.id ? "bg-white/15 text-white" : "bg-transparent text-white/70",
-                    )}
-                    onClick={() => libraryUI$.selectedCollection.set(tab.id)}
-                >
-                    <Text className="text-xs font-medium">{tab.label}</Text>
-                </Button>
-            ))}
-        </View>
-    );
-}
 
 export function MediaLibraryView() {
     perfCount("MediaLibraryView.render");
-    const searchQuery = useValue(libraryUI$.searchQuery);
-    const searchInputRef = useRef<TextInputSearchRef | null>(null);
     const showHints = useValue(settings$.general.showHints);
 
     return (
         <View className="flex-1 min-w-[360px] min-h-0 bg-black/5 border-l border-white/10">
-            <MediaLibrarySearchBar searchInputRef={searchInputRef} query={searchQuery} />
-            <LibraryCollectionTabs />
             <View className="flex-1">
                 <PanelGroup direction="horizontal">
                     <Panel
@@ -68,13 +23,13 @@ export function MediaLibraryView() {
                         order={0}
                         className="border-r border-white/10"
                     >
-                        <LibraryTree searchQuery={searchQuery} />
+                        <MediaLibrarySidebar />
                     </Panel>
 
                     <ResizeHandle panelId="sidebar" />
 
                     <Panel id="tracklist" minSize={80} defaultSize={200} order={1} flex>
-                        <TrackList searchQuery={searchQuery} />
+                        <TrackList />
                     </Panel>
                 </PanelGroup>
             </View>

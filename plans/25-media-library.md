@@ -168,7 +168,7 @@ Upgrade the media library UI to a two-pane, local-first experience: a left sideb
 - Add focused tests for playlist persistence helpers (mocking `expo-file-system/next` `File`/`Directory`) if helpers are added.
 
 ## Steps
-- [ ] Add new sidebar UI and `libraryUI$` selection model; remove top tabs.
+- [x] Add new sidebar UI and `libraryUI$` selection model; remove top tabs.
 - [ ] Build reusable Table primitives under `src/components/`.
 - [ ] Refactor MediaLibrary track list into a 5-column table with per-row menu and enqueue on double click.
 - [ ] Implement Artists/Albums grouping with separators and make search switch to global results.

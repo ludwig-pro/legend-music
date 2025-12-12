@@ -9,14 +9,13 @@ import { type NativeDragTrack, TrackDragSource } from "@/native-modules/TrackDra
 import { useLibraryTrackList } from "./useLibraryTrackList";
 
 interface TrackListProps {
-    searchQuery: string;
 }
 
 function getFixedItemSize() {
     return 32;
 }
 
-export function TrackList({ searchQuery }: TrackListProps) {
+export function TrackList(_props: TrackListProps) {
     const {
         tracks,
         selectedIndices$,
@@ -26,8 +25,7 @@ export function TrackList({ searchQuery }: TrackListProps) {
         handleNativeDragStart,
         buildDragData,
         keyExtractor,
-        selectedItem,
-    } = useLibraryTrackList(searchQuery);
+    } = useLibraryTrackList();
 
     const renderTrack = useCallback(
         ({ item, index }: { item: TrackData; index: number }) => (
@@ -51,14 +49,6 @@ export function TrackList({ searchQuery }: TrackListProps) {
             selectedIndices$,
         ],
     );
-
-    if (!selectedItem) {
-        return (
-            <View className="flex-1 min-h-0 justify-center items-start px-2.5">
-                <Text className="text-sm text-white/60 text-left">Select an item to view tracks</Text>
-            </View>
-        );
-    }
 
     return (
         <View className="flex-1 min-h-0">

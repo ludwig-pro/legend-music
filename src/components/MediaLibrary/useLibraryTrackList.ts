@@ -8,7 +8,7 @@ import { localAudioControls } from "@/components/LocalAudioPlayer";
 import type { TrackData } from "@/components/TrackItem";
 import { usePlaylistSelection } from "@/hooks/usePlaylistSelection";
 import { showContextMenu } from "@/native-modules/ContextMenu";
-import { getArtistKey, library$, libraryUI$, type LibraryItem, type LibraryTrack } from "@/systems/LibraryState";
+import { library$, libraryUI$, type LibraryTrack, type LibraryView } from "@/systems/LibraryState";
 import { getQueueAction, type QueueAction } from "@/utils/queueActions";
 import { buildTrackContextMenuItems, handleTrackContextMenuSelection } from "@/utils/trackContextMenu";
 
@@ -23,45 +23,23 @@ interface UseLibraryTrackListResult {
     handleNativeDragStart: () => void;
     buildDragData: (activeIndex: number) => MediaLibraryDragData;
     keyExtractor: (item: TrackData) => string;
-    selectedItem: LibraryItem | null;
 }
 
 interface BuildTrackItemsInput {
     tracks: LibraryTrack[];
-    selectedItem: LibraryItem | null;
+    selectedView: LibraryView;
+    selectedPlaylistId: string | null;
     searchQuery: string;
 }
 
-export function buildTrackItems({ tracks, selectedItem, searchQuery }: BuildTrackItemsInput) {
+export function buildTrackItems({ tracks, selectedView, selectedPlaylistId, searchQuery }: BuildTrackItemsInput) {
     const normalizedQuery = searchQuery.trim().toLowerCase();
-    const selectedArtistKey = selectedItem?.type === "artist" ? getArtistKey(selectedItem.name) : null;
+    void selectedPlaylistId;
 
-    if (!selectedItem && !normalizedQuery) {
-        return {
-            sourceTracks: [] as LibraryTrack[],
-            trackItems: [] as TrackListItem[],
-        };
-    }
+    let filteredTracks = tracks;
 
-    let filteredTracks: LibraryTrack[];
-    if (normalizedQuery) {
-        filteredTracks = tracks;
-    } else if (selectedItem?.type === "artist") {
-        filteredTracks = tracks.filter((track) => {
-            const trackArtistKey = getArtistKey(track.artist);
-            if (selectedArtistKey) {
-                return trackArtistKey === selectedArtistKey;
-            }
-
-            return track.artist === selectedItem.name;
-        });
-    } else if (selectedItem?.type === "album") {
-        const albumName = selectedItem.album ?? selectedItem.name;
-        filteredTracks = tracks.filter((track) => (track.album ?? "Unknown Album") === albumName);
-    } else if (selectedItem?.type === "playlist") {
-        filteredTracks = tracks;
-    } else {
-        filteredTracks = tracks;
+    if (selectedView === "starred") {
+        filteredTracks = [];
     }
 
     if (normalizedQuery) {
@@ -89,7 +67,10 @@ export function buildTrackItems({ tracks, selectedItem, searchQuery }: BuildTrac
 }
 
 export function useLibraryTrackList(searchQuery: string): UseLibraryTrackListResult {
-    const selectedItem = useValue(libraryUI$.selectedItem);
+export function useLibraryTrackList(): UseLibraryTrackListResult {
+    const selectedView = useValue(libraryUI$.selectedView);
+    const selectedPlaylistId = useValue(libraryUI$.selectedPlaylistId);
+    const searchQuery = useValue(libraryUI$.searchQuery);
     const allTracks = useValue(library$.tracks);
     const skipClickRef = useRef(false);
 
@@ -97,10 +78,11 @@ export function useLibraryTrackList(searchQuery: string): UseLibraryTrackListRes
         () =>
             buildTrackItems({
                 tracks: allTracks,
-                selectedItem,
+                selectedView,
+                selectedPlaylistId,
                 searchQuery,
             }),
-        [allTracks, searchQuery, selectedItem],
+        [allTracks, searchQuery, selectedPlaylistId, selectedView],
     );
 
     const {
@@ -112,11 +94,10 @@ export function useLibraryTrackList(searchQuery: string): UseLibraryTrackListRes
     });
 
     useObserveEffect(() => {
-        const selectedItemId = libraryUI$.selectedItem.get()?.id;
-        const trackCount = library$.tracks.get().length;
-        if (selectedItemId || trackCount >= 0) {
-            clearSelection();
-        }
+        libraryUI$.selectedView.get();
+        libraryUI$.selectedPlaylistId.get();
+        library$.tracks.get().length;
+        clearSelection();
     });
 
     useEffect(() => {
@@ -250,7 +231,6 @@ export function useLibraryTrackList(searchQuery: string): UseLibraryTrackListRes
         handleNativeDragStart,
         buildDragData,
         keyExtractor,
-        selectedItem,
     };
 }
 
