@@ -877,10 +877,22 @@ export function markLibraryChangeUserInitiated(): void {
     pendingUserInitiatedLibraryChange = true;
 }
 
+const toFilePath = (value: string): string => (value.startsWith("file://") ? new URL(value).pathname : value);
+
+const sanitizePlaylistFileName = (name: string): string => {
+    const trimmed = name.trim();
+    const sanitized = trimmed
+        .replace(/[\\/:*?"<>|]+/g, "-")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    return sanitized.length > 0 ? sanitized : "New Playlist";
+};
+
 export async function loadLocalPlaylists(): Promise<void> {
     perfLog("LocalMusic.loadLocalPlaylists.start");
 
-    const playlistDirectory = getCacheDirectory("playlists");
+    const playlistDirectory = getCacheDirectory("data");
     ensureCacheDirectory(playlistDirectory);
 
     let entries: (Directory | File)[] = [];
@@ -893,7 +905,6 @@ export async function loadLocalPlaylists(): Promise<void> {
     }
 
     const playlists: LocalPlaylist[] = [];
-    const toFilePath = (value: string): string => (value.startsWith("file://") ? new URL(value).pathname : value);
 
     for (const entry of entries) {
         if (!(entry instanceof File)) {
@@ -901,6 +912,10 @@ export async function loadLocalPlaylists(): Promise<void> {
         }
 
         if (!entry.name.toLowerCase().endsWith(".m3u")) {
+            continue;
+        }
+
+        if (entry.name.toLowerCase() === "queue.m3u") {
             continue;
         }
 
@@ -928,6 +943,33 @@ export async function loadLocalPlaylists(): Promise<void> {
 
     localMusicState$.playlists.set(playlists);
     perfLog("LocalMusic.loadLocalPlaylists.end", { total: playlists.length });
+}
+
+export async function createLocalPlaylist(name: string): Promise<LocalPlaylist> {
+    const playlistName = name.trim() || "New Playlist";
+    const fileBase = sanitizePlaylistFileName(playlistName);
+    const fileName = `${fileBase}.m3u`;
+
+    const directory = getCacheDirectory("data");
+    ensureCacheDirectory(directory);
+    const file = new File(directory, fileName);
+    file.write("#EXTM3U\n");
+
+    const filePath = toFilePath(file.uri);
+    const playlist: LocalPlaylist = {
+        id: filePath,
+        name: playlistName,
+        filePath,
+        trackPaths: [],
+        trackCount: 0,
+    };
+
+    const currentPlaylists = localMusicState$.playlists.peek();
+    const nextPlaylists = [...currentPlaylists, playlist].filter((pl) => !pl.id.startsWith("pl-temp-"));
+    nextPlaylists.sort((a, b) => a.name.localeCompare(b.name));
+    localMusicState$.playlists.set(nextPlaylists);
+
+    return playlist;
 }
 
 // Set current playlist selection

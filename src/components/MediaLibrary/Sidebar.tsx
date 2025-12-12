@@ -1,13 +1,18 @@
 import { useValue } from "@legendapp/state/react";
-import { useCallback, useRef } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { useCallback, useRef, useState } from "react";
+import { ScrollView, Text, TextInput, View } from "react-native";
 
 import { Button } from "@/components/Button";
 import type { TextInputSearchRef } from "@/components/TextInputSearch";
 import { useListItemStyles } from "@/hooks/useListItemStyles";
 import { SUPPORT_PLAYLISTS } from "@/systems/constants";
-import { libraryUI$, selectLibraryView, type LibraryView } from "@/systems/LibraryState";
-import { localMusicState$ } from "@/systems/LocalMusicState";
+import {
+    libraryUI$,
+    selectLibraryPlaylist,
+    selectLibraryView,
+    type LibraryView,
+} from "@/systems/LibraryState";
+import { createLocalPlaylist, localMusicState$ } from "@/systems/LocalMusicState";
 import { cn } from "@/utils/cn";
 import { perfCount } from "@/utils/perfLogger";
 import { MediaLibrarySearchBar } from "./SearchBar";
@@ -27,6 +32,8 @@ export function MediaLibrarySidebar() {
     const playlists = useValue(localMusicState$.playlists);
     const listItemStyles = useListItemStyles();
     const searchInputRef = useRef<TextInputSearchRef | null>(null);
+    const [tempPlaylistId, setTempPlaylistId] = useState<string | null>(null);
+    const [tempPlaylistName, setTempPlaylistName] = useState("");
 
     const handleSelectView = useCallback(
         (view: LibraryView) => {
@@ -34,6 +41,51 @@ export function MediaLibrarySidebar() {
         },
         [],
     );
+
+    const handleAddPlaylist = useCallback(() => {
+        if (tempPlaylistId) {
+            return;
+        }
+
+        const id = `pl-temp-${Date.now()}`;
+        const defaultName = "New Playlist";
+        localMusicState$.playlists.push({
+            id,
+            name: defaultName,
+            filePath: "",
+            trackPaths: [],
+            trackCount: 0,
+        });
+        setTempPlaylistId(id);
+        setTempPlaylistName(defaultName);
+        selectLibraryPlaylist(id);
+    }, [tempPlaylistId]);
+
+    const finalizeTempPlaylist = useCallback(async () => {
+        if (!tempPlaylistId) {
+            return;
+        }
+
+        const name = tempPlaylistName.trim();
+        const currentPlaylists = localMusicState$.playlists.peek();
+        localMusicState$.playlists.set(currentPlaylists.filter((pl) => pl.id !== tempPlaylistId));
+
+        setTempPlaylistId(null);
+        setTempPlaylistName("");
+
+        if (!name) {
+            selectLibraryView("songs");
+            return;
+        }
+
+        try {
+            const playlist = await createLocalPlaylist(name);
+            selectLibraryPlaylist(playlist.id);
+        } catch (error) {
+            console.error("Failed to create playlist:", error);
+            selectLibraryView("songs");
+        }
+    }, [tempPlaylistId, tempPlaylistName]);
 
     return (
         <View className="flex-1 min-h-0">
@@ -82,7 +134,8 @@ export function MediaLibrarySidebar() {
                                 variant="icon"
                                 size="small"
                                 accessibilityLabel="Add playlist"
-                                disabled
+                                disabled={Boolean(tempPlaylistId)}
+                                onClick={handleAddPlaylist}
                                 className="bg-transparent hover:bg-white/10"
                             />
                         </View>
@@ -94,6 +147,32 @@ export function MediaLibrarySidebar() {
                             playlists.map((playlist) => {
                                 const isSelected =
                                     selectedView === "playlist" && selectedPlaylistId === playlist.id;
+                                const isTemp = playlist.id === tempPlaylistId;
+
+                                if (isTemp) {
+                                    return (
+                                        <View
+                                            key={playlist.id}
+                                            className={listItemStyles.getRowClassName({
+                                                variant: "compact",
+                                                isSelected: true,
+                                                isInteractive: false,
+                                            })}
+                                        >
+                                            <TextInput
+                                                value={tempPlaylistName}
+                                                onChangeText={setTempPlaylistName}
+                                                onSubmitEditing={finalizeTempPlaylist}
+                                                onBlur={finalizeTempPlaylist}
+                                                autoFocus
+                                                selectTextOnFocus
+                                                placeholder="New Playlist"
+                                                className="flex-1 text-sm text-text-primary"
+                                            />
+                                        </View>
+                                    );
+                                }
+
                                 return (
                                     <Button
                                         key={playlist.id}
@@ -101,10 +180,7 @@ export function MediaLibrarySidebar() {
                                             variant: "compact",
                                             isSelected,
                                         })}
-                                        onClick={() => {
-                                            libraryUI$.selectedView.set("playlist");
-                                            libraryUI$.selectedPlaylistId.set(playlist.id);
-                                        }}
+                                        onClick={() => selectLibraryPlaylist(playlist.id)}
                                     >
                                         <View className="flex-1 flex-row items-center justify-between overflow-hidden">
                                             <Text
@@ -141,4 +217,3 @@ export function MediaLibrarySidebar() {
         </View>
     );
 }
-

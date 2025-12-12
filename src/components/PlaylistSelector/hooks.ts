@@ -253,7 +253,7 @@ export function useQueueExporter({ queueTracks }: QueueExporterArgs) {
             const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
             const filename = `Queue-${timestamp}.m3u`;
 
-            const playlistDirectory = getCacheDirectory("playlists");
+            const playlistDirectory = getCacheDirectory("data");
             ensureCacheDirectory(playlistDirectory);
 
             const file = new File(playlistDirectory, filename);
