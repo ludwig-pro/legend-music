@@ -1,6 +1,7 @@
 import { useValue } from "@legendapp/state/react";
 import { useCallback, useRef, useState } from "react";
-import { Platform, ScrollView, Text, TextInput, View } from "react-native";
+import { Alert, Platform, ScrollView, Text, TextInput, View } from "react-native";
+import type { NativeMouseEvent } from "react-native-macos";
 
 import { Button } from "@/components/Button";
 import {
@@ -12,7 +13,9 @@ import {
 import type { TextInputSearchRef } from "@/components/TextInputSearch";
 import { showToast } from "@/components/Toast";
 import { useListItemStyles } from "@/hooks/useListItemStyles";
+import { showContextMenu, type ContextMenuItem } from "@/native-modules/ContextMenu";
 import { DragDropView } from "@/native-modules/DragDropView";
+import { showInFinder } from "@/native-modules/FileDialog";
 import { SUPPORT_PLAYLISTS } from "@/systems/constants";
 import {
     libraryUI$,
@@ -20,8 +23,14 @@ import {
     selectLibraryView,
     type LibraryView,
 } from "@/systems/LibraryState";
-import { addTracksToPlaylist } from "@/systems/LocalPlaylists";
-import { createLocalPlaylist, localMusicState$ } from "@/systems/LocalMusicState";
+import {
+    addTracksToPlaylist,
+    deletePlaylist,
+    duplicatePlaylistToCache,
+    exportPlaylistToFile,
+    renamePlaylist,
+} from "@/systems/LocalPlaylists";
+import { createLocalPlaylist, localMusicState$, type LocalPlaylist } from "@/systems/LocalMusicState";
 import { cn } from "@/utils/cn";
 import { perfCount } from "@/utils/perfLogger";
 import { MediaLibrarySearchBar } from "./SearchBar";
@@ -44,6 +53,8 @@ export function MediaLibrarySidebar() {
     const [tempPlaylistId, setTempPlaylistId] = useState<string | null>(null);
     const [tempPlaylistName, setTempPlaylistName] = useState("");
     const [activeNativeDropPlaylistId, setActiveNativeDropPlaylistId] = useState<string | null>(null);
+    const [editingPlaylistId, setEditingPlaylistId] = useState<string | null>(null);
+    const [editingPlaylistName, setEditingPlaylistName] = useState("");
 
     const handleSelectView = useCallback(
         (view: LibraryView) => {
@@ -98,6 +109,35 @@ export function MediaLibrarySidebar() {
         }
     }, [tempPlaylistId, tempPlaylistName]);
 
+    const cancelRename = useCallback(() => {
+        setEditingPlaylistId(null);
+        setEditingPlaylistName("");
+    }, []);
+
+    const finalizeRename = useCallback(async () => {
+        if (!editingPlaylistId) {
+            return;
+        }
+
+        const playlistId = editingPlaylistId;
+        const nextName = editingPlaylistName.trim();
+        cancelRename();
+
+        if (!nextName) {
+            return;
+        }
+
+        try {
+            const result = await renamePlaylist(playlistId, nextName);
+            if (result) {
+                showToast(`Renamed playlist to ${result.playlistName}`, "info");
+            }
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "Failed to rename playlist";
+            showToast(message, "error");
+        }
+    }, [cancelRename, editingPlaylistId, editingPlaylistName]);
+
     const handleAddTracks = useCallback(async (playlistId: string, trackPaths: string[]) => {
         try {
             const { addedPaths, playlist } = await addTracksToPlaylist(playlistId, trackPaths);
@@ -112,6 +152,94 @@ export function MediaLibrarySidebar() {
             showToast(message, "error");
         }
     }, []);
+
+    const handlePlaylistContextMenu = useCallback(
+        async (playlist: LocalPlaylist, event: NativeMouseEvent) => {
+            const x = event.pageX ?? event.x ?? 0;
+            const y = event.pageY ?? event.y ?? 0;
+
+            const isEditable = playlist.source === "cache" && Boolean(playlist.filePath);
+            const menuItems: ContextMenuItem[] = [];
+
+            if (isEditable) {
+                menuItems.push({ id: "rename", title: "Rename" });
+                menuItems.push({ id: "delete", title: "Delete" });
+                menuItems.push({ id: "export", title: "Export .m3u" });
+            } else {
+                menuItems.push({ id: "import", title: "Import to Local Playlists" });
+                menuItems.push({ id: "export", title: "Export .m3u" });
+            }
+
+            menuItems.push({ id: "reveal", title: "Reveal in Finder" });
+
+            const selection = await showContextMenu(menuItems, { x, y });
+            if (!selection) {
+                return;
+            }
+
+            switch (selection) {
+                case "rename":
+                    setEditingPlaylistId(playlist.id);
+                    setEditingPlaylistName(playlist.name);
+                    return;
+                case "delete":
+                    Alert.alert("Delete playlist", `Delete “${playlist.name}”?`, [
+                        { text: "Cancel", style: "cancel" },
+                        {
+                            text: "Delete",
+                            style: "destructive",
+                            onPress: () => {
+                                void (async () => {
+                                    try {
+                                        await deletePlaylist(playlist.id);
+                                        showToast(`Deleted ${playlist.name}`, "info");
+                                    } catch (error) {
+                                        const message =
+                                            error instanceof Error ? error.message : "Failed to delete playlist";
+                                        showToast(message, "error");
+                                    }
+                                })();
+                            },
+                        },
+                    ]);
+                    return;
+                case "reveal": {
+                    const didReveal = await showInFinder(playlist.filePath);
+                    if (!didReveal) {
+                        showToast("Unable to reveal playlist", "error");
+                    }
+                    return;
+                }
+                case "export": {
+                    try {
+                        const exportedPath = await exportPlaylistToFile(playlist.id);
+                        if (exportedPath) {
+                            await showInFinder(exportedPath);
+                            showToast(`Exported ${playlist.name}`, "info");
+                        }
+                    } catch (error) {
+                        const message = error instanceof Error ? error.message : "Failed to export playlist";
+                        showToast(message, "error");
+                    }
+                    return;
+                }
+                case "import": {
+                    try {
+                        const nextPlaylist = await duplicatePlaylistToCache(playlist.id);
+                        selectLibraryPlaylist(nextPlaylist.id);
+                        showToast(`Imported ${playlist.name}`, "info");
+                    } catch (error) {
+                        const message = error instanceof Error ? error.message : "Failed to import playlist";
+                        showToast(message, "error");
+                    }
+                    return;
+                }
+                default:
+                    return;
+            }
+        },
+        [],
+    );
 
     return (
         <View className="flex-1 min-h-0">
@@ -174,6 +302,7 @@ export function MediaLibrarySidebar() {
                                 const isSelected =
                                     selectedView === "playlist" && selectedPlaylistId === playlist.id;
                                 const isTemp = playlist.id === tempPlaylistId;
+                                const isEditing = playlist.id === editingPlaylistId;
                                 const isDroppable = playlist.source === "cache" && Boolean(playlist.filePath);
                                 const isNativeDropActive =
                                     Platform.OS === "macos" && isDroppable && activeNativeDropPlaylistId === playlist.id;
@@ -202,6 +331,30 @@ export function MediaLibrarySidebar() {
                                     );
                                 }
 
+                                if (isEditing) {
+                                    return (
+                                        <View
+                                            key={playlist.id}
+                                            className={listItemStyles.getRowClassName({
+                                                variant: "compact",
+                                                isSelected: true,
+                                                isInteractive: false,
+                                            })}
+                                        >
+                                            <TextInput
+                                                value={editingPlaylistName}
+                                                onChangeText={setEditingPlaylistName}
+                                                onSubmitEditing={finalizeRename}
+                                                onBlur={finalizeRename}
+                                                autoFocus
+                                                selectTextOnFocus
+                                                placeholder="Playlist name"
+                                                className="flex-1 text-sm text-text-primary"
+                                            />
+                                        </View>
+                                    );
+                                }
+
                                 const renderRow = (className?: string) => (
                                     <Button
                                         className={cn(
@@ -212,6 +365,7 @@ export function MediaLibrarySidebar() {
                                             className,
                                         )}
                                         onClick={() => selectLibraryPlaylist(playlist.id)}
+                                        onRightClick={(event) => handlePlaylistContextMenu(playlist, event)}
                                     >
                                         <View className="flex-1 flex-row items-center justify-between overflow-hidden">
                                             <Text
