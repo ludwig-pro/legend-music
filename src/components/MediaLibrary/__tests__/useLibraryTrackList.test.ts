@@ -84,7 +84,7 @@ describe("buildTrackItems", () => {
         expect(result.trackItems.filter((item) => item.isSeparator).length).toBe(3);
     });
 
-    it("search filters globally and ignores view", () => {
+    it("search filters within current view", () => {
         const result = buildTrackItems({
             tracks: mockTracks,
             playlists: [],
@@ -93,8 +93,8 @@ describe("buildTrackItems", () => {
             searchQuery: "album y",
         });
 
-        expect(result.trackItems.map((track) => track.id)).toEqual(["2"]);
-        expect(result.trackItems.some((item) => item.isSeparator)).toBe(false);
+        expect(result.trackItems.map((item) => item.title)).toEqual(["— Artist 2 —", "Song B"]);
+        expect(result.trackItems.filter((item) => item.isSeparator).length).toBe(1);
     });
 
     it("playlist view preserves order and flags missing tracks", () => {

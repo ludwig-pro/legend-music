@@ -53,6 +53,16 @@ export function buildTrackItems({
     searchQuery,
 }: BuildTrackItemsInput) {
     const normalizedQuery = searchQuery.trim().toLowerCase();
+    const matchesQuery = (track: LibraryTrack): boolean => {
+        if (!normalizedQuery) {
+            return true;
+        }
+
+        const title = track.title?.toLowerCase() ?? "";
+        const artist = track.artist?.toLowerCase() ?? "";
+        const album = track.album?.toLowerCase() ?? "";
+        return title.includes(normalizedQuery) || artist.includes(normalizedQuery) || album.includes(normalizedQuery);
+    };
 
     const toTrackItem = (track: LibraryTrack, viewIndex: number): LibraryTrackListItem => ({
         id: track.id,
@@ -72,23 +82,10 @@ export function buildTrackItems({
         };
     }
 
-    if (normalizedQuery) {
-        const filteredTracks = tracks.filter((track) => {
-            const title = track.title?.toLowerCase() ?? "";
-            const artist = track.artist?.toLowerCase() ?? "";
-            const album = track.album?.toLowerCase() ?? "";
-            return (
-                title.includes(normalizedQuery) || artist.includes(normalizedQuery) || album.includes(normalizedQuery)
-            );
-        });
-
-        return {
-            trackItems: filteredTracks.map((track, index) => toTrackItem(track, index)),
-        };
-    }
+    const filteredTracks = normalizedQuery ? tracks.filter(matchesQuery) : tracks;
 
     if (selectedView === "artists") {
-        const sortedTracks = [...tracks].sort((a, b) => {
+        const sortedTracks = [...filteredTracks].sort((a, b) => {
             const keyA = getArtistKey(a.artist);
             const keyB = getArtistKey(b.artist);
             if (keyA !== keyB) {
@@ -125,7 +122,7 @@ export function buildTrackItems({
     }
 
     if (selectedView === "albums") {
-        const sortedTracks = [...tracks].sort((a, b) => {
+        const sortedTracks = [...filteredTracks].sort((a, b) => {
             const albumA = a.album?.trim() || "Unknown Album";
             const albumB = b.album?.trim() || "Unknown Album";
             const keyA = albumA.toLowerCase();
@@ -193,12 +190,14 @@ export function buildTrackItems({
         );
 
         return {
-            trackItems: orderedTracks.map((track, index) => toTrackItem(track, index)),
+            trackItems: (normalizedQuery ? orderedTracks.filter(matchesQuery) : orderedTracks).map((track, index) =>
+                toTrackItem(track, index),
+            ),
         };
     }
 
     return {
-        trackItems: tracks.map((track, index) => toTrackItem(track, index)),
+        trackItems: filteredTracks.map((track, index) => toTrackItem(track, index)),
     };
 }
 

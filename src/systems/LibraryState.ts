@@ -20,7 +20,7 @@ export interface LibraryItem {
 export interface LibraryTrack extends LocalTrack {
 }
 
-export type LibraryView = "songs" | "artists" | "albums" | "starred" | "playlist" | "search";
+export type LibraryView = "songs" | "artists" | "albums" | "starred" | "playlist";
 
 export interface LibraryUIState {
     selectedView: LibraryView;

@@ -237,7 +237,7 @@ Add a small header above the table in playlist view:
   - Add coverage for playlist-view filtering behavior (if implemented).
 
 ## Steps
-- [ ] Change search to filter current view; remove “search” view.
+- [x] Change search to filter current view; remove “search” view.
 - [ ] Add playlist discovery in library roots and merge into `localMusicState$.playlists`.
 - [ ] Add playlist mutation helpers: add, rename, delete, export, duplicate/import (+ collision handling).
 - [ ] Add action-capable toast and wire undo for add/remove (and optionally delete).
@@ -250,4 +250,3 @@ Add a small header above the table in playlist view:
 Validation:
 - Run `bun run test`.
 - Manual: drag tracks onto playlist rows, add via menus, rename/delete with confirmation, verify persistence across restart, verify library-folder playlists appear, verify search filters within current view.
-
