@@ -5,11 +5,11 @@ interface IconProps {
     name: SFSymbols;
     size: number;
     color?: string;
-    marginTop?: number;
+    yOffset?: number;
 }
 
-export function Icon({ name, size, color: colorProp, marginTop }: IconProps) {
+export function Icon({ name, size, color: colorProp, yOffset }: IconProps) {
     const color = colorProp ?? "white";
 
-    return <SFSymbol name={name} size={size} color={color} style={{ marginTop }} />;
+    return <SFSymbol name={name} size={size} color={color} yOffset={yOffset} />;
 }

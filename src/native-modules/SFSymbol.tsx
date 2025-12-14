@@ -7,6 +7,7 @@ interface SFSymbolProps {
     color?: string;
     scale?: "small" | "medium" | "large";
     size?: number;
+    yOffset?: number;
     style?: ViewStyle;
     testID?: string;
 }
@@ -15,7 +16,7 @@ interface SFSymbolProps {
 const RNSFSymbol = requireNativeComponent<SFSymbolProps>("RNSFSymbol");
 
 // SFSymbol component
-export function SFSymbol({ name, color, scale = "medium", size, style, ...props }: SFSymbolProps) {
+export function SFSymbol({ name, color, scale = "medium", size, style, yOffset, ...props }: SFSymbolProps) {
     // For macOS, use the native component
     if (Platform.OS === "macos" && RNSFSymbol) {
         // Create a base style with default height and width
@@ -24,7 +25,17 @@ export function SFSymbol({ name, color, scale = "medium", size, style, ...props 
         // Merge with provided style if any
         const mergedStyle = style ? StyleSheet.flatten([baseStyle, style]) : baseStyle;
 
-        return <RNSFSymbol name={name} color={color} scale={scale} size={size} style={mergedStyle} {...props} />;
+        return (
+            <RNSFSymbol
+                name={name}
+                color={color}
+                scale={scale}
+                size={size}
+                yOffset={yOffset}
+                style={mergedStyle}
+                {...props}
+            />
+        );
     }
 
     // Fallback for other platforms

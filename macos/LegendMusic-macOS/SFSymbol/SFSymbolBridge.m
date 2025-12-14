@@ -5,6 +5,7 @@
 // Forward declare the SFSymbolView class
 @interface SFSymbolView : NSView
 @property (nonatomic, strong) NSColor *color;
+@property (nonatomic, strong) NSNumber *yOffset;
 @end
 
 @interface RCT_EXTERN_MODULE(RNSFSymbol, RCTViewManager)
@@ -12,6 +13,7 @@
 RCT_EXPORT_VIEW_PROPERTY(name, NSString)
 RCT_EXPORT_VIEW_PROPERTY(scale, NSString)
 RCT_EXPORT_VIEW_PROPERTY(size, NSNumber)
+RCT_EXPORT_VIEW_PROPERTY(yOffset, NSNumber)
 
 // Custom property for color handling
 RCT_CUSTOM_VIEW_PROPERTY(color, NSColor, SFSymbolView)

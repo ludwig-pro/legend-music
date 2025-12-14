@@ -51,21 +51,18 @@ const PLAYBACK_CONTROL_DEFINITIONS: ControlDefinition<PlaybackControlId>[] = [
         id: "next",
         label: "Next",
         // description: "Advance to the next track",
-        iconMarginTop: -1,
         icon: "forward.end.fill",
     },
     {
         id: "shuffle",
         label: "Shuffle",
         // description: "Toggle shuffle mode",
-        iconMarginTop: -2,
         icon: "shuffle",
     },
     {
         id: "repeat",
         label: "Repeat",
         // description: "Cycle repeat modes",
-        iconMarginTop: -2,
         icon: "repeat",
     },
 ];

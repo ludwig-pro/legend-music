@@ -102,7 +102,6 @@ export function PlaybackArea({ showBorder = true, overlayMode }: PlaybackAreaPro
                                     variant="icon"
                                     iconSize={16}
                                     size="small"
-                                    iconMarginTop={1}
                                     onClick={localAudioControls.playPrevious}
                                     tooltip="Previous"
                                 />
@@ -115,7 +114,6 @@ export function PlaybackArea({ showBorder = true, overlayMode }: PlaybackAreaPro
                                     variant="icon"
                                     iconSize={16}
                                     size="small"
-                                    iconMarginTop={1}
                                     onClick={localAudioControls.togglePlayPause}
                                     tooltip={isPlaying ? "Pause" : "Play"}
                                 />
@@ -128,7 +126,6 @@ export function PlaybackArea({ showBorder = true, overlayMode }: PlaybackAreaPro
                                     variant="icon"
                                     iconSize={16}
                                     size="small"
-                                    iconMarginTop={1}
                                     onClick={localAudioControls.playNext}
                                     tooltip="Next"
                                 />
@@ -144,7 +141,6 @@ export function PlaybackArea({ showBorder = true, overlayMode }: PlaybackAreaPro
                                     variant="icon"
                                     iconSize={shuffleSize}
                                     size="small"
-                                    iconMarginTop={shuffleEnabled ? 0 : 2}
                                     onClick={localAudioControls.toggleShuffle}
                                     tooltip={shuffleEnabled ? "Disable shuffle" : "Enable shuffle"}
                                     active={shuffleEnabled}
@@ -173,7 +169,6 @@ export function PlaybackArea({ showBorder = true, overlayMode }: PlaybackAreaPro
                                     variant="icon"
                                     iconSize={repeatSize}
                                     size="small"
-                                    iconMarginTop={repeatMode === "off" ? 1 : 0}
                                     onClick={localAudioControls.cycleRepeatMode}
                                     tooltip={repeatTooltip}
                                     active={repeatMode !== "off"}

@@ -1,7 +1,7 @@
 import { useValue } from "@legendapp/state/react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { type LayoutChangeEvent, Text, useWindowDimensions, View } from "react-native";
-
+import type { SFSymbol } from "sf-symbols-typescript";
 import { Button } from "@/components/Button";
 import type { DropdownMenuRootRef } from "@/components/DropdownMenu";
 import { queue$ } from "@/components/LocalAudioPlayer";
@@ -162,8 +162,8 @@ export function PlaylistSelector() {
                                     icon="square.and.arrow.down"
                                     variant="icon"
                                     size="small"
-                                    iconSize={14}
-                                    iconMarginTop={-4}
+                                    iconSize={16}
+                                    iconYOffset={2}
                                     onClick={handleSavePlaylist}
                                     className="ml-2 hover:bg-white/10"
                                     disabled={queue.tracks.length === 0}
@@ -180,7 +180,7 @@ export function PlaylistSelector() {
                                     variant="icon"
                                     size="small"
                                     iconSize={iconSize}
-                                    iconMarginTop={-1}
+                                    iconYOffset={1}
                                     onClick={toggleVisualizer}
                                     className={cn("ml-2 hover:bg-white/10", isVisualizerOpen && "bg-white/15")}
                                     tooltip={isVisualizerOpen ? "Hide visualizer" : "Show visualizer"}
@@ -188,7 +188,7 @@ export function PlaylistSelector() {
                             );
                         }
                         case "toggleLibrary": {
-                            const icon = isLibraryOpen ? "play.square.stack.fill" : "play.square.stack";
+                            const icon: SFSymbol = isLibraryOpen ? "play.square.stack.fill" : "play.square.stack";
                             const iconSize = isLibraryOpen ? 18 : 18;
 
                             return (
@@ -198,7 +198,7 @@ export function PlaylistSelector() {
                                     variant="icon"
                                     size="small"
                                     iconSize={iconSize}
-                                    iconMarginTop={-4}
+                                    iconYOffset={1}
                                     onClick={toggleLibraryWindow}
                                     className={cn("ml-2 hover:bg-white/10", isLibraryOpen && "bg-white/15")}
                                     tooltip={isLibraryOpen ? "Hide library" : "Show library"}

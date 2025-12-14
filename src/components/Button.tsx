@@ -19,7 +19,7 @@ export interface ButtonProps
     variant?: "icon" | "icon-bg" | "primary" | "secondary" | "accent" | "destructive" | "inverse";
     size?: "small" | "medium" | "large";
     iconSize?: number;
-    iconMarginTop?: number;
+    iconYOffset?: number;
     tooltip?: string;
     active?: boolean;
     onClick?: (event: NativeMouseEvent) => void;
@@ -36,7 +36,7 @@ export function Button({
     variant,
     size,
     iconSize: iconSizeProp,
-    iconMarginTop,
+    iconYOffset,
     active,
     onClick,
     onMouseDown,
@@ -151,11 +151,11 @@ export function Button({
             {...restPressableProps}
             ref={pressableRef}
             className={cn(
-                icon && children && "flex-row items-center gap-2",
+                icon && children && "flex-row items-center",
                 icon && !children && "items-center justify-center",
                 icon && !children && active && "text-blue-500",
-                size === "small" && isIcon && "size-7 pb-1.5",
-                size === "medium" && isIcon && "size-9 pb-1.5",
+                size === "small" && isIcon && "size-7",
+                size === "medium" && isIcon && "size-9",
                 size === "large" && isIcon && "p-4",
                 variant === "icon" && "rounded-md hover:bg-white/10",
                 variant === "icon-bg" &&
@@ -175,7 +175,7 @@ export function Button({
             onHoverIn={handleHoverIn}
             onHoverOut={handleHoverOut}
         >
-            {icon && <Icon name={icon} size={iconSize} marginTop={iconMarginTop} />}
+            {icon && <Icon name={icon} size={iconSize} yOffset={iconYOffset} />}
             {isString(children) ? <Text className="text-white text-base">{children}</Text> : children}
         </Pressable>
     );
