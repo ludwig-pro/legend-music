@@ -7,31 +7,30 @@ import type { NativeMouseEvent } from "react-native-macos";
 
 import { Button } from "@/components/Button";
 import {
+    type DragData,
     DraggableItem,
+    type DraggedItem,
     DroppableZone,
     LOCAL_PLAYLIST_DRAG_ZONE_ID,
-    MEDIA_LIBRARY_DRAG_ZONE_ID,
-    type DragData,
-    type DraggedItem,
     type LocalPlaylistDragData,
+    MEDIA_LIBRARY_DRAG_ZONE_ID,
     type MediaLibraryDragData,
 } from "@/components/dnd";
 import { localPlayerState$ } from "@/components/LocalAudioPlayer";
+import { Table, TableCell, type TableColumnSpec, TableHeader, TableRow } from "@/components/Table";
 import type { TrackData } from "@/components/TrackItem";
-import { Table, TableCell, TableHeader, TableRow, type TableColumnSpec } from "@/components/Table";
 import { useListItemStyles } from "@/hooks/useListItemStyles";
-import { Icon } from "@/systems/Icon";
 import { type ContextMenuItem, showContextMenu } from "@/native-modules/ContextMenu";
 import { type NativeDragTrack, TrackDragSource } from "@/native-modules/TrackDragSource";
+import { Icon } from "@/systems/Icon";
 import { libraryUI$ } from "@/systems/LibraryState";
 import { localMusicState$, saveLocalPlaylistTracks } from "@/systems/LocalMusicState";
 import { themeState$ } from "@/theme/ThemeProvider";
-import type { QueueAction } from "@/utils/queueActions";
 import { cn } from "@/utils/cn";
+import type { QueueAction } from "@/utils/queueActions";
 import { useLibraryTrackList } from "./useLibraryTrackList";
 
-interface TrackListProps {
-}
+type TrackListProps = {};
 
 export function TrackList(_props: TrackListProps) {
     const {
@@ -179,7 +178,7 @@ export function TrackList(_props: TrackListProps) {
             }
 
             const trackPathForPlaylist =
-                isPlaylistEditable && selectedPlaylist ? selectedPlaylist.trackPaths[index] ?? item.id : null;
+                isPlaylistEditable && selectedPlaylist ? (selectedPlaylist.trackPaths[index] ?? item.id) : null;
 
             const trackRow = (
                 <LibraryTrackRow
@@ -230,6 +229,14 @@ export function TrackList(_props: TrackListProps) {
         ],
     );
 
+    const getItemType = useCallback((item: TrackData) => {
+        return item.isSeparator ? "separator" : "track";
+    }, []);
+
+    const getFixedItemSize = useCallback((_: number, item: TrackData, type: string | undefined) => {
+        return item.isSeparator ? 81 : 32;
+    }, []);
+
     return (
         <View className="flex-1 min-h-0">
             {selectedView === "playlist" && selectedPlaylist ? (
@@ -264,9 +271,12 @@ export function TrackList(_props: TrackListProps) {
             ) : null}
             <Table header={<TableHeader columns={columns} />}>
                 <LegendList
+                    key={selectedView}
                     data={tracks}
                     keyExtractor={keyExtractor}
                     renderItem={renderTrack}
+                    getItemType={getItemType}
+                    getFixedItemSize={getFixedItemSize}
                     ListHeaderComponent={
                         isPlaylistEditable && Platform.OS !== "macos" ? (
                             <LocalPlaylistDropZone
@@ -285,11 +295,8 @@ export function TrackList(_props: TrackListProps) {
                                   justifyContent: "center",
                                   alignItems: "flex-start",
                                   paddingVertical: 16,
-                                  paddingHorizontal: 10,
                               }
                     }
-                    waitForInitialLayout={false}
-                    estimatedItemSize={36}
                     recycleItems
                     ListEmptyComponent={
                         <View className="items-start justify-center py-4 px-2.5">
@@ -304,12 +311,10 @@ export function TrackList(_props: TrackListProps) {
 
 function LibrarySeparatorRow({ title }: { title: string }) {
     return (
-        <View className="flex-row items-center px-4 py-4 mt-6 mb-2">
-            <View className="flex-1 h-px bg-white/15" />
-            <Text className="text-white/90 text-xs font-semibold tracking-wider uppercase mx-4 bg-white/5 px-3 py-1.5 rounded-full border border-white/15">
+        <View className="flex items-center pt-8 pb-1 mb-1 border-b border-white/15">
+            <Text className="text-white/90 text-xl font-semibold mx-4 px-3 py-1.5 rounded-lg" numberOfLines={1}>
                 {title.replace(/^— (.+) —$/, "$1")}
             </Text>
-            <View className="flex-1 h-px bg-white/15" />
         </View>
     );
 }
