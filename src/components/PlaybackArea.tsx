@@ -1,5 +1,5 @@
 import { useValue } from "@legendapp/state/react";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { type LayoutChangeEvent, Text, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 import { AlbumArt } from "@/components/AlbumArt";
@@ -48,6 +48,9 @@ export function PlaybackArea({ showBorder = true, overlayMode }: PlaybackAreaPro
     const overlayControlsVisible = overlayModeEnabled ? (overlayMode?.showControls ?? false) : true;
     const overlayControlsProgress = useSharedValue(overlayControlsVisible ? 1 : 0);
     const sliderRowHeight = useSharedValue(0);
+    const [isHovered, setIsHovered] = useState(false);
+    const handleHoverIn = useCallback(() => setIsHovered(true), []);
+    const handleHoverOut = useCallback(() => setIsHovered(false), []);
 
     useEffect(() => {
         if (!overlayModeEnabled) {
@@ -212,10 +215,16 @@ export function PlaybackArea({ showBorder = true, overlayMode }: PlaybackAreaPro
     // });
 
     return (
-        <View className={cn("px-3 pt-3", showBorder && "border-b border-white/10")} mouseDownCanMoveWindow>
-            <View className="flex-row items-center">
+        <View
+            className={cn("relative px-3 pt-8 pb-6", showBorder && "border-b border-white/10")}
+            mouseDownCanMoveWindow
+            onHoverIn={handleHoverIn}
+            onHoverOut={handleHoverOut}
+            data-hovered={isHovered ? "true" : undefined}
+        >
+            <View className="flex-row items-start gap-3">
                 {/* Album Art */}
-                <View className="mr-3">
+                <View className="relative shrink-0">
                     <AlbumArt
                         uri={currentTrack?.thumbnail}
                         reloadKey={thumbnailVersion}
@@ -226,22 +235,34 @@ export function PlaybackArea({ showBorder = true, overlayMode }: PlaybackAreaPro
 
                 {/* Song Info */}
                 <View
-                    className={cn("flex-1 flex-col overflow-hidden")}
+                    className={cn("relative flex-1 flex-col gap-2 overflow-hidden")}
                     style={{ maxWidth: overlayModeEnabled ? OVERLAY_WINDOW_WIDTH_COMPACT - 148 : undefined }}
                 >
-                    <Text className="text-white text-sm font-semibold" numberOfLines={1}>
-                        {currentTrack?.title || " "}
-                    </Text>
-                    <Text className="text-white/70 text-sm" numberOfLines={1}>
-                        {currentTrack?.artist || " "}
-                    </Text>
-                </View>
-                <View className="flex-row items-center">
+                    <View className="flex-col gap-0.5">
+                        <Text className="text-white/70 text-sm" numberOfLines={1}>
+                            {currentTrack?.artist || " "}
+                        </Text>
+                        <Text className="text-white text-sm font-semibold" numberOfLines={1}>
+                            {currentTrack?.title || " "}
+                        </Text>
+                    </View>
                     {overlayModeEnabled ? (
                         <Animated.View
-                            className={cn(overlayModeEnabled && "absolute top-0 bottom-0")}
                             pointerEvents={overlayControlsVisible ? "auto" : "none"}
-                            style={[controlsAnimatedStyle, { right: -64 }]}
+                            style={sliderAnimatedStyle}
+                        >
+                            {sliderRowNode}
+                        </Animated.View>
+                    ) : (
+                        sliderRowNode
+                    )}
+                </View>
+
+                <View className="flex-row items-start">
+                    {overlayModeEnabled ? (
+                        <Animated.View
+                            pointerEvents={overlayControlsVisible ? "auto" : "none"}
+                            style={controlsAnimatedStyle}
                         >
                             {playbackControlsNode}
                         </Animated.View>
@@ -250,13 +271,6 @@ export function PlaybackArea({ showBorder = true, overlayMode }: PlaybackAreaPro
                     )}
                 </View>
             </View>
-            {overlayModeEnabled ? (
-                <Animated.View pointerEvents={overlayControlsVisible ? "auto" : "none"} style={sliderAnimatedStyle}>
-                    {sliderRowNode}
-                </Animated.View>
-            ) : (
-                sliderRowNode
-            )}
         </View>
     );
 }

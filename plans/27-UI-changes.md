@@ -17,7 +17,7 @@ Refresh the playback area to use hover-driven overlays, relocate the timeline, a
 - On playback hover, show the full playback controls (play/pause, next, etc.) over the artist/title, right-aligned with a vibrancy backdrop.
 
 ## Steps
-- [ ] Restructure `PlaybackArea` layout to add vertical padding, move the timeline to the right column, and prepare overlay hooks.
+- [x] Restructure `PlaybackArea` layout to add vertical padding, move the timeline to the right column, and prepare overlay hooks.
 - [ ] Add hover overlays: play/pause on album art plus vibrancy-backed playback controls over artist/title, ensuring layout and hit-testing stay intact.
 - [ ] Surface `PlaylistSelector` controls at the top-right on hover within `PlaybackArea`, keeping hover/focus behavior consistent.
 - [ ] Simplify `TitleBar` to remove the background and rely on fade-in window controls; verify hover interactions across the updated layout.
