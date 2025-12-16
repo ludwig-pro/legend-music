@@ -16,8 +16,8 @@ export interface ButtonProps
     extends Omit<PressableProps, "onPress" | "onPressIn" | "onPressOut" | "onClick" | "onMouseDown" | "onMouseUp"> {
     className?: string;
     icon?: SFSymbols;
-    variant?: "icon" | "icon-bg" | "primary" | "secondary" | "accent" | "destructive" | "inverse";
-    size?: "small" | "medium" | "large";
+    variant?: "icon-hover" | "icon" | "icon-bg" | "primary" | "secondary" | "accent" | "destructive" | "inverse";
+    size?: "xs" | "small" | "medium" | "large";
     iconSize?: number;
     iconYOffset?: number;
     tooltip?: string;
@@ -144,7 +144,7 @@ export function Button({
     };
 
     const iconSize = iconSizeProp ?? (size === "small" ? 14 : size === "large" ? 24 : 18);
-    const isIcon = variant === "icon" || variant === "icon-bg";
+    const isIcon = variant === "icon" || variant === "icon-bg" || variant === "icon-hover";
 
     return (
         <Pressable
@@ -154,10 +154,12 @@ export function Button({
                 icon && children && "flex-row items-center",
                 icon && !children && "items-center justify-center",
                 icon && !children && active && "text-blue-500",
+                size === "xs" && isIcon && "size-6",
                 size === "small" && isIcon && "size-7",
                 size === "medium" && isIcon && "size-9",
                 size === "large" && isIcon && "p-4",
                 variant === "icon" && "rounded-md hover:bg-white/10",
+                variant === "icon-hover" && "opacity-25 hover:opacity-100",
                 variant === "icon-bg" &&
                     "rounded-md bg-background-secondary border border-border-primary hover:bg-white/10",
                 size === "small" && !isIcon && "h-7 px-2 justify-center items-center",

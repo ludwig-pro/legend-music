@@ -206,7 +206,7 @@ export function AlbumArt({
     const sizeClasses = {
         small: "size-6",
         medium: "size-9",
-        large: "size-12",
+        large: "size-16",
     };
 
     const fallbackTextSizes = {

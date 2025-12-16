@@ -1,5 +1,4 @@
 import { useValue } from "@legendapp/state/react";
-import { VibrancyView } from "@fluentui-react-native/vibrancy-view";
 import { useCallback, useEffect, useState } from "react";
 import { type LayoutChangeEvent, Text, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
@@ -20,6 +19,7 @@ import {
 import { localMusicState$ } from "@/systems/LocalMusicState";
 import { setIsScrubbing } from "@/systems/PlaybackInteractionState";
 import { type PlaybackControlId, settings$ } from "@/systems/Settings";
+import { state$ } from "@/systems/State";
 import { cn } from "@/utils/cn";
 import { perfCount } from "@/utils/perfLogger";
 
@@ -46,14 +46,17 @@ export function PlaybackArea({ showBorder = true, overlayMode }: PlaybackAreaPro
     const repeatMode = useValue(settings$.playback.repeatMode);
     const handleSlidingStart = useCallback(() => setIsScrubbing(true), []);
     const handleSlidingEnd = useCallback(() => setIsScrubbing(false), []);
-    const overlayModeEnabled = overlayMode?.enabled ?? false;
+    const overlayModeEnabled = false; //overlayMode?.enabled ?? false;
     const overlayControlsVisible = overlayModeEnabled ? (overlayMode?.showControls ?? false) : true;
     const overlayControlsProgress = useSharedValue(overlayControlsVisible ? 1 : 0);
     const sliderRowHeight = useSharedValue(0);
     const [isHovered, setIsHovered] = useState(false);
     const handleHoverIn = useCallback(() => setIsHovered(true), []);
     const handleHoverOut = useCallback(() => setIsHovered(false), []);
-    const hoverContentVisible = isHovered && overlayControlsVisible;
+    const isWindowHovered = useValue(state$.isWindowHovered);
+
+    const hoverContentVisible = true; // isHovered && overlayControlsVisible;
+    // const hoverContentVisible = isWindowHovered && overlayControlsVisible;
 
     useEffect(() => {
         if (!overlayModeEnabled) {
@@ -83,15 +86,15 @@ export function PlaybackArea({ showBorder = true, overlayMode }: PlaybackAreaPro
     const sliderAnimatedStyle = useAnimatedStyle(() => {
         const rawProgress = overlayModeEnabled ? overlayControlsProgress.value : 1;
         const clampedProgress = Math.min(Math.max(rawProgress * 1.1, 0), 1);
-        const measuredHeight = sliderRowHeight.value;
+        // const measuredHeight = sliderRowHeight.value;
         return {
             opacity: clampedProgress,
-            height: measuredHeight === 0 ? undefined : measuredHeight * clampedProgress,
+            // height: measuredHeight === 0 ? undefined : measuredHeight * clampedProgress,
         };
     });
 
     const playbackControlsNode = (
-        <View className="flex-row items-center gap-1">
+        <View className="flex-row justify-center items-center gap-x-1">
             {(
                 (playbackControlsLayout?.shown?.length
                     ? playbackControlsLayout.shown
@@ -105,9 +108,9 @@ export function PlaybackArea({ showBorder = true, overlayMode }: PlaybackAreaPro
                                 <Button
                                     key="previous"
                                     icon="backward.end.fill"
-                                    variant="icon"
-                                    iconSize={16}
-                                    size="small"
+                                    variant="icon-hover"
+                                    iconSize={14}
+                                    size="xs"
                                     onClick={localAudioControls.playPrevious}
                                     tooltip="Previous"
                                 />
@@ -117,9 +120,9 @@ export function PlaybackArea({ showBorder = true, overlayMode }: PlaybackAreaPro
                                 <Button
                                     key="playPause"
                                     icon={isPlaying ? "pause.fill" : "play.fill"}
-                                    variant="icon"
-                                    iconSize={16}
-                                    size="small"
+                                    variant="icon-hover"
+                                    iconSize={14}
+                                    size="xs"
                                     onClick={localAudioControls.togglePlayPause}
                                     tooltip={isPlaying ? "Pause" : "Play"}
                                 />
@@ -129,24 +132,24 @@ export function PlaybackArea({ showBorder = true, overlayMode }: PlaybackAreaPro
                                 <Button
                                     key="next"
                                     icon="forward.end.fill"
-                                    variant="icon"
-                                    iconSize={16}
-                                    size="small"
+                                    variant="icon-hover"
+                                    iconSize={14}
+                                    size="xs"
                                     onClick={localAudioControls.playNext}
                                     tooltip="Next"
                                 />
                             );
                         case "shuffle": {
                             const shuffleIcon = shuffleEnabled ? "shuffle.circle.fill" : "shuffle";
-                            const shuffleSize = shuffleEnabled ? 25 : 18;
+                            const shuffleSize = shuffleEnabled ? 23 : 16;
 
                             return (
                                 <Button
                                     key="shuffle"
                                     icon={shuffleIcon}
-                                    variant="icon"
+                                    variant="icon-hover"
                                     iconSize={shuffleSize}
-                                    size="small"
+                                    size="xs"
                                     onClick={localAudioControls.toggleShuffle}
                                     tooltip={shuffleEnabled ? "Disable shuffle" : "Enable shuffle"}
                                     active={shuffleEnabled}
@@ -160,7 +163,7 @@ export function PlaybackArea({ showBorder = true, overlayMode }: PlaybackAreaPro
                                     : repeatMode === "one"
                                       ? "repeat.1.circle.fill"
                                       : "repeat.circle.fill";
-                            const repeatSize = repeatMode === "off" ? 18 : 25;
+                            const repeatSize = repeatMode === "off" ? 16 : 23;
                             const repeatTooltip =
                                 repeatMode === "off"
                                     ? "Enable repeat"
@@ -172,9 +175,9 @@ export function PlaybackArea({ showBorder = true, overlayMode }: PlaybackAreaPro
                                 <Button
                                     key="repeat"
                                     icon={repeatIcon}
-                                    variant="icon"
+                                    variant="icon-hover"
                                     iconSize={repeatSize}
-                                    size="small"
+                                    size="xs"
                                     onClick={localAudioControls.cycleRepeatMode}
                                     tooltip={repeatTooltip}
                                     active={repeatMode !== "off"}
@@ -219,32 +222,17 @@ export function PlaybackArea({ showBorder = true, overlayMode }: PlaybackAreaPro
 
     return (
         <View
-            className={cn("relative px-3 pt-8 pb-6", showBorder && "border-b border-white/10")}
+            className={cn("relative px-3", showBorder ? "pt-3" : "py-3")}
             mouseDownCanMoveWindow
-            onHoverIn={handleHoverIn}
-            onHoverOut={handleHoverOut}
+            onMouseEnter={handleHoverIn}
+            onMouseLeave={handleHoverOut}
             data-hovered={isHovered ? "true" : undefined}
         >
-            {hoverContentVisible ? (
-                <View className="absolute right-3 top-3" pointerEvents="box-none">
-                    <View className="overflow-hidden rounded-xl border border-white/10" pointerEvents="auto">
-                        <VibrancyView
-                            blendingMode="withinWindow"
-                            state="active"
-                            material="popover"
-                            pointerEvents="none"
-                            style={{
-                                position: "absolute",
-                                top: 0,
-                                right: 0,
-                                bottom: 0,
-                                left: 0,
-                            }}
-                        />
-                        <PlaylistSelector variant="overlay" />
-                    </View>
+            {/* {hoverContentVisible ? (
+                <View className="absolute right-0 top-0" pointerEvents="box-none">
+                    <PlaylistSelector variant="overlay" />
                 </View>
-            ) : null}
+            ) : null} */}
             <View className="flex-row items-start gap-3">
                 {/* Album Art */}
                 <View className="relative shrink-0">
@@ -254,70 +242,44 @@ export function PlaybackArea({ showBorder = true, overlayMode }: PlaybackAreaPro
                         size="large"
                         fallbackIcon="♪"
                     />
-                    {hoverContentVisible ? (
-                        <View className="absolute inset-0 items-center justify-center" pointerEvents="box-none">
-                            <Button
-                                icon={isPlaying ? "pause.fill" : "play.fill"}
-                                variant="icon-bg"
-                                size="medium"
-                                iconSize={20}
-                                onClick={localAudioControls.togglePlayPause}
-                                tooltip={isPlaying ? "Pause" : "Play"}
-                            />
-                        </View>
-                    ) : null}
                 </View>
 
                 {/* Song Info */}
                 <View
-                    className={cn("relative flex-1 flex-col gap-2 overflow-hidden")}
+                    className={cn("relative flex-1 flex-col overflow-hidden")}
                     style={{ maxWidth: overlayModeEnabled ? OVERLAY_WINDOW_WIDTH_COMPACT - 148 : undefined }}
                 >
                     <View className="relative flex-col gap-0.5">
-                        <Text className="text-white/70 text-sm" numberOfLines={1}>
-                            {currentTrack?.artist || " "}
-                        </Text>
                         <Text className="text-white text-sm font-semibold" numberOfLines={1}>
                             {currentTrack?.title || " "}
                         </Text>
-                        {hoverContentVisible ? (
+                        <Text className="text-white/70 text-sm" numberOfLines={1}>
+                            {currentTrack?.artist || " "}
+                        </Text>
+                        {overlayModeEnabled ? (
                             <Animated.View
-                                className="absolute inset-x-0 top-0 z-10 flex-row justify-end"
-                                pointerEvents="box-none"
-                                style={controlsAnimatedStyle}
+                                pointerEvents={overlayControlsVisible ? "auto" : "none"}
+                                style={sliderAnimatedStyle}
                             >
-                                <View className="overflow-hidden rounded-lg" pointerEvents="auto">
-                                    <VibrancyView
-                                        blendingMode="withinWindow"
-                                        state="active"
-                                        material="popover"
-                                        pointerEvents="none"
-                                        style={{
-                                            position: "absolute",
-                                            top: 0,
-                                            right: 0,
-                                            bottom: 0,
-                                            left: 0,
-                                        }}
-                                    />
-                                    <View className="flex-row items-center gap-1 px-2 py-1">
-                                        {playbackControlsNode}
-                                    </View>
-                                </View>
+                                {sliderRowNode}
                             </Animated.View>
-                        ) : null}
+                        ) : (
+                            sliderRowNode
+                        )}
                     </View>
-                    {overlayModeEnabled ? (
-                        <Animated.View
-                            pointerEvents={overlayControlsVisible ? "auto" : "none"}
-                            style={sliderAnimatedStyle}
-                        >
-                            {sliderRowNode}
-                        </Animated.View>
-                    ) : (
-                        sliderRowNode
-                    )}
                 </View>
+            </View>
+            <View className="w-full pt-1 flex-row">
+                {hoverContentVisible ? (
+                    <Animated.View
+                        className="flex-row justify-between flex-1 pt-0.5 -mx-1"
+                        pointerEvents="box-none"
+                        style={controlsAnimatedStyle}
+                    >
+                        {playbackControlsNode}
+                        <PlaylistSelector variant="overlay" />
+                    </Animated.View>
+                ) : null}
             </View>
         </View>
     );

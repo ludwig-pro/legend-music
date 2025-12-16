@@ -74,12 +74,9 @@ export function PlaylistSelector({ variant = "default", className }: PlaylistSel
         (bottomBarLayout?.shown?.length ? bottomBarLayout.shown : DEFAULT_BOTTOM_BAR_BUTTONS) as BottomBarControlId[]
     ).filter((controlId, index, array) => array.indexOf(controlId) === index);
     const hasSearchControl = bottomBarControls.includes("search");
-    const isOverlayVariant = variant === "overlay";
-    const containerClassName = cn(
-        isOverlayVariant ? "px-2 py-1" : "px-3 border-t border-white/10",
-        className,
-    );
-    const rowClassName = cn("flex-row items-center", isOverlayVariant && "justify-end gap-2");
+    const isOverlayVariant = true; //variant === "overlay";
+    const containerClassName = cn(isOverlayVariant ? "" : "px-3 border-t border-white/10", className);
+    const rowClassName = cn("flex-row items-center gap-x-1", isOverlayVariant && "justify-end");
 
     useOnHotkeys(
         hasSearchControl
@@ -171,47 +168,44 @@ export function PlaylistSelector({ variant = "default", className }: PlaylistSel
                                 <Button
                                     key="savePlaylist"
                                     icon="square.and.arrow.down"
-                                    variant="icon"
-                                    size="small"
-                                    iconSize={16}
+                                    variant="icon-hover"
+                                    size="xs"
+                                    iconSize={14}
                                     iconYOffset={2}
                                     onClick={handleSavePlaylist}
-                                    className="ml-2 hover:bg-white/10"
                                     disabled={queue.tracks.length === 0}
                                     tooltip="Save playlist"
                                 />
                             ) : null;
                         case "toggleVisualizer": {
                             const icon = isVisualizerOpen ? "waveform.circle.fill" : "waveform";
-                            const iconSize = isVisualizerOpen ? 23 : 16;
+                            const iconSize = isVisualizerOpen ? 21 : 14;
                             return (
                                 <Button
                                     key="toggleVisualizer"
                                     icon={icon}
-                                    variant="icon"
-                                    size="small"
+                                    variant="icon-hover"
+                                    size="xs"
                                     iconSize={iconSize}
                                     iconYOffset={1}
                                     onClick={toggleVisualizer}
-                                    className={cn("ml-2 hover:bg-white/10", isVisualizerOpen && "bg-white/15")}
                                     tooltip={isVisualizerOpen ? "Hide visualizer" : "Show visualizer"}
                                 />
                             );
                         }
                         case "toggleLibrary": {
                             const icon: SFSymbol = isLibraryOpen ? "play.square.stack.fill" : "play.square.stack";
-                            const iconSize = isLibraryOpen ? 18 : 18;
+                            const iconSize = isLibraryOpen ? 16 : 16;
 
                             return (
                                 <Button
                                     key="toggleLibrary"
                                     icon={icon}
-                                    variant="icon"
-                                    size="small"
+                                    variant={isLibraryOpen ? "icon" : "icon-hover"}
+                                    size="xs"
                                     iconSize={iconSize}
                                     iconYOffset={1}
                                     onClick={toggleLibraryWindow}
-                                    className={cn("ml-2 hover:bg-white/10", isLibraryOpen && "bg-white/15")}
                                     tooltip={isLibraryOpen ? "Hide library" : "Show library"}
                                 />
                             );

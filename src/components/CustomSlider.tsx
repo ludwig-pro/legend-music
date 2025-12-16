@@ -184,10 +184,10 @@ export function CustomSlider({
                 disabled={isDisabled}
                 className="flex-1 justify-center"
             >
-                <View
+                <Animated.View
                     onLayout={handleTrackLayout}
-                    className="h-1.5 bg-white/20 rounded-full"
-                    style={{ backgroundColor: maximumTrackTintColor }}
+                    className="bg-white/20 rounded-full"
+                    style={{ backgroundColor: maximumTrackTintColor, height: isHovered ? 6 : 3 }}
                 >
                     {/* Progress track */}
                     <Animated.View className="h-full rounded-full" style={trackAnimatedStyle} />
@@ -203,7 +203,7 @@ export function CustomSlider({
                             },
                         ]}
                     />
-                </View>
+                </Animated.View>
             </Pressable>
         </View>
     );
