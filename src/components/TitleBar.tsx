@@ -1,14 +1,21 @@
+import { VibrancyView } from "@fluentui-react-native/vibrancy-view";
+import { AnimatePresence, Motion } from "@legendapp/motion";
 import { observe } from "@legendapp/state";
 import { useObserveEffect, useValue } from "@legendapp/state/react";
-import { Pressable, View } from "react-native";
+import type { JSX } from "react";
+import { Pressable } from "react-native";
 import WindowControls from "@/native-modules/WindowControls";
 import { settings$ } from "@/systems/Settings";
 import { state$ } from "@/systems/State";
 import { perfCount, perfLog } from "@/utils/perfLogger";
 
+type MotionViewProps = Parameters<typeof Motion.View>[0];
+const MotionView = Motion.View as unknown as (props: MotionViewProps) => JSX.Element;
+
 export function TitleBar() {
     perfCount("TitleBar.render");
     const showOnHover = useValue(settings$.general.showTitleBarOnHover);
+    const isHovered = useValue(state$.titleBarHovered);
 
     useObserveEffect(() => {
         const showOnHover = settings$.general.showTitleBarOnHover.get();
@@ -39,16 +46,31 @@ export function TitleBar() {
     }
 
     return (
-        <View className="absolute top-0 left-0 right-0 h-[28px]" pointerEvents="box-none">
-            <Pressable
-                className="h-full w-[220px]"
-                onPointerMove={onHover}
-                onHoverIn={onHover}
-                onHoverOut={onHoverLeave}
-            >
-                <View pointerEvents="none" className="h-full w-full" />
-            </Pressable>
-        </View>
+        <Pressable
+            className="absolute top-0 left-0 right-0 h-[28px]"
+            onPointerMove={onHover}
+            onHoverIn={onHover}
+            onHoverOut={onHoverLeave}
+        >
+            <AnimatePresence>
+                {isHovered ? (
+                    <MotionView
+                        className="absolute inset-0 border-b border-border-popup"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ type: "tween", duration: 100 }}
+                    >
+                        <VibrancyView
+                            blendingMode="withinWindow"
+                            state="active"
+                            material="popover"
+                            style={{ flex: 1 }}
+                        />
+                    </MotionView>
+                ) : null}
+            </AnimatePresence>
+        </Pressable>
     );
 }
 
