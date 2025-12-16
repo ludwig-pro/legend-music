@@ -3,7 +3,7 @@ import { type ReactNode, useEffect, useId, useRef } from "react";
 import { type LayoutChangeEvent, type LayoutRectangle, View } from "react-native";
 
 import { cn } from "@/utils/cn";
-import { type DraggedItem, useDragDrop } from "./DragDropContext";
+import { type DraggedItem, type DropZoneHitSlop, useDragDrop } from "./DragDropContext";
 
 type DroppableZoneChildren = ReactNode | ((isActive: boolean) => ReactNode);
 
@@ -15,6 +15,7 @@ interface DroppableZoneProps {
     className?: string;
     activeClassName?: string;
     disableProximityDetection?: boolean;
+    hitSlop?: DropZoneHitSlop;
 }
 
 export const DroppableZone = ({
@@ -25,6 +26,7 @@ export const DroppableZone = ({
     className = "",
     activeClassName = "",
     disableProximityDetection = false,
+    hitSlop,
 }: DroppableZoneProps) => {
     // Generate an ID if one wasn't provided
     const generatedId = useId();
@@ -48,12 +50,12 @@ export const DroppableZone = ({
 
     // Register the drop zone on mount and unregister on unmount
     useEffect(() => {
-        registerDropZone(id, layoutRef.current, allowDrop, onDrop, { disableProximityDetection });
+        registerDropZone(id, layoutRef.current, allowDrop, onDrop, { disableProximityDetection, hitSlop });
 
         return () => {
             unregisterDropZone(id);
         };
-    }, [id, registerDropZone, unregisterDropZone, allowDrop, onDrop, disableProximityDetection]);
+    }, [id, registerDropZone, unregisterDropZone, allowDrop, onDrop, disableProximityDetection, hitSlop]);
 
     // Handle layout changes
     const updateRectFromWindow = () => {

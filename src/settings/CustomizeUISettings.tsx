@@ -332,6 +332,9 @@ function ControlDropZone<T extends string>({
     const indicatorClass = isExpanded
         ? "rounded-2xl border border-emerald-500/40 bg-emerald-500/10"
         : "rounded-full bg-emerald-500/40";
+    const dropHitSlop = isExpanded
+        ? { top: 12, bottom: 12, left: 8, right: 8 }
+        : { top: 12, bottom: 12, left: 16, right: 16 };
 
     return (
         <DroppableZone
@@ -352,6 +355,7 @@ function ControlDropZone<T extends string>({
             }}
             className={baseClassName}
             activeClassName="opacity-100"
+            hitSlop={dropHitSlop}
         >
             {(isActive) => (
                 <View
