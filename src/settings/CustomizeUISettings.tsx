@@ -3,20 +3,16 @@ import { Fragment, useMemo } from "react";
 import { Text, View } from "react-native";
 
 import { DragDropProvider, DraggableItem, DroppableZone } from "@/components/dnd";
-import { useBottomBarControlLayout, usePlaybackControlLayout } from "@/hooks/useUIControls";
+import { usePlaybackControlLayout } from "@/hooks/useUIControls";
 import { SettingsPage, SettingsSection } from "@/settings/components";
 import { SUPPORT_PLAYLISTS } from "@/systems/constants";
 import { Icon } from "@/systems/Icon";
-import { type BottomBarControlId, type PlaybackControlId, settings$, type UIControlLayout } from "@/systems/Settings";
+import { type PlaybackControlId, settings$, type UIControlLayout } from "@/systems/Settings";
 import type { SFSymbols } from "@/types/SFSymbols";
-import { ax } from "@/utils/ax";
 import { cn } from "@/utils/cn";
 
 type ControlGroup = "shown" | "hidden";
-type ControlSectionType = "playback" | "bottomBar";
-
 type ControlDragData<T extends string> = {
-    section: ControlSectionType;
     controlId: T;
     group: ControlGroup;
 };
@@ -65,11 +61,6 @@ const PLAYBACK_CONTROL_DEFINITIONS: ControlDefinition<PlaybackControlId>[] = [
         // description: "Cycle repeat modes",
         icon: "repeat",
     },
-];
-
-const BOTTOM_BAR_CONTROL_DEFINITIONS: ControlDefinition<BottomBarControlId>[] = ax<
-    ControlDefinition<BottomBarControlId>
->([
     {
         id: "search",
         label: "Search",
@@ -97,38 +88,32 @@ const BOTTOM_BAR_CONTROL_DEFINITIONS: ControlDefinition<BottomBarControlId>[] = 
         iconMarginTop: -2,
         icon: "sidebar.right",
     },
-]);
+    {
+        id: "spacer",
+        label: "Spacer",
+        icon: "arrow.left.and.right",
+    },
+];
 
 const PLAYBACK_CONTROL_MAP = Object.fromEntries(
     PLAYBACK_CONTROL_DEFINITIONS.map((definition) => [definition.id, definition]),
 ) as Record<PlaybackControlId, ControlDefinition<PlaybackControlId>>;
 
-const BOTTOM_BAR_CONTROL_MAP = Object.fromEntries(
-    BOTTOM_BAR_CONTROL_DEFINITIONS.map((definition) => [definition.id, definition]),
-) as Record<BottomBarControlId, ControlDefinition<BottomBarControlId>>;
-
 const PLAYBACK_DRAG_ZONE_ID = "customize-playback-controls";
-const BOTTOM_BAR_DRAG_ZONE_ID = "customize-bottom-bar";
 
 export function CustomizeUISettings() {
     const playbackLayout = usePlaybackControlLayout();
-    const bottomBarLayout = useBottomBarControlLayout();
 
     useObserveEffect(() => {
-        ensureLayoutCompleteness("playback", settings$.ui.playback.get(), PLAYBACK_CONTROL_DEFINITIONS);
-    });
-
-    useObserveEffect(() => {
-        ensureLayoutCompleteness("bottomBar", settings$.ui.bottomBar.get(), BOTTOM_BAR_CONTROL_DEFINITIONS);
+        ensureLayoutCompleteness(settings$.ui.playback.get(), PLAYBACK_CONTROL_DEFINITIONS);
     });
 
     const normalizedPlaybackLayout = useNormalizedLayout(playbackLayout, PLAYBACK_CONTROL_DEFINITIONS);
-    const normalizedBottomBarLayout = useNormalizedLayout(bottomBarLayout, BOTTOM_BAR_CONTROL_DEFINITIONS);
 
     return (
         <SettingsPage
             title="Customize UI"
-            description="Select which controls are visible and arrange their order for the playback toolbar and bottom bar."
+            description="Select which controls are visible and arrange their order for the playback toolbar."
         >
             <DragDropProvider>
                 <View className="flex flex-col gap-8">
@@ -137,20 +122,8 @@ export function CustomizeUISettings() {
                         description="Drag controls between Shown and Hidden to curate the playback toolbar."
                     >
                         <ControlLayoutEditor
-                            section="playback"
                             layout={normalizedPlaybackLayout}
                             definitions={PLAYBACK_CONTROL_MAP}
-                        />
-                    </SettingsSection>
-
-                    <SettingsSection
-                        title="Bottom Bar"
-                        description="Organize shortcuts shown next to the playlist selector."
-                    >
-                        <ControlLayoutEditor
-                            section="bottomBar"
-                            layout={normalizedBottomBarLayout}
-                            definitions={BOTTOM_BAR_CONTROL_MAP}
                         />
                     </SettingsSection>
                 </View>
@@ -195,11 +168,7 @@ function arraysEqual<T>(a: readonly T[], b: readonly T[]): boolean {
     return a.every((value, index) => value === b[index]);
 }
 
-function ensureLayoutCompleteness<T extends string>(
-    section: ControlSectionType,
-    layout: UIControlLayout<T>,
-    definitions: ControlDefinition<T>[],
-) {
+function ensureLayoutCompleteness<T extends string>(layout: UIControlLayout<T>, definitions: ControlDefinition<T>[]) {
     const normalized = normalizeLayout(layout, definitions);
     const sanitizedLayout: UIControlLayout<T> = {
         shown: normalized.shown,
@@ -209,20 +178,15 @@ function ensureLayoutCompleteness<T extends string>(
         return;
     }
 
-    if (section === "playback") {
-        settings$.ui.playback.set(sanitizedLayout as UIControlLayout<PlaybackControlId>);
-    } else {
-        settings$.ui.bottomBar.set(sanitizedLayout as UIControlLayout<BottomBarControlId>);
-    }
+    settings$.ui.playback.set(sanitizedLayout as UIControlLayout<PlaybackControlId>);
 }
 
 interface ControlLayoutEditorProps<T extends string> {
-    section: ControlSectionType;
     layout: NormalizedUIControlLayout<T>;
     definitions: Record<T, ControlDefinition<T>>;
 }
 
-function ControlLayoutEditor<T extends string>({ section, layout, definitions }: ControlLayoutEditorProps<T>) {
+function ControlLayoutEditor<T extends string>({ layout, definitions }: ControlLayoutEditorProps<T>) {
     const handleMove = (params: MoveControlParams<T>) => {
         moveControl(params);
     };
@@ -236,7 +200,6 @@ function ControlLayoutEditor<T extends string>({ section, layout, definitions }:
                 label="Shown"
                 items={shownItems}
                 group="shown"
-                section={section}
                 definitions={definitions}
                 onMove={handleMove}
             />
@@ -244,7 +207,6 @@ function ControlLayoutEditor<T extends string>({ section, layout, definitions }:
                 label="Hidden"
                 items={hiddenItems}
                 group="hidden"
-                section={section}
                 definitions={definitions}
                 onMove={handleMove}
             />
@@ -256,13 +218,12 @@ interface ControlGroupProps<T extends string> {
     label: string;
     items: T[];
     group: ControlGroup;
-    section: ControlSectionType;
     definitions: Record<T, ControlDefinition<T>>;
     onMove: (params: MoveControlParams<T>) => void;
 }
 
-function ControlGroup<T extends string>({ label, items, group, section, definitions, onMove }: ControlGroupProps<T>) {
-    const zoneId = section === "playback" ? PLAYBACK_DRAG_ZONE_ID : BOTTOM_BAR_DRAG_ZONE_ID;
+function ControlGroup<T extends string>({ label, items, group, definitions, onMove }: ControlGroupProps<T>) {
+    const zoneId = PLAYBACK_DRAG_ZONE_ID;
     const hasItems = items.length > 0;
 
     return (
@@ -272,7 +233,6 @@ function ControlGroup<T extends string>({ label, items, group, section, definiti
                 <View className={cn("flex flex-row flex-wrap items-center", hasItems ? undefined : "justify-center")}>
                     <ControlDropZone
                         targetGroup={group}
-                        section={section}
                         index={0}
                         onMove={onMove}
                         isExpanded={!hasItems}
@@ -280,9 +240,9 @@ function ControlGroup<T extends string>({ label, items, group, section, definiti
                     {items.map((controlId, index) => (
                         <Fragment key={`${group}-${controlId}`}>
                             <DraggableItem<ControlDragData<T>>
-                                id={`${section}-${controlId}`}
+                                id={`playback-${controlId}`}
                                 zoneId={zoneId}
-                                data={() => ({ controlId, section, group })}
+                                data={() => ({ controlId, group })}
                                 className="flex-shrink-0"
                             >
                                 <ControlChip definition={definitions[controlId]} />
@@ -290,7 +250,6 @@ function ControlGroup<T extends string>({ label, items, group, section, definiti
                             {index < items.length - 1 && (
                                 <ControlDropZone
                                     targetGroup={group}
-                                    section={section}
                                     index={index + 1}
                                     onMove={onMove}
                                 />
@@ -300,7 +259,6 @@ function ControlGroup<T extends string>({ label, items, group, section, definiti
                     {hasItems && (
                         <ControlDropZone
                             targetGroup={group}
-                            section={section}
                             index={items.length}
                             onMove={onMove}
                             isExpanded
@@ -313,21 +271,14 @@ function ControlGroup<T extends string>({ label, items, group, section, definiti
 }
 
 interface ControlDropZoneProps<T extends string> {
-    section: ControlSectionType;
     targetGroup: ControlGroup;
     index: number;
     onMove: (params: MoveControlParams<T>) => void;
     isExpanded?: boolean;
 }
 
-function ControlDropZone<T extends string>({
-    section,
-    targetGroup,
-    index,
-    onMove,
-    isExpanded = false,
-}: ControlDropZoneProps<T>) {
-    const dropId = `${section}-${targetGroup}-drop-${index}`;
+function ControlDropZone<T extends string>({ targetGroup, index, onMove, isExpanded = false }: ControlDropZoneProps<T>) {
+    const dropId = `playback-${targetGroup}-drop-${index}`;
     const baseClassName = isExpanded ? "px-2 h-10 flex-1 w-full basis-full" : "h-10 w-2 flex-shrink-0";
     const indicatorClass = isExpanded
         ? "rounded-2xl border border-emerald-500/40 bg-emerald-500/10"
@@ -339,14 +290,10 @@ function ControlDropZone<T extends string>({
     return (
         <DroppableZone
             id={dropId}
-            allowDrop={(item) => {
-                const payload = item.data as ControlDragData<T>;
-                return payload.section === section;
-            }}
+            allowDrop={() => true}
             onDrop={(item) => {
                 const payload = item.data as ControlDragData<T>;
                 onMove({
-                    section,
                     controlId: payload.controlId,
                     sourceGroup: payload.group,
                     targetGroup,
@@ -390,29 +337,15 @@ function ControlChip<T extends string>({ definition }: ControlChipProps<T>) {
 }
 
 interface MoveControlParams<T extends string> {
-    section: ControlSectionType;
     controlId: T;
     sourceGroup: ControlGroup;
     targetGroup: ControlGroup;
     targetIndex: number;
 }
 
-function moveControl<T extends string>({
-    section,
-    controlId,
-    sourceGroup,
-    targetGroup,
-    targetIndex,
-}: MoveControlParams<T>) {
-    const layout =
-        section === "playback"
-            ? ((settings$.ui.playback.get() as UIControlLayout<T>) ?? { shown: [] })
-            : ((settings$.ui.bottomBar.get() as UIControlLayout<T>) ?? { shown: [] });
-
-    const definitions =
-        section === "playback"
-            ? (PLAYBACK_CONTROL_DEFINITIONS as ControlDefinition<T>[])
-            : (BOTTOM_BAR_CONTROL_DEFINITIONS as ControlDefinition<T>[]);
+function moveControl<T extends string>({ controlId, sourceGroup, targetGroup, targetIndex }: MoveControlParams<T>) {
+    const layout = (settings$.ui.playback.get() as UIControlLayout<T>) ?? { shown: [] };
+    const definitions = PLAYBACK_CONTROL_DEFINITIONS as ControlDefinition<T>[];
 
     const normalized = normalizeLayout(layout, definitions);
     const filteredShown = normalized.shown.filter((id) => id !== controlId);
@@ -442,9 +375,5 @@ function moveControl<T extends string>({
         shown: sanitized.shown,
     };
 
-    if (section === "playback") {
-        settings$.ui.playback.set(nextLayout as UIControlLayout<PlaybackControlId>);
-    } else {
-        settings$.ui.bottomBar.set(nextLayout as UIControlLayout<BottomBarControlId>);
-    }
+    settings$.ui.playback.set(nextLayout as UIControlLayout<PlaybackControlId>);
 }

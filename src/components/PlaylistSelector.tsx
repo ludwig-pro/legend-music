@@ -7,12 +7,12 @@ import type { DropdownMenuRootRef } from "@/components/DropdownMenu";
 import { queue$ } from "@/components/LocalAudioPlayer";
 import { PlaylistSelectorSearchDropdown } from "@/components/PlaylistSelectorSearchDropdown";
 import { SelectLegendList } from "@/components/SelectLegendList";
-import { useBottomBarControlLayout } from "@/hooks/useUIControls";
+import { usePlaybackControlLayout } from "@/hooks/useUIControls";
 import { SUPPORT_PLAYLISTS } from "@/systems/constants";
 import { useOnHotkeys } from "@/systems/keyboard/Keyboard";
 import { library$ } from "@/systems/LibraryState";
 import { DEFAULT_LOCAL_PLAYLIST_NAME, localMusicState$ } from "@/systems/LocalMusicState";
-import type { BottomBarControlId } from "@/systems/Settings";
+import type { PlaybackControlId } from "@/systems/Settings";
 import { cn } from "@/utils/cn";
 import {
     selectedPlaylist$,
@@ -23,17 +23,14 @@ import {
     useVisualizerToggle,
 } from "./PlaylistSelector/hooks";
 
-const DEFAULT_BOTTOM_BAR_BUTTONS: BottomBarControlId[] = [
-    "search",
-    "savePlaylist",
-    "toggleVisualizer",
-    "toggleLibrary",
-];
+const DEFAULT_BOTTOM_BAR_BUTTONS: PlaybackControlId[] = ["search", "savePlaylist", "toggleVisualizer", "toggleLibrary"];
 
 type PlaylistSelectorProps = {
     variant?: "default" | "overlay";
     className?: string;
 };
+
+// TODO: This file isn't used anymore
 
 export function PlaylistSelector({ variant = "default", className }: PlaylistSelectorProps = {}) {
     const localMusicState = useValue(localMusicState$);
@@ -69,10 +66,12 @@ export function PlaylistSelector({ variant = "default", className }: PlaylistSel
 
     const { handleSavePlaylist } = useQueueExporter({ queueTracks: queue.tracks });
 
-    const bottomBarLayout = useBottomBarControlLayout();
+    const playbackLayout = usePlaybackControlLayout();
     const bottomBarControls = (
-        (bottomBarLayout?.shown?.length ? bottomBarLayout.shown : DEFAULT_BOTTOM_BAR_BUTTONS) as BottomBarControlId[]
-    ).filter((controlId, index, array) => array.indexOf(controlId) === index);
+        (playbackLayout?.shown?.length ? playbackLayout.shown : DEFAULT_BOTTOM_BAR_BUTTONS) as PlaybackControlId[]
+    )
+        .filter((controlId, index, array) => array.indexOf(controlId) === index)
+        .filter((controlId) => DEFAULT_BOTTOM_BAR_BUTTONS.includes(controlId));
     const hasSearchControl = bottomBarControls.includes("search");
     const isOverlayVariant = true; //variant === "overlay";
     const containerClassName = cn(isOverlayVariant ? "" : "px-3 border-t border-white/10", className);

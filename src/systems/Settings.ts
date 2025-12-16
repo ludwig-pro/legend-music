@@ -24,9 +24,17 @@ export interface PlaybackSettingsConfig {
     repeatMode: RepeatMode;
 }
 
-export type PlaybackControlId = "previous" | "playPause" | "next" | "shuffle" | "repeat";
-
-export type BottomBarControlId = "search" | "savePlaylist" | "toggleVisualizer" | "toggleLibrary";
+export type PlaybackControlId =
+    | "previous"
+    | "playPause"
+    | "next"
+    | "shuffle"
+    | "repeat"
+    | "search"
+    | "savePlaylist"
+    | "toggleVisualizer"
+    | "toggleLibrary"
+    | "spacer";
 
 export interface UIControlLayout<T extends string> {
     shown: T[];
@@ -34,7 +42,6 @@ export interface UIControlLayout<T extends string> {
 
 export interface UISettingsConfig {
     playback: UIControlLayout<PlaybackControlId>;
-    bottomBar: UIControlLayout<BottomBarControlId>;
 }
 
 export interface AppSettings {
@@ -102,10 +109,16 @@ export const settings$ = createJSONManager<AppSettings>({
         },
         ui: {
             playback: {
-                shown: ["playPause", "next"],
-            },
-            bottomBar: {
-                shown: ["search", "savePlaylist", "toggleVisualizer", "toggleLibrary"],
+                shown: [
+                    "previous",
+                    "playPause",
+                    "next",
+                    "spacer",
+                    "search",
+                    "savePlaylist",
+                    "toggleVisualizer",
+                    "toggleLibrary",
+                ],
             },
         },
         uniqueId: "",
