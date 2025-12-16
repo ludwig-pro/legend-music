@@ -276,10 +276,10 @@ export function PlaybackArea({ showBorder = true, overlayMode }: PlaybackAreaPro
                     </View>
                 </View>
             </View>
-            <View className="w-full pt-1 flex-row">
+            <View className="w-full flex-row">
                 {hoverContentVisible ? (
                     <Animated.View
-                        className="flex-row justify-between flex-1 pt-0.5 -mx-1"
+                        className="flex-row justify-between flex-1 pt-0.5 -mx-1 pb-1"
                         pointerEvents="box-none"
                         style={controlsAnimatedStyle}
                     >
