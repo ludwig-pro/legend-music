@@ -90,7 +90,7 @@ const TextOnHover = memo(function SkiaTextOnHover({
 
 const Text$ = memo(function Text$({ text$ }: { text$: Observable<string> }) {
     return (
-        <Text className="text-[11px] text-text-secondary font-bold" style={{ fontVariant: ["tabular-nums"] }}>
+        <Text className="text-[11px] text-text-secondary" style={{ fontVariant: ["tabular-nums"] }}>
             <Memo>{text$}</Memo>
         </Text>
     );

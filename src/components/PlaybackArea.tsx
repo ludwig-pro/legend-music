@@ -1,6 +1,6 @@
 import { useValue } from "@legendapp/state/react";
 import { useCallback, useEffect, useState } from "react";
-import { type LayoutChangeEvent, Text, View } from "react-native";
+import { type LayoutChangeEvent, Pressable, Text, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 import { AlbumArt } from "@/components/AlbumArt";
 import { Button } from "@/components/Button";
@@ -16,6 +16,7 @@ import {
     OVERLAY_CONTENT_SPRING_STIFFNESS,
     OVERLAY_WINDOW_WIDTH_COMPACT,
 } from "@/overlay/OverlayConstants";
+import { Icon } from "@/systems/Icon";
 import { localMusicState$ } from "@/systems/LocalMusicState";
 import { setIsScrubbing } from "@/systems/PlaybackInteractionState";
 import { type PlaybackControlId, settings$ } from "@/systems/Settings";
@@ -242,6 +243,12 @@ export function PlaybackArea({ showBorder = true, overlayMode }: PlaybackAreaPro
                         size="large"
                         fallbackIcon="♪"
                     />
+                    <Pressable
+                        className="absolute inset-0 opacity-0 hover:opacity-100 transition-all duration-300 items-center justify-center"
+                        onPress={localAudioControls.togglePlayPause}
+                    >
+                        <Icon name={isPlaying ? "pause.fill" : "play.fill"} size={24} color="#fff" />
+                    </Pressable>
                 </View>
 
                 {/* Song Info */}
