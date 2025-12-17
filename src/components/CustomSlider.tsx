@@ -1,3 +1,4 @@
+import { Motion } from "@legendapp/motion";
 import type { Observable } from "@legendapp/state";
 import { useObservable, useObserveEffect, useValue } from "@legendapp/state/react";
 import { useCallback, useMemo, useRef, useState } from "react";
@@ -5,6 +6,7 @@ import type { GestureResponderEvent, LayoutChangeEvent } from "react-native";
 import { PanResponder, Pressable, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useObservableLatest } from "@/observables/useObservableLatest";
+import { Transitions } from "@/systems/constants";
 import { perfCount, perfLog } from "@/utils/perfLogger";
 
 interface CustomSliderProps {
@@ -184,26 +186,29 @@ export function CustomSlider({
                 disabled={isDisabled}
                 className="flex-1 justify-center"
             >
-                <Animated.View
+                <Motion.View
                     onLayout={handleTrackLayout}
                     className="bg-white/20 rounded-full"
-                    style={{ backgroundColor: maximumTrackTintColor, height: isHovered ? 6 : 3 }}
+                    style={{ backgroundColor: maximumTrackTintColor }}
+                    animate={{ height: isHovered ? 8 : 3 }}
+                    transition={Transitions.Spring}
                 >
                     {/* Progress track */}
-                    <Animated.View className="h-full rounded-full" style={trackAnimatedStyle} />
+                    <Animated.View className="h-full rounded-l-full" style={trackAnimatedStyle} />
                     {/* Vertical line thumb */}
-                    <Animated.View
+                    {/* <Animated.View
                         className="absolute w-1 bg-white rounded-full"
                         style={[
                             thumbAnimatedStyle,
                             {
-                                // marginTop: 3,
-                                marginLeft: -4, // Half of line width
+                                marginTop: -3,
+                                height: 100,
+                                marginLeft: -4,
                                 opacity: isDisabled ? 0.5 : isHovered || isDragging ? 1 : 0,
                             },
                         ]}
-                    />
-                </Animated.View>
+                    /> */}
+                </Motion.View>
             </Pressable>
         </View>
     );

@@ -1,6 +1,6 @@
 import { useValue } from "@legendapp/state/react";
 import { useCallback, useEffect, useState } from "react";
-import { type LayoutChangeEvent, Pressable, Text, View } from "react-native";
+import { type LayoutChangeEvent, Platform, Pressable, Text, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 import { AlbumArt } from "@/components/AlbumArt";
 import { localAudioControls, localPlayerState$ } from "@/components/LocalAudioPlayer";
@@ -17,6 +17,7 @@ import {
 import { Icon } from "@/systems/Icon";
 import { localMusicState$ } from "@/systems/LocalMusicState";
 import { setIsScrubbing } from "@/systems/PlaybackInteractionState";
+import { settings$ } from "@/systems/Settings";
 import { state$ } from "@/systems/State";
 import { cn } from "@/utils/cn";
 import { perfCount } from "@/utils/perfLogger";
@@ -47,6 +48,7 @@ export function PlaybackArea({ showBorder = true, overlayMode }: PlaybackAreaPro
     const handleHoverIn = useCallback(() => setIsHovered(true), []);
     const handleHoverOut = useCallback(() => setIsHovered(false), []);
     const _isWindowHovered = useValue(state$.isWindowHovered);
+    const playbackControlsEnabled = useValue(settings$.ui.playbackControlsEnabled) ?? true;
 
     const hoverContentVisible = true; // isHovered && overlayControlsVisible;
     // const hoverContentVisible = isWindowHovered && overlayControlsVisible;
@@ -117,7 +119,7 @@ export function PlaybackArea({ showBorder = true, overlayMode }: PlaybackAreaPro
 
     return (
         <View
-            className={cn("relative px-3", showBorder ? "pt-3" : "py-3")}
+            className={cn("relative px-3", showBorder ? "pt-3" : "py-3", !playbackControlsEnabled && "py-3")}
             mouseDownCanMoveWindow
             onMouseEnter={handleHoverIn}
             onMouseLeave={handleHoverOut}
@@ -170,7 +172,7 @@ export function PlaybackArea({ showBorder = true, overlayMode }: PlaybackAreaPro
                     </View>
                 </View>
             </View>
-            <PlaybackControls className="pt-1 -mx-1 pb-1" />
+            {playbackControlsEnabled ? <PlaybackControls className="pt-1 -mx-1 pb-1" /> : null}
         </View>
     );
 }

@@ -6,16 +6,14 @@ import { Button } from "@/components/Button";
 import type { DropdownMenuRootRef } from "@/components/DropdownMenu";
 import { queue$ } from "@/components/LocalAudioPlayer";
 import { PlaylistSelectorSearchDropdown } from "@/components/PlaylistSelectorSearchDropdown";
-import { SelectLegendList } from "@/components/SelectLegendList";
 import { usePlaybackControlLayout } from "@/hooks/useUIControls";
 import { SUPPORT_PLAYLISTS } from "@/systems/constants";
 import { useOnHotkeys } from "@/systems/keyboard/Keyboard";
 import { library$ } from "@/systems/LibraryState";
-import { DEFAULT_LOCAL_PLAYLIST_NAME, localMusicState$ } from "@/systems/LocalMusicState";
+import { localMusicState$ } from "@/systems/LocalMusicState";
 import type { PlaybackControlId } from "@/systems/Settings";
 import { cn } from "@/utils/cn";
 import {
-    selectedPlaylist$,
     useLibraryToggle,
     usePlaylistOptions,
     usePlaylistQueueHandlers,

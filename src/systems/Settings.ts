@@ -41,6 +41,7 @@ export interface UIControlLayout<T extends string> {
 }
 
 export interface UISettingsConfig {
+    playbackControlsEnabled: boolean;
     playback: UIControlLayout<PlaybackControlId>;
 }
 
@@ -108,6 +109,7 @@ export const settings$ = createJSONManager<AppSettings>({
             repeatMode: "off",
         },
         ui: {
+            playbackControlsEnabled: true,
             playback: {
                 shown: [
                     "previous",

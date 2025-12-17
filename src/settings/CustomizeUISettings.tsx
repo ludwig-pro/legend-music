@@ -2,9 +2,10 @@ import { useObserveEffect } from "@legendapp/state/react";
 import { Fragment, useMemo } from "react";
 import { Text, View } from "react-native";
 
+import { Checkbox } from "@/components/Checkbox";
 import { DragDropProvider, DraggableItem, DroppableZone } from "@/components/dnd";
 import { usePlaybackControlLayout } from "@/hooks/useUIControls";
-import { SettingsPage, SettingsSection } from "@/settings/components";
+import { SettingsPage, SettingsRow, SettingsSection } from "@/settings/components";
 import { SUPPORT_PLAYLISTS } from "@/systems/constants";
 import { Icon } from "@/systems/Icon";
 import { type PlaybackControlId, settings$, type UIControlLayout } from "@/systems/Settings";
@@ -121,6 +122,11 @@ export function CustomizeUISettings() {
                         title="Playback Controls"
                         description="Drag controls between Shown and Hidden to curate the playback toolbar."
                     >
+                        <SettingsRow
+                            title="Enable playback controls"
+                            description="Show the playback toolbar beneath the Now Playing area."
+                            control={<Checkbox $checked={settings$.ui.playbackControlsEnabled} />}
+                        />
                         <ControlLayoutEditor
                             layout={normalizedPlaybackLayout}
                             definitions={PLAYBACK_CONTROL_MAP}
