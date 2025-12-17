@@ -1,12 +1,9 @@
-import { AnimatePresence, Motion } from "@legendapp/motion";
 import type { Observable } from "@legendapp/state";
-import { Memo, useObservable, useValue } from "@legendapp/state/react";
+import { Memo, useObservable } from "@legendapp/state/react";
 import { memo } from "react";
 import { type LayoutChangeEvent, Text, View } from "react-native";
 import type { OverlayPlaybackMode } from "@/components/PlaybackArea";
 import { PlaybackTimelineSlider } from "@/components/PlaybackTimelineSlider";
-import { SkiaText, type SkiaTextProps } from "@/components/SkiaText";
-import { state$ } from "@/systems/State";
 import { cn } from "@/utils/cn";
 
 type PlaybackTimelineProps = {

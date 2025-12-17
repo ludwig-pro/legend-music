@@ -205,7 +205,7 @@ export function AlbumArt({
 
     const sizeClasses = {
         small: "size-6",
-        medium: "size-9",
+        medium: "size-14",
         large: "size-16",
     };
 
