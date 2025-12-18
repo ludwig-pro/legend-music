@@ -13,10 +13,11 @@ import {
     DEFAULT_LOCAL_PLAYLIST_NAME,
     loadLocalPlaylists,
     localMusicState$,
-    setCurrentPlaylist,
     saveLocalPlaylistTracks,
+    setCurrentPlaylist,
 } from "@/systems/LocalMusicState";
 import { stateSaved$ } from "@/systems/State";
+
 import { perfLog } from "@/utils/perfLogger";
 import type { QueueAction } from "@/utils/queueActions";
 import { buildTrackLookup, getTracksForLibraryItem, resolvePlaylistTracks } from "@/utils/trackResolution";
@@ -273,7 +274,8 @@ export function useQueueExporter({ queueTracks }: QueueExporterArgs) {
 
             const normalizedName = trimmedName.toLowerCase();
             const playlists = localMusicState$.playlists.peek();
-            const existing = playlists.find((playlist) => playlist.name.trim().toLowerCase() === normalizedName) ?? null;
+            const existing =
+                playlists.find((playlist) => playlist.name.trim().toLowerCase() === normalizedName) ?? null;
             const trackPaths = queueTracks.map((track) => track.filePath);
 
             try {
