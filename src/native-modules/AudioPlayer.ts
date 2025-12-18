@@ -70,6 +70,13 @@ export interface NativeScannedTrack {
     skipped?: boolean;
 }
 
+export interface NativeScannedPlaylist {
+    rootIndex: number;
+    relativePath: string;
+    fileName: string;
+    absolutePath?: string;
+}
+
 export interface MediaScanBatchEvent {
     tracks: NativeScannedTrack[];
     rootIndex: number;
@@ -87,6 +94,7 @@ export interface MediaScanResult {
     totalTracks: number;
     totalRoots: number;
     errors?: string[];
+    playlists?: NativeScannedPlaylist[];
 }
 
 export interface MediaScanOptions {

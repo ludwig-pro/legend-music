@@ -142,6 +142,16 @@ static NSSet<NSString *> *LMSupportedAudioExtensions(void) {
     return extensions;
 }
 
+static NSSet<NSString *> *LMPlaylistExtensions(void) {
+    static NSSet<NSString *> *extensions = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        extensions = [NSSet setWithObjects:@"m3u", @"m3u8", nil];
+    });
+
+    return extensions;
+}
+
 static NSSet<NSString *> *LMExtensionsFromOption(NSArray<NSString *> *options) {
     if (![options isKindOfClass:[NSArray class]] || options.count == 0) {
         return LMSupportedAudioExtensions();
@@ -168,6 +178,14 @@ static BOOL LMIsSupportedAudioExtensionString(NSString *extension, NSSet<NSStrin
 
     NSSet<NSString *> *extensions = allowedExtensions ?: LMSupportedAudioExtensions();
     return [extensions containsObject:[extension lowercaseString]];
+}
+
+static BOOL LMIsPlaylistExtensionString(NSString *extension) {
+    if (!extension || extension.length == 0) {
+        return NO;
+    }
+
+    return [LMPlaylistExtensions() containsObject:[extension lowercaseString]];
 }
 
 static BOOL LMIsSupportedAudioURLWithSet(NSURL *fileURL, NSSet<NSString *> *allowedExtensions) {
@@ -1709,7 +1727,7 @@ RCT_EXPORT_METHOD(scanMediaLibrary:(NSArray<NSString *> *)paths
     }
 
     if (paths.count == 0) {
-        resolve(@{ @"totalTracks": @0, @"totalRoots": @0, @"errors": @[] });
+        resolve(@{ @"totalTracks": @0, @"totalRoots": @0, @"errors": @[], @"playlists": @[] });
         return;
     }
 
@@ -1739,7 +1757,7 @@ RCT_EXPORT_METHOD(scanMediaLibrary:(NSArray<NSString *> *)paths
             if (totalRoots == 0) {
                 dispatch_async(dispatch_get_main_queue(), ^{
                     self.isMediaScanning = NO;
-                    resolve(@{ @"totalTracks": @0, @"totalRoots": @0, @"errors": @[] });
+                    resolve(@{ @"totalTracks": @0, @"totalRoots": @0, @"errors": @[], @"playlists": @[] });
                 });
                 return;
             }
@@ -1794,6 +1812,7 @@ RCT_EXPORT_METHOD(scanMediaLibrary:(NSArray<NSString *> *)paths
             NSMutableArray<NSString *> *errors = [NSMutableArray array];
             NSUInteger totalTracks = 0;
             NSUInteger completedRoots = 0;
+            NSMutableArray<NSDictionary *> *playlists = [NSMutableArray array];
 
             NSFileManager *fileManager = [NSFileManager defaultManager];
 
@@ -1867,6 +1886,21 @@ RCT_EXPORT_METHOD(scanMediaLibrary:(NSArray<NSString *> *)paths
                         }
 
                         NSString *extension = [[fileURL pathExtension] lowercaseString];
+                        if (LMIsPlaylistExtensionString(extension)) {
+                            NSString *relativePath = LMRelativePathFromRoot(fileURL.path, rootPath);
+                            NSString *fileName = fileURL.lastPathComponent ?: relativePath;
+
+                            NSMutableDictionary *playlist = [@{
+                                @"rootIndex": @(rootIndex),
+                                @"relativePath": relativePath ?: fileURL.path,
+                                @"fileName": fileName ?: fileURL.lastPathComponent ?: fileURL.path,
+                                @"absolutePath": fileURL.path ?: @""
+                            } mutableCopy];
+
+                            [playlists addObject:playlist];
+                            continue;
+                        }
+
                         if (!LMIsSupportedAudioExtensionString(extension, allowedExtensions)) {
                             continue;
                         }
@@ -1956,7 +1990,12 @@ RCT_EXPORT_METHOD(scanMediaLibrary:(NSArray<NSString *> *)paths
                 }
             }
 
-            NSDictionary *result = @{ @"totalTracks": @(totalTracks), @"totalRoots": @(totalRoots), @"errors": errors };
+            NSDictionary *result = @{
+                @"totalTracks": @(totalTracks),
+                @"totalRoots": @(totalRoots),
+                @"errors": errors,
+                @"playlists": playlists
+            };
             if (errors.count > 0) {
                 RCTLogWarn(@"Media scan completed with %lu errors, totalTracks=%lu", (unsigned long)errors.count, (unsigned long)totalTracks);
             } else {

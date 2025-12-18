@@ -4,6 +4,7 @@ import AudioPlayer, {
     type MediaScanBatchEvent,
     type MediaScanProgressEvent,
     type MediaScanResult,
+    type NativeScannedPlaylist,
 } from "@/native-modules/AudioPlayer";
 import { addChangeListener, setWatchedDirectories } from "@/native-modules/FileSystemWatcher";
 import { isSupportedAudioFile, SUPPORTED_AUDIO_EXTENSIONS, stripSupportedAudioExtension } from "@/systems/audioFormats";
@@ -84,6 +85,39 @@ let removeLibraryWatcher: (() => void) | undefined;
 let libraryWatcherTimeout: ReturnType<typeof setTimeout> | undefined;
 let hasSubscribedToLibraryPathChanges = false;
 let lastLibraryPaths: string[] = [];
+type DiscoveredPlaylist = {
+    filePath: string;
+    originRoot: string;
+    fileName: string;
+};
+let lastDiscoveredLibraryPlaylists: DiscoveredPlaylist[] = [];
+
+const setDiscoveredLibraryPlaylists = (playlists: DiscoveredPlaylist[]): void => {
+    const seen = new Set<string>();
+    const deduped: DiscoveredPlaylist[] = [];
+
+    for (const playlist of playlists) {
+        const normalizedPath = normalizeRootPath(playlist.filePath);
+        if (!normalizedPath) {
+            continue;
+        }
+
+        const key = normalizedPath.toLowerCase();
+        if (seen.has(key)) {
+            continue;
+        }
+
+        seen.add(key);
+        deduped.push({
+            ...playlist,
+            filePath: normalizedPath,
+            originRoot: normalizeRootPath(playlist.originRoot),
+        });
+    }
+
+    lastDiscoveredLibraryPlaylists = deduped;
+};
+
 const debugLocalMusicLog = (...args: unknown[]) => {
     if (DEBUG_LOCAL_MUSIC_LOGS) {
         console.log(...args);
@@ -660,15 +694,75 @@ async function scanDirectoriesForTracks(
     return tracks;
 }
 
-async function scanLibraryNative(paths: string[]): Promise<{ tracks: LocalTrack[]; errors: string[] }> {
+async function scanLibraryNative(
+    paths: string[],
+): Promise<{ tracks: LocalTrack[]; errors: string[]; playlists: DiscoveredPlaylist[] }> {
     if (paths.length === 0) {
-        return { tracks: [], errors: [] };
+        setDiscoveredLibraryPlaylists([]);
+        return { tracks: [], errors: [], playlists: [] };
     }
 
     const normalizedRoots = paths.map((path) => normalizeRootPath(path));
     const tracks: LocalTrack[] = [];
     const scanErrors: string[] = [];
     const seenPaths = new Set<string>();
+    let discoveredPlaylists: DiscoveredPlaylist[] = [];
+    setDiscoveredLibraryPlaylists([]);
+    const applyDiscoveredPlaylists = (nativePlaylists?: NativeScannedPlaylist[]): void => {
+        if (!Array.isArray(nativePlaylists) || nativePlaylists.length === 0) {
+            discoveredPlaylists = [];
+            setDiscoveredLibraryPlaylists([]);
+            return;
+        }
+
+        const mapped: DiscoveredPlaylist[] = [];
+        const seen = new Set<string>();
+
+        for (const playlist of nativePlaylists) {
+            if (!playlist) {
+                continue;
+            }
+
+            const rootIndex = Number.isFinite(playlist.rootIndex) ? playlist.rootIndex : -1;
+            const originRoot = normalizedRoots[rootIndex];
+            if (!originRoot) {
+                continue;
+            }
+
+            const candidatePath =
+                (playlist.absolutePath && playlist.absolutePath.length > 0
+                    ? playlist.absolutePath
+                    : undefined) ??
+                (playlist.relativePath?.length
+                    ? buildAbsolutePath(originRoot, playlist.relativePath)
+                    : buildAbsolutePath(originRoot, playlist.fileName ?? ""));
+
+            const normalizedPath = candidatePath ? normalizeRootPath(candidatePath) : "";
+            if (!normalizedPath) {
+                continue;
+            }
+
+            const fileName = playlist.fileName ?? fileNameFromPath(normalizedPath);
+            if (!isPlaylistFileName(fileName) || isQueuePlaylistFileName(fileName)) {
+                continue;
+            }
+
+            const key = normalizedPath.toLowerCase();
+            if (seen.has(key)) {
+                continue;
+            }
+
+            seen.add(key);
+            mapped.push({
+                filePath: normalizedPath,
+                originRoot,
+                fileName,
+            });
+        }
+
+        discoveredPlaylists = mapped;
+        setDiscoveredLibraryPlaylists(mapped);
+    };
     const { skipEntries, cachedTracksByRoot, cachedTrackCount } = buildCachedTrackIndex(normalizedRoots);
     if (cachedTrackCount > 0) {
         localMusicState$.scanTrackTotal.set((value) => Math.max(value, cachedTrackCount));
@@ -760,6 +854,10 @@ async function scanLibraryNative(paths: string[]): Promise<{ tracks: LocalTrack[
         if (Array.isArray(event.errors) && event.errors.length > 0) {
             scanErrors.push(...(event.errors as string[]));
         }
+
+        if (Array.isArray(event.playlists)) {
+            applyDiscoveredPlaylists(event.playlists);
+        }
     };
 
     const subscriptions = [
@@ -792,7 +890,8 @@ async function scanLibraryNative(paths: string[]): Promise<{ tracks: LocalTrack[
                 sampleErrors: scanErrors.slice(0, 5),
             });
         }
-        return { tracks, errors: scanErrors };
+        applyDiscoveredPlaylists(result.playlists);
+        return { tracks, errors: scanErrors, playlists: discoveredPlaylists };
     } finally {
         for (const subscription of subscriptions) {
             try {
@@ -867,6 +966,7 @@ export async function scanLocalMusic(): Promise<void> {
             );
         }
 
+        loadLocalPlaylists();
         debugLocalMusicLog(`Scan complete: Found ${dedupedTracks.length} total audio files`);
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
@@ -954,71 +1054,6 @@ const readPlaylistTrackPaths = (file: File): string[] => {
     return parsed.songs.map((track) => resolveTrackPathForPlaylist(file.uri, track.filePath));
 };
 
-export function findM3UFilesInLibraryRoots(roots: string[]): Array<{ filePath: string; originRoot: string }> {
-    const normalizedRoots = roots.map((root) => root.trim()).filter(Boolean);
-    if (normalizedRoots.length === 0) {
-        return [];
-    }
-
-    const discovered = new Map<string, string>();
-    const maxDepth = 6;
-    const maxEntriesPerDirectory = 2000;
-
-    const walk = (directory: Directory, depth: number, originRoot: string) => {
-        if (depth > maxDepth) {
-            return;
-        }
-
-        let entries: (Directory | File)[] = [];
-        try {
-            entries = directory.list();
-        } catch {
-            return;
-        }
-
-        if (entries.length > maxEntriesPerDirectory) {
-            return;
-        }
-
-        for (const entry of entries) {
-            if (entry instanceof File) {
-                if (!isPlaylistFileName(entry.name) || isQueuePlaylistFileName(entry.name)) {
-                    continue;
-                }
-
-                const filePath = toFilePath(entry.uri);
-                if (!discovered.has(filePath)) {
-                    discovered.set(filePath, originRoot);
-                }
-                continue;
-            }
-
-            if (entry instanceof Directory) {
-                if (entry.name.startsWith(".")) {
-                    continue;
-                }
-
-                walk(entry, depth + 1, originRoot);
-            }
-        }
-    };
-
-    for (const root of normalizedRoots) {
-        try {
-            const directory = new Directory(root);
-            if (!directory.exists) {
-                continue;
-            }
-
-            walk(directory, 0, toFilePath(root));
-        } catch (error) {
-            console.warn(`Failed to scan playlists in library root: ${root}`, error);
-        }
-    }
-
-    return Array.from(discovered.entries()).map(([filePath, originRoot]) => ({ filePath, originRoot }));
-}
-
 export function loadLocalPlaylists(): void {
     perfLog("LocalMusic.loadLocalPlaylists.start");
 
@@ -1064,12 +1099,17 @@ export function loadLocalPlaylists(): void {
         }
     }
 
-    const discoveredPlaylists = findM3UFilesInLibraryRoots(librarySettings$.paths.get());
+    const discoveredPlaylists = lastDiscoveredLibraryPlaylists;
     const cachePlaylistIds = new Set(cachePlaylists.map((playlist) => playlist.id));
     const libraryPlaylists: LocalPlaylist[] = [];
 
     for (const discovered of discoveredPlaylists) {
-        const filePath = discovered.filePath;
+        const filePath = toFilePath(discovered.filePath);
+        const fileName = discovered.fileName || fileNameFromPath(filePath);
+        if (!filePath || !isPlaylistFileName(fileName) || isQueuePlaylistFileName(fileName)) {
+            continue;
+        }
+
         if (cachePlaylistIds.has(filePath)) {
             continue;
         }
@@ -1081,9 +1121,10 @@ export function loadLocalPlaylists(): void {
             }
 
             const trackPaths = readPlaylistTrackPaths(file);
+            const playlistName = fileName.replace(/\.(m3u|m3u8)$/i, "");
             libraryPlaylists.push({
                 id: toFilePath(file.uri),
-                name: file.name.replace(/\.(m3u|m3u8)$/i, ""),
+                name: playlistName,
                 filePath: toFilePath(file.uri),
                 trackPaths,
                 trackCount: trackPaths.length,
