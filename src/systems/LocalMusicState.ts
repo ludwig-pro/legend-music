@@ -165,28 +165,29 @@ function normalizeRootPath(path: string): string {
     return trimmed.length > 0 ? trimmed : withoutPrefix;
 }
 
-async function validateLibraryPaths(paths: string[]): Promise<{ existing: string[]; missing: string[] }> {
+function validateLibraryPaths(paths: string[]): { existing: string[]; missing: string[] } {
     if (paths.length === 0) {
         return { existing: [], missing: [] };
     }
 
-    const results = await Promise.all(
-        paths.map(async (path) => {
-            try {
-                const directory = new Directory(path);
-                const exists = directory.exists;
-                return { path, exists };
-            } catch (error) {
-                console.warn(`validateLibraryPaths: failed to inspect ${path}`, error);
-                return { path, exists: false };
-            }
-        }),
-    );
+    const existing: string[] = [];
+    const missing: string[] = [];
 
-    return {
-        existing: results.filter((result) => result.exists).map((result) => result.path),
-        missing: results.filter((result) => !result.exists).map((result) => result.path),
-    };
+    for (const path of paths) {
+        try {
+            const directory = new Directory(path);
+            if (directory.exists) {
+                existing.push(path);
+            } else {
+                missing.push(path);
+            }
+        } catch (error) {
+            console.warn(`validateLibraryPaths: failed to inspect ${path}`, error);
+            missing.push(path);
+        }
+    }
+
+    return { existing, missing };
 }
 
 function dedupeTracksByPath(tracks: LocalTrack[]): LocalTrack[] {
@@ -821,7 +822,7 @@ export async function scanLocalMusic(): Promise<void> {
         return;
     }
 
-    const { existing: availablePaths, missing: missingPaths } = await validateLibraryPaths(paths);
+    const { existing: availablePaths, missing: missingPaths } = validateLibraryPaths(paths);
     if (availablePaths.length === 0) {
         localMusicState$.scanTrackProgress.set(0);
         localMusicState$.scanTrackTotal.set(0);
@@ -953,9 +954,7 @@ const readPlaylistTrackPaths = (file: File): string[] => {
     return parsed.songs.map((track) => resolveTrackPathForPlaylist(file.uri, track.filePath));
 };
 
-export async function findM3UFilesInLibraryRoots(
-    roots: string[],
-): Promise<Array<{ filePath: string; originRoot: string }>> {
+export function findM3UFilesInLibraryRoots(roots: string[]): Array<{ filePath: string; originRoot: string }> {
     const normalizedRoots = roots.map((root) => root.trim()).filter(Boolean);
     if (normalizedRoots.length === 0) {
         return [];
@@ -1020,7 +1019,7 @@ export async function findM3UFilesInLibraryRoots(
     return Array.from(discovered.entries()).map(([filePath, originRoot]) => ({ filePath, originRoot }));
 }
 
-export async function loadLocalPlaylists(): Promise<void> {
+export function loadLocalPlaylists(): void {
     perfLog("LocalMusic.loadLocalPlaylists.start");
 
     const playlistDirectory = getPlaylistsDirectory();
@@ -1065,7 +1064,7 @@ export async function loadLocalPlaylists(): Promise<void> {
         }
     }
 
-    const discoveredPlaylists = await findM3UFilesInLibraryRoots(librarySettings$.paths.get());
+    const discoveredPlaylists = findM3UFilesInLibraryRoots(librarySettings$.paths.get());
     const cachePlaylistIds = new Set(cachePlaylists.map((playlist) => playlist.id));
     const libraryPlaylists: LocalPlaylist[] = [];
 
@@ -1109,7 +1108,7 @@ export async function loadLocalPlaylists(): Promise<void> {
     perfLog("LocalMusic.loadLocalPlaylists.end", { total: playlists.length });
 }
 
-export async function createLocalPlaylist(name: string): Promise<LocalPlaylist> {
+export function createLocalPlaylist(name: string): LocalPlaylist {
     const desiredName = name.trim() || "New Playlist";
 
     const directory = getPlaylistsDirectory();
@@ -1152,7 +1151,7 @@ export async function createLocalPlaylist(name: string): Promise<LocalPlaylist> 
     return playlist;
 }
 
-export async function saveLocalPlaylistTracks(playlist: LocalPlaylist, trackPaths: string[]): Promise<void> {
+export function saveLocalPlaylistTracks(playlist: LocalPlaylist, trackPaths: string[]): void {
     try {
         const m3uTracks = trackPaths.map((filePath) => ({
             id: filePath,
@@ -1248,9 +1247,11 @@ export function initializeLocalMusic(): void {
         }
 
         runAfterInteractionsWithLabel(() => {
-            loadLocalPlaylists().catch((error) => {
+            try {
+                loadLocalPlaylists();
+            } catch (error) {
                 console.error("Failed to load local playlists:", error);
-            });
+            }
         }, "LocalMusic.loadLocalPlaylists");
 
         if (settings.autoScanOnStart) {
