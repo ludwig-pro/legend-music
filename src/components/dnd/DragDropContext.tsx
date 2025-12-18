@@ -5,6 +5,15 @@ import { type LayoutRectangle, View } from "react-native";
 
 const MAX_VERTICAL_PROXIMITY = 80;
 
+export type DropZoneHitSlop =
+    | number
+    | Partial<{
+          top: number;
+          right: number;
+          bottom: number;
+          left: number;
+      }>;
+
 // Type for the dragged item
 export interface DraggedItem<T = any> {
     id: string;
@@ -20,7 +29,7 @@ interface DragDropContextValue {
         rect: LayoutRectangle,
         allowDrop: (item: DraggedItem) => boolean,
         onDrop: (item: DraggedItem) => void,
-        options?: { disableProximityDetection?: boolean },
+        options?: { disableProximityDetection?: boolean; hitSlop?: DropZoneHitSlop },
     ) => void;
     unregisterDropZone: (id: string) => void;
     updateDropZoneRect: (id: string, rect: LayoutRectangle) => void;
@@ -36,6 +45,7 @@ export interface DropZone {
     allowDrop: (item: DraggedItem) => boolean;
     onDrop: (item: DraggedItem) => void;
     disableProximityDetection?: boolean;
+    hitSlop?: DropZoneHitSlop;
 }
 
 // Create context
@@ -69,15 +79,40 @@ export const DragDropProvider = ({ children }: DragDropProviderProps) => {
     // Access current values
     const activeDropZone = useValue(activeDropZone$);
 
+    const resolveHitSlop = (hitSlop?: DropZoneHitSlop) => {
+        if (typeof hitSlop === "number") {
+            return { top: hitSlop, right: hitSlop, bottom: hitSlop, left: hitSlop };
+        }
+
+        return {
+            top: hitSlop?.top ?? 0,
+            right: hitSlop?.right ?? 0,
+            bottom: hitSlop?.bottom ?? 0,
+            left: hitSlop?.left ?? 0,
+        };
+    };
+
+    const applyHitSlopToRect = (rect: LayoutRectangle, hitSlop?: DropZoneHitSlop): LayoutRectangle => {
+        const slop = resolveHitSlop(hitSlop);
+
+        return {
+            x: rect.x - slop.left,
+            y: rect.y - slop.top,
+            width: Math.max(0, rect.width + slop.left + slop.right),
+            height: Math.max(0, rect.height + slop.top + slop.bottom),
+        };
+    };
+
     // Register a drop zone
     const registerDropZone = (
         id: string,
         rect: LayoutRectangle,
         allowDrop: (item: DraggedItem) => boolean,
         onDrop: (item: DraggedItem) => void,
-        options?: { disableProximityDetection?: boolean },
+        options?: { disableProximityDetection?: boolean; hitSlop?: DropZoneHitSlop },
     ) => {
-        dropZonesRef.current.set(id, { id, rect, allowDrop, onDrop, ...options });
+        const rectWithHitSlop = applyHitSlopToRect(rect, options?.hitSlop);
+        dropZonesRef.current.set(id, { id, rect: rectWithHitSlop, allowDrop, onDrop, ...options });
     };
 
     // Unregister a drop zone
@@ -89,7 +124,8 @@ export const DragDropProvider = ({ children }: DragDropProviderProps) => {
     const updateDropZoneRect = (id: string, rect: LayoutRectangle) => {
         const dropZone = dropZonesRef.current.get(id);
         if (dropZone) {
-            dropZonesRef.current.set(id, { ...dropZone, rect });
+            const rectWithHitSlop = applyHitSlopToRect(rect, dropZone.hitSlop);
+            dropZonesRef.current.set(id, { ...dropZone, rect: rectWithHitSlop });
         }
     };
 

@@ -1,12 +1,9 @@
-import { AnimatePresence, Motion } from "@legendapp/motion";
 import type { Observable } from "@legendapp/state";
-import { Memo, useObservable, useValue } from "@legendapp/state/react";
+import { Memo, useObservable } from "@legendapp/state/react";
 import { memo } from "react";
 import { type LayoutChangeEvent, Text, View } from "react-native";
-import { CustomSlider } from "@/components/CustomSlider";
 import type { OverlayPlaybackMode } from "@/components/PlaybackArea";
-import { SkiaText, type SkiaTextProps } from "@/components/SkiaText";
-import { state$ } from "@/systems/State";
+import { PlaybackTimelineSlider } from "@/components/PlaybackTimelineSlider";
 import { cn } from "@/utils/cn";
 
 type PlaybackTimelineProps = {
@@ -22,85 +19,90 @@ type PlaybackTimelineProps = {
 
 const formatTimeCache = new Map<number, string>();
 
-const SkiaTextOnHover = memo(function SkiaTextOnHover({
-    text$,
-    align,
-}: {
-    text$: Observable<string>;
-    align?: SkiaTextProps["align"];
-    overlayMode: boolean;
-}) {
-    const visible = useValue(state$.isWindowHovered);
+// const SkiaTextOnHover = memo(function SkiaTextOnHover({
+//     text$,
+//     align,
+// }: {
+//     text$: Observable<string>;
+//     align?: SkiaTextProps["align"];
+//     overlayMode: boolean;
+// }) {
+//     const visible = useValue(state$.isWindowHovered);
 
+//     return (
+//         <AnimatePresence>
+//             {visible ? (
+//                 <Motion.View
+//                     initial={{ opacity: 0 }}
+//                     animate={{ opacity: 1 }}
+//                     exit={{ opacity: 0 }}
+//                     transition={{
+//                         opacity: {
+//                             type: "timing",
+//                             duration: 100,
+//                         },
+//                     }}
+//                 >
+//                     <SkiaText text$={text$} fontSize={10} color="#ffffffb3" align={align} />
+//                 </Motion.View>
+//             ) : null}
+//         </AnimatePresence>
+//     );
+// });
+
+// const TextOnHover = memo(function SkiaTextOnHover({
+//     text$,
+//     align,
+//     overlayMode = false,
+// }: {
+//     text$: Observable<string>;
+//     align?: SkiaTextProps["align"];
+//     overlayMode: boolean;
+// }) {
+//     // const visible = useValue(state$.isWindowHovered);
+//     const visible = true; // useValue(state$.isWindowHovered);
+
+//     return (
+//         <AnimatePresence>
+//             {overlayMode || visible ? (
+//                 <Motion.View
+//                     initial={{ opacity: 0 }}
+//                     animate={{ opacity: 1 }}
+//                     exit={{ opacity: 0 }}
+//                     transition={{
+//                         opacity: {
+//                             type: "timing",
+//                             duration: 100,
+//                         },
+//                     }}
+//                 >
+//                     <Text className="text-[11px] text-text-primary font-bold" style={{ fontVariant: ["tabular-nums"] }}>
+//                         <Memo>{text$}</Memo>
+//                     </Text>
+//                 </Motion.View>
+//             ) : null}
+//         </AnimatePresence>
+//     );
+// });
+
+const Text$ = memo(function Text$({ text$ }: { text$: Observable<string> }) {
     return (
-        <AnimatePresence>
-            {visible ? (
-                <Motion.View
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{
-                        opacity: {
-                            type: "timing",
-                            duration: 100,
-                        },
-                    }}
-                >
-                    <SkiaText text$={text$} fontSize={10} color="#ffffffb3" align={align} />
-                </Motion.View>
-            ) : null}
-        </AnimatePresence>
+        <Text className="text-[11px] text-text-secondary" style={{ fontVariant: ["tabular-nums"] }}>
+            <Memo>{text$}</Memo>
+        </Text>
     );
 });
 
-const TextOnHover = memo(function SkiaTextOnHover({
-    text$,
-    align,
-    overlayMode = false,
-}: {
-    text$: Observable<string>;
-    align?: SkiaTextProps["align"];
-    overlayMode: boolean;
-}) {
-    const visible = useValue(state$.isWindowHovered);
+export const CurrentTime = memo(function CurrentTime({ time$ }: { time$: Observable<number> }) {
+    const formattedTime$ = useObservable(() => formatTime(time$.get?.() ?? 0, false));
 
-    return (
-        <AnimatePresence>
-            {overlayMode || visible ? (
-                <Motion.View
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{
-                        opacity: {
-                            type: "timing",
-                            duration: 100,
-                        },
-                    }}
-                >
-                    <Text className="text-[11px] text-text-secondary" style={{ fontVariant: ["tabular-nums"] }}>
-                        <Memo>{text$}</Memo>
-                    </Text>
-                </Motion.View>
-            ) : null}
-        </AnimatePresence>
-    );
+    return <Text$ text$={formattedTime$} />;
 });
 
-const CurrentTime = memo(function CurrentTime({
-    currentLocalTime$,
-    duration$,
-    overlayMode = false,
-}: {
-    currentLocalTime$: Observable<number>;
-    duration$: Observable<number>;
-    overlayMode: boolean;
-}) {
-    const formattedTime$ = useObservable(
-        () => `${formatTime(currentLocalTime$.get?.() ?? 0, false)} / ${formatTime(duration$.get?.() ?? 0, true)}`,
-    );
+const Duration = memo(function Duration({ duration$ }: { duration$: Observable<number> }) {
+    const formattedTime$ = useObservable(() => formatTime(duration$.get?.() ?? 0, true));
 
-    return <TextOnHover text$={formattedTime$} overlayMode={overlayMode} />;
+    return <Text$ text$={formattedTime$} />;
 });
 
 // const CurrentDuration = memo(function CurrentDuration({ duration$ }: { duration$: Observable<number> }) {
@@ -121,12 +123,13 @@ export function PlaybackTimeline({
 }: PlaybackTimelineProps) {
     return (
         <View
-            className={cn("pb-1 pt-3 -mt-2", disabled && "opacity-0")}
+            className={cn("flex flex-row gap-2 items-center h-5", disabled && "opacity-0")}
             onLayout={onLayout}
             mouseDownCanMoveWindow={false}
         >
-            <CustomSlider
-                style={{ height: 24, width: "100%" }}
+            <CurrentTime time$={currentLocalTime$} />
+            <PlaybackTimelineSlider
+                style={{ height: 14, flex: 1 }}
                 minimumValue={0}
                 $maximumValue={duration$}
                 $value={currentLocalTime$}
@@ -137,9 +140,7 @@ export function PlaybackTimeline({
                 maximumTrackTintColor="#ffffff40"
                 disabled={disabled}
             />
-            <View className="absolute right-0 top-1 flex-row items-center" pointerEvents="none">
-                <CurrentTime currentLocalTime$={currentLocalTime$} duration$={duration$} overlayMode={!!overlayMode} />
-            </View>
+            <Duration duration$={duration$} />
         </View>
     );
 }

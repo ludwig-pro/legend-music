@@ -39,3 +39,7 @@ export function deleteCacheFiles(subdirectory: string, filenames: string[]): voi
         }
     }
 }
+
+export function getPlaylistsDirectory(): FileSystem.Directory {
+    return getCacheDirectory("playlists");
+}

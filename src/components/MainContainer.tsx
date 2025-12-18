@@ -41,7 +41,7 @@ export function MainContainer() {
             <View className="flex-1">
                 <PlaybackArea />
                 <Playlist />
-                <PlaylistSelector />
+                {/* <PlaylistSelector /> */}
                 {SUPPORT_ACCOUNTS && <Unregistered />}
             </View>
         </View>

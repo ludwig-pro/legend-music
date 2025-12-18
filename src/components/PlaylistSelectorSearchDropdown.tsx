@@ -188,11 +188,10 @@ export const PlaylistSelectorSearchDropdown = forwardRef<DropdownMenuRootRef, Pl
                 <DropdownMenu.Trigger asChild>
                     <Button
                         icon="magnifyingglass"
-                        variant="icon"
-                        size="small"
+                        variant="icon-hover"
+                        size="xs"
                         iconYOffset={1}
                         iconSize={14}
-                        className="ml-2 hover:bg-white/10"
                         tooltip="Search playlists"
                     />
                 </DropdownMenu.Trigger>

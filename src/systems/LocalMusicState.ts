@@ -16,7 +16,7 @@ import {
 } from "@/systems/LibraryCache";
 import { settings$ } from "@/systems/Settings";
 import { stateSaved$ } from "@/systems/State";
-import { ensureCacheDirectory, getCacheDirectory } from "@/utils/cacheDirectories";
+import { ensureCacheDirectory, getCacheDirectory, getPlaylistsDirectory } from "@/utils/cacheDirectories";
 import { parseM3U, writeM3U } from "@/utils/m3u";
 import { loadQueueFromM3U } from "@/utils/m3uManager";
 import { perfCount, perfLog } from "@/utils/perfLogger";
@@ -588,7 +588,7 @@ async function scanDirectoriesForTracks(
                 ? nativeTrack.relativePath
                 : nativeTrack.filePath?.length
                   ? nativeTrack.filePath
-                  : nativeTrack.fileName ?? "";
+                  : (nativeTrack.fileName ?? "");
 
             if (!relativePath) {
                 continue;
@@ -1023,7 +1023,7 @@ export async function findM3UFilesInLibraryRoots(
 export async function loadLocalPlaylists(): Promise<void> {
     perfLog("LocalMusic.loadLocalPlaylists.start");
 
-    const playlistDirectory = getCacheDirectory("data");
+    const playlistDirectory = getPlaylistsDirectory();
     ensureCacheDirectory(playlistDirectory);
 
     let entries: (Directory | File)[] = [];
@@ -1112,7 +1112,7 @@ export async function loadLocalPlaylists(): Promise<void> {
 export async function createLocalPlaylist(name: string): Promise<LocalPlaylist> {
     const desiredName = name.trim() || "New Playlist";
 
-    const directory = getCacheDirectory("data");
+    const directory = getPlaylistsDirectory();
     ensureCacheDirectory(directory);
     const maxAttempts = 50;
     let playlistName = desiredName;

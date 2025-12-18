@@ -1,7 +1,7 @@
 import { File } from "expo-file-system/next";
 import { DEBUG_QUEUE_LOGS } from "@/systems/constants";
 import type { LocalTrack } from "@/systems/LocalMusicState";
-import { ensureCacheDirectory, getCacheDirectory } from "@/utils/cacheDirectories";
+import { ensureCacheDirectory, getCacheDirectory, getPlaylistsDirectory } from "@/utils/cacheDirectories";
 import { formatSecondsToMmSs, type M3UTrack, parseDurationToSeconds, parseM3U, writeM3U } from "@/utils/m3u";
 
 const QUEUE_FILE_PATH = "queue.m3u";
@@ -51,7 +51,7 @@ export async function saveQueueToM3U(tracks: LocalTrack[]): Promise<void> {
         const playlist = { songs: m3uTracks, suggestions: [] };
         const m3uContent = writeM3U(playlist);
 
-        const directory = getCacheDirectory("data");
+        const directory = getPlaylistsDirectory();
         ensureCacheDirectory(directory);
 
         const file = new File(directory, QUEUE_FILE_PATH);
@@ -69,7 +69,7 @@ export async function saveQueueToM3U(tracks: LocalTrack[]): Promise<void> {
  */
 export function loadQueueFromM3U(): LocalTrack[] {
     try {
-        const directory = getCacheDirectory("data");
+        const directory = getPlaylistsDirectory();
         ensureCacheDirectory(directory);
         const file = new File(directory, QUEUE_FILE_PATH);
 
@@ -99,7 +99,7 @@ export function loadQueueFromM3U(): LocalTrack[] {
  */
 export async function clearQueueM3U(): Promise<void> {
     try {
-        const directory = getCacheDirectory("data");
+        const directory = getPlaylistsDirectory();
         ensureCacheDirectory(directory);
         const file = new File(directory, QUEUE_FILE_PATH);
         if (file.exists) {

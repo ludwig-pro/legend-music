@@ -5,8 +5,10 @@ import { useObserveEffect, useValue } from "@legendapp/state/react";
 import type { JSX } from "react";
 import { Pressable } from "react-native";
 import WindowControls from "@/native-modules/WindowControls";
+import { IS_TAHOE } from "@/systems/constants";
 import { settings$ } from "@/systems/Settings";
 import { state$ } from "@/systems/State";
+import { cn } from "@/utils/cn";
 import { perfCount, perfLog } from "@/utils/perfLogger";
 
 type MotionViewProps = Parameters<typeof Motion.View>[0];
@@ -47,7 +49,7 @@ export function TitleBar() {
 
     return (
         <Pressable
-            className="absolute top-0 left-0 right-0 h-[28px]"
+            className={cn("absolute top-0 left-0 right-0", IS_TAHOE ? "h-[30px]" : "h-[28px]")}
             onPointerMove={onHover}
             onHoverIn={onHover}
             onHoverOut={onHoverLeave}

@@ -1,3 +1,4 @@
+import { Motion } from "@legendapp/motion";
 import type { Observable } from "@legendapp/state";
 import { useObservable, useObserveEffect, useValue } from "@legendapp/state/react";
 import { useCallback, useMemo, useRef, useState } from "react";
@@ -5,9 +6,10 @@ import type { GestureResponderEvent, LayoutChangeEvent } from "react-native";
 import { PanResponder, Pressable, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useObservableLatest } from "@/observables/useObservableLatest";
+import { Transitions } from "@/systems/constants";
 import { perfCount, perfLog } from "@/utils/perfLogger";
 
-interface CustomSliderProps {
+interface PlaybackTimelineSliderProps {
     value?: number | undefined;
     $value: Observable<number>;
     minimumValue: number;
@@ -22,7 +24,7 @@ interface CustomSliderProps {
     maximumTrackTintColor?: string;
 }
 
-export function CustomSlider({
+export function PlaybackTimelineSlider({
     $value,
     minimumValue,
     $maximumValue,
@@ -34,7 +36,7 @@ export function CustomSlider({
     style,
     minimumTrackTintColor = "#ffffff",
     maximumTrackTintColor = "#ffffff40",
-}: CustomSliderProps) {
+}: PlaybackTimelineSliderProps) {
     const isDragging$ = useObservable(false);
     const isHovered$ = useObservable(false);
     const isHovered = useValue(isHovered$);
@@ -46,11 +48,11 @@ export function CustomSlider({
 
     // Calculate progress percentage
     const progress$ = useObservableSharedValue(() => {
-        perfCount("CustomSlider.computeProgress");
+        perfCount("PlaybackTimelineSlider.computeProgress");
         const value = $value.get();
         const maximumValue = $maximumValue.get();
         const progress = maximumValue > minimumValue ? (value - minimumValue) / (maximumValue - minimumValue) : 0;
-        perfLog("CustomSlider.computeProgress", { value, maximumValue, progress });
+        perfLog("PlaybackTimelineSlider.computeProgress", { value, maximumValue, progress });
         return progress;
     });
 
@@ -74,7 +76,7 @@ export function CustomSlider({
             const percentage = Math.max(0, Math.min(1, locationX / sliderWidth));
             const newValue = minimumValue + percentage * (maximumValue - minimumValue);
 
-            perfLog("CustomSlider.updateValueFromLocation", {
+            perfLog("PlaybackTimelineSlider.updateValueFromLocation", {
                 locationX,
                 sliderWidth,
                 percentage,
@@ -103,7 +105,7 @@ export function CustomSlider({
                 onMoveShouldSetPanResponder: () => !isDisabled$.get(),
                 onMoveShouldSetPanResponderCapture: () => !isDisabled$.get(),
                 onPanResponderGrant: (event: GestureResponderEvent) => {
-                    perfLog("CustomSlider.panGrant", { disabled: isDisabled$.get() });
+                    perfLog("PlaybackTimelineSlider.panGrant", { disabled: isDisabled$.get() });
                     if (isDisabled$.get()) return;
 
                     lastCommittedValueRef.current = null;
@@ -119,7 +121,7 @@ export function CustomSlider({
                     updateValueFromLocation(event.nativeEvent.locationX);
                 },
                 onPanResponderRelease: (event: GestureResponderEvent) => {
-                    perfLog("CustomSlider.panRelease", { disabled: isDisabled$.get() });
+                    perfLog("PlaybackTimelineSlider.panRelease", { disabled: isDisabled$.get() });
                     if (isDisabled$.get()) return;
 
                     updateValueFromLocation(event.nativeEvent.locationX);
@@ -128,7 +130,7 @@ export function CustomSlider({
                 },
                 onPanResponderTerminationRequest: () => false,
                 onPanResponderTerminate: (event: GestureResponderEvent) => {
-                    perfLog("CustomSlider.panTerminate", { disabled: isDisabled$.get() });
+                    perfLog("PlaybackTimelineSlider.panTerminate", { disabled: isDisabled$.get() });
                     if (isDisabled$.get()) return;
 
                     updateValueFromLocation(event.nativeEvent.locationX);
@@ -140,7 +142,7 @@ export function CustomSlider({
     );
 
     const handleHoverIn = () => {
-        perfLog("CustomSlider.handleHoverIn", { disabled: isDisabled$.get() });
+        perfLog("PlaybackTimelineSlider.handleHoverIn", { disabled: isDisabled$.get() });
         if (isDisabled$.get()) {
             onHoverChange?.(false);
             return;
@@ -150,7 +152,7 @@ export function CustomSlider({
     };
 
     const handleHoverOut = () => {
-        perfLog("CustomSlider.handleHoverOut", { disabled: isDisabled$.get() });
+        perfLog("PlaybackTimelineSlider.handleHoverOut", { disabled: isDisabled$.get() });
         if (isDisabled$.get()) {
             onHoverChange?.(false);
             return;
@@ -184,26 +186,29 @@ export function CustomSlider({
                 disabled={isDisabled}
                 className="flex-1 justify-center"
             >
-                <View
+                <Motion.View
                     onLayout={handleTrackLayout}
-                    className="h-1.5 bg-white/20 rounded-full"
+                    className="bg-white/20 rounded-full"
                     style={{ backgroundColor: maximumTrackTintColor }}
+                    animate={{ height: isHovered ? 8 : 3 }}
+                    transition={Transitions.Spring}
                 >
                     {/* Progress track */}
-                    <Animated.View className="h-full rounded-full" style={trackAnimatedStyle} />
+                    <Animated.View className="h-full rounded-l-full" style={trackAnimatedStyle} />
                     {/* Vertical line thumb */}
-                    <Animated.View
+                    {/* <Animated.View
                         className="absolute w-1 bg-white rounded-full"
                         style={[
                             thumbAnimatedStyle,
                             {
-                                // marginTop: 3,
-                                marginLeft: -4, // Half of line width
+                                marginTop: -3,
+                                height: 100,
+                                marginLeft: -4,
                                 opacity: isDisabled ? 0.5 : isHovered || isDragging ? 1 : 0,
                             },
                         ]}
-                    />
-                </View>
+                    /> */}
+                </Motion.View>
             </Pressable>
         </View>
     );

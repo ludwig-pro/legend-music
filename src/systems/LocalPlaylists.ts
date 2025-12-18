@@ -3,13 +3,13 @@ import { Directory, File } from "expo-file-system/next";
 import { libraryUI$, selectLibraryPlaylist, selectLibraryView } from "@/systems/LibraryState";
 import {
     createLocalPlaylist,
+    type LocalPlaylist,
     loadLocalPlaylists,
     localMusicState$,
     sanitizePlaylistFileName,
     saveLocalPlaylistTracks,
-    type LocalPlaylist,
 } from "@/systems/LocalMusicState";
-import { ensureCacheDirectory, getCacheDirectory } from "@/utils/cacheDirectories";
+import { ensureCacheDirectory, getCacheDirectory, getPlaylistsDirectory } from "@/utils/cacheDirectories";
 import { writeM3U } from "@/utils/m3u";
 
 const toFilePath = (value: string): string => {
@@ -41,7 +41,8 @@ const decodeIfUriEncoded = (value: string): string => {
     }
 };
 
-const isEditablePlaylist = (playlist: LocalPlaylist): boolean => playlist.source === "cache" && Boolean(playlist.filePath);
+const isEditablePlaylist = (playlist: LocalPlaylist): boolean =>
+    playlist.source === "cache" && Boolean(playlist.filePath);
 
 const getPlaylistOrThrow = (playlistId: string): LocalPlaylist => {
     const normalize = (value: string) => {
@@ -52,8 +53,7 @@ const getPlaylistOrThrow = (playlistId: string): LocalPlaylist => {
         }
     };
     const normalizedId = normalize(playlistId);
-    const playlist =
-        localMusicState$.playlists.peek().find((pl) => normalize(pl.id) === normalizedId) ?? null;
+    const playlist = localMusicState$.playlists.peek().find((pl) => normalize(pl.id) === normalizedId) ?? null;
     if (!playlist) {
         throw new Error("Playlist not found");
     }
@@ -141,7 +141,7 @@ export async function renamePlaylist(
         throw new Error("Playlist file not found");
     }
 
-    const directory = currentFile.parentDirectory ?? getCacheDirectory("data");
+    const directory = currentFile.parentDirectory ?? getPlaylistsDirectory();
     ensureCacheDirectory(directory);
 
     const { file: nextFile, resolvedName } = getUniquePlaylistFile(directory, trimmedName, playlist.filePath);
@@ -189,7 +189,7 @@ export async function deletePlaylist(playlistId: string): Promise<void> {
 export async function exportPlaylistToFile(playlistId: string): Promise<string | null> {
     const playlist = getPlaylistOrThrow(playlistId);
 
-    const directory = new Directory(getCacheDirectory("data"), "exports");
+    const directory = new Directory(getPlaylistsDirectory());
     ensureCacheDirectory(directory);
 
     const fileBase = sanitizePlaylistFileName(playlist.name);
@@ -207,10 +207,7 @@ export async function exportPlaylistToFile(playlistId: string): Promise<string |
     return toFilePath(file.uri);
 }
 
-export async function duplicatePlaylistToCache(
-    playlistId: string,
-    nextName?: string,
-): Promise<LocalPlaylist> {
+export async function duplicatePlaylistToCache(playlistId: string, nextName?: string): Promise<LocalPlaylist> {
     const playlist = getPlaylistOrThrow(playlistId);
     const name = nextName?.trim() || playlist.name;
 

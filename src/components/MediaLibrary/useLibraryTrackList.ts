@@ -71,8 +71,8 @@ export function buildTrackItems({
         return title.includes(normalizedQuery) || artist.includes(normalizedQuery) || album.includes(normalizedQuery);
     };
 
-    const toTrackItem = (track: LibraryTrack, viewIndex: number): LibraryTrackListItem => ({
-        id: track.id,
+    const toTrackItem = (track: LibraryTrack, viewIndex: number, idOverride?: string): LibraryTrackListItem => ({
+        id: idOverride ?? track.id,
         title: track.title,
         artist: track.artist,
         album: track.album,
@@ -218,10 +218,32 @@ export function buildTrackItems({
               })
             : orderedTracks;
 
+        const usedIds = new Set<string>();
+        const makeUniqueId = (baseId: string) => {
+            if (!usedIds.has(baseId)) {
+                usedIds.add(baseId);
+                return baseId;
+            }
+
+            let attempt = 2;
+            let candidate = `${baseId}-${attempt}`;
+            while (usedIds.has(candidate)) {
+                attempt += 1;
+                candidate = `${baseId}-${attempt}`;
+            }
+            usedIds.add(candidate);
+            return candidate;
+        };
+
         return {
-            trackItems: (normalizedQuery ? displayTracks.filter(matchesQuery) : displayTracks).map((track, index) =>
-                toTrackItem(track, index),
-            ),
+            trackItems: (normalizedQuery ? displayTracks.filter(matchesQuery) : displayTracks).map((track, index) => {
+                const baseItem = toTrackItem(track, index);
+                const uniqueId = makeUniqueId(baseItem.id);
+                if (uniqueId === baseItem.id) {
+                    return baseItem;
+                }
+                return { ...baseItem, id: uniqueId };
+            }),
         };
     }
 

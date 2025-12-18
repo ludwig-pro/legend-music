@@ -299,8 +299,8 @@ export function TrackList(_props: TrackListProps) {
                     }
                     recycleItems
                     ListEmptyComponent={
-                        <View className="items-start justify-center py-4 px-2.5">
-                            <Text className="text-sm text-white/60 text-left">No tracks found</Text>
+                        <View className="items-center justify-center py-4 px-2.5 w-full">
+                            <Text className="text-sm text-white/60">No tracks found</Text>
                         </View>
                     }
                 />

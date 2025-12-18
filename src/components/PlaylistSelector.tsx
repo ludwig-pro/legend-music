@@ -6,16 +6,14 @@ import { Button } from "@/components/Button";
 import type { DropdownMenuRootRef } from "@/components/DropdownMenu";
 import { queue$ } from "@/components/LocalAudioPlayer";
 import { PlaylistSelectorSearchDropdown } from "@/components/PlaylistSelectorSearchDropdown";
-import { SelectLegendList } from "@/components/SelectLegendList";
-import { useBottomBarControlLayout } from "@/hooks/useUIControls";
+import { usePlaybackControlLayout } from "@/hooks/useUIControls";
 import { SUPPORT_PLAYLISTS } from "@/systems/constants";
 import { useOnHotkeys } from "@/systems/keyboard/Keyboard";
 import { library$ } from "@/systems/LibraryState";
-import { DEFAULT_LOCAL_PLAYLIST_NAME, localMusicState$ } from "@/systems/LocalMusicState";
-import type { BottomBarControlId } from "@/systems/Settings";
+import { localMusicState$ } from "@/systems/LocalMusicState";
+import type { PlaybackControlId } from "@/systems/Settings";
 import { cn } from "@/utils/cn";
 import {
-    selectedPlaylist$,
     useLibraryToggle,
     usePlaylistOptions,
     usePlaylistQueueHandlers,
@@ -23,14 +21,16 @@ import {
     useVisualizerToggle,
 } from "./PlaylistSelector/hooks";
 
-const DEFAULT_BOTTOM_BAR_BUTTONS: BottomBarControlId[] = [
-    "search",
-    "savePlaylist",
-    "toggleVisualizer",
-    "toggleLibrary",
-];
+const DEFAULT_BOTTOM_BAR_BUTTONS: PlaybackControlId[] = ["search", "savePlaylist", "toggleVisualizer", "toggleLibrary"];
 
-export function PlaylistSelector() {
+type PlaylistSelectorProps = {
+    variant?: "default" | "overlay";
+    className?: string;
+};
+
+// TODO: This file isn't used anymore
+
+export function PlaylistSelector({ variant = "default", className }: PlaylistSelectorProps = {}) {
     const localMusicState = useValue(localMusicState$);
     const library = useValue(library$);
     const queue = useValue(queue$);
@@ -64,11 +64,16 @@ export function PlaylistSelector() {
 
     const { handleSavePlaylist } = useQueueExporter({ queueTracks: queue.tracks });
 
-    const bottomBarLayout = useBottomBarControlLayout();
+    const playbackLayout = usePlaybackControlLayout();
     const bottomBarControls = (
-        (bottomBarLayout?.shown?.length ? bottomBarLayout.shown : DEFAULT_BOTTOM_BAR_BUTTONS) as BottomBarControlId[]
-    ).filter((controlId, index, array) => array.indexOf(controlId) === index);
+        (playbackLayout?.shown?.length ? playbackLayout.shown : DEFAULT_BOTTOM_BAR_BUTTONS) as PlaybackControlId[]
+    )
+        .filter((controlId, index, array) => array.indexOf(controlId) === index)
+        .filter((controlId) => DEFAULT_BOTTOM_BAR_BUTTONS.includes(controlId));
     const hasSearchControl = bottomBarControls.includes("search");
+    const isOverlayVariant = true; //variant === "overlay";
+    const containerClassName = cn(isOverlayVariant ? "" : "px-3 border-t border-white/10", className);
+    const rowClassName = cn("flex-row items-center gap-x-1", isOverlayVariant && "justify-end");
 
     useOnHotkeys(
         hasSearchControl
@@ -114,9 +119,9 @@ export function PlaylistSelector() {
     );
 
     return (
-        <View className="px-3 border-t border-white/10" onLayout={handleLayout}>
-            <View className="flex-row items-center">
-                <View className="flex-1" />
+        <View className={containerClassName} onLayout={handleLayout}>
+            <View className={rowClassName}>
+                {!isOverlayVariant && <View className="flex-1" />}
                 {/* <View className="flex-1">
                     <SelectLegendList
                         items={availablePlaylistIds}
@@ -160,47 +165,44 @@ export function PlaylistSelector() {
                                 <Button
                                     key="savePlaylist"
                                     icon="square.and.arrow.down"
-                                    variant="icon"
-                                    size="small"
-                                    iconSize={16}
+                                    variant="icon-hover"
+                                    size="xs"
+                                    iconSize={14}
                                     iconYOffset={2}
                                     onClick={handleSavePlaylist}
-                                    className="ml-2 hover:bg-white/10"
                                     disabled={queue.tracks.length === 0}
                                     tooltip="Save playlist"
                                 />
                             ) : null;
                         case "toggleVisualizer": {
                             const icon = isVisualizerOpen ? "waveform.circle.fill" : "waveform";
-                            const iconSize = isVisualizerOpen ? 23 : 16;
+                            const iconSize = isVisualizerOpen ? 21 : 14;
                             return (
                                 <Button
                                     key="toggleVisualizer"
                                     icon={icon}
-                                    variant="icon"
-                                    size="small"
+                                    variant="icon-hover"
+                                    size="xs"
                                     iconSize={iconSize}
                                     iconYOffset={1}
                                     onClick={toggleVisualizer}
-                                    className={cn("ml-2 hover:bg-white/10", isVisualizerOpen && "bg-white/15")}
                                     tooltip={isVisualizerOpen ? "Hide visualizer" : "Show visualizer"}
                                 />
                             );
                         }
                         case "toggleLibrary": {
                             const icon: SFSymbol = isLibraryOpen ? "play.square.stack.fill" : "play.square.stack";
-                            const iconSize = isLibraryOpen ? 18 : 18;
+                            const iconSize = isLibraryOpen ? 16 : 16;
 
                             return (
                                 <Button
                                     key="toggleLibrary"
                                     icon={icon}
-                                    variant="icon"
-                                    size="small"
+                                    variant={isLibraryOpen ? "icon" : "icon-hover"}
+                                    size="xs"
                                     iconSize={iconSize}
                                     iconYOffset={1}
                                     onClick={toggleLibraryWindow}
-                                    className={cn("ml-2 hover:bg-white/10", isLibraryOpen && "bg-white/15")}
                                     tooltip={isLibraryOpen ? "Hide library" : "Show library"}
                                 />
                             );

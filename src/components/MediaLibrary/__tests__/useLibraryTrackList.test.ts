@@ -126,6 +126,30 @@ describe("buildTrackItems", () => {
         expect(result.trackItems[1]).toMatchObject({ isMissing: true, title: "missing.mp3" });
     });
 
+    it("playlist view makes duplicate IDs unique", () => {
+        const playlists: LocalPlaylist[] = [
+            {
+                id: "/cache/data/test-dupes.m3u",
+                name: "Test Dupes",
+                filePath: "/cache/data/test-dupes.m3u",
+                trackPaths: ["/music/song-b.mp3", "/music/song-b.mp3", "/music/song-a.mp3"],
+                trackCount: 3,
+                source: "cache",
+            },
+        ];
+
+        const result = buildTrackItems({
+            tracks: mockTracks,
+            playlists,
+            selectedView: "playlist",
+            selectedPlaylistId: playlists[0].id,
+            searchQuery: "",
+            playlistSort: "playlist-order",
+        });
+
+        expect(result.trackItems.map((item) => item.id)).toEqual(["2", "2-2", "1"]);
+    });
+
     it("formats numeric durations into minutes and seconds", () => {
         const result = buildTrackItems({
             tracks: mockTracks,
