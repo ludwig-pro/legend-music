@@ -8,26 +8,43 @@ import { localAudioControls } from "@/components/LocalAudioPlayer";
 import { showToast } from "@/components/Toast";
 import type { TrackData } from "@/components/TrackItem";
 import { usePlaylistSelection } from "@/hooks/usePlaylistSelection";
-import { showContextMenu, type ContextMenuItem } from "@/native-modules/ContextMenu";
-import { addTracksToPlaylist } from "@/systems/LocalPlaylists";
-import { localMusicState$, saveLocalPlaylistTracks, type LocalPlaylist } from "@/systems/LocalMusicState";
+import { type ContextMenuItem, showContextMenu } from "@/native-modules/ContextMenu";
 import {
     getArtistKey,
+    type LibraryTrack,
+    type LibraryView,
     library$,
     libraryUI$,
     normalizeArtistName,
-    type LibraryTrack,
-    type LibraryView,
     type PlaylistSortMode,
 } from "@/systems/LibraryState";
+import { type LocalPlaylist, localMusicState$, saveLocalPlaylistTracks } from "@/systems/LocalMusicState";
+import { addTracksToPlaylist } from "@/systems/LocalPlaylists";
 import { getQueueAction, type QueueAction } from "@/utils/queueActions";
-import { buildTrackLookup } from "@/utils/trackResolution";
 import { buildTrackContextMenuItems, handleTrackContextMenuSelection } from "@/utils/trackContextMenu";
+import { buildTrackLookup } from "@/utils/trackResolution";
 
 type TrackListItem = TrackData;
 type LibraryTrackListItem = TrackData & { sourceTrack?: LibraryTrack };
 
 const ADD_TO_PLAYLIST_MENU_ITEM: ContextMenuItem = { id: "add-to-playlist", title: "Add to Playlist…" };
+
+const getSortableTrackNumber = (track: LibraryTrack): number | null => {
+    const trackNumber = track.trackNumber;
+    if (typeof trackNumber !== "number" || !Number.isFinite(trackNumber)) {
+        return null;
+    }
+    return trackNumber;
+};
+
+const getAlbumSortInfo = (track: LibraryTrack): { key: string; displayName: string; isMissing: boolean } => {
+    const trimmed = track.album?.trim() ?? "";
+    if (!trimmed) {
+        return { key: "__missing__", displayName: "Unknown Album", isMissing: true };
+    }
+
+    return { key: trimmed.toLowerCase(), displayName: trimmed, isMissing: false };
+};
 
 interface UseLibraryTrackListResult {
     tracks: TrackData[];
@@ -80,6 +97,7 @@ export function buildTrackItems({
         thumbnail: track.thumbnail,
         isMissing: track.isMissing,
         index: viewIndex,
+        trackIndex: track.trackNumber,
         sourceTrack: track,
     });
 
@@ -99,12 +117,19 @@ export function buildTrackItems({
                 return keyA.localeCompare(keyB);
             }
 
-            const albumA = a.album?.trim() || "Unknown Album";
-            const albumB = b.album?.trim() || "Unknown Album";
-            const albumKeyA = albumA.toLowerCase();
-            const albumKeyB = albumB.toLowerCase();
-            if (albumKeyA !== albumKeyB) {
-                return albumKeyA.localeCompare(albumKeyB);
+            const albumInfoA = getAlbumSortInfo(a);
+            const albumInfoB = getAlbumSortInfo(b);
+            if (albumInfoA.isMissing !== albumInfoB.isMissing) {
+                return albumInfoA.isMissing ? 1 : -1;
+            }
+            if (albumInfoA.key !== albumInfoB.key) {
+                return albumInfoA.key.localeCompare(albumInfoB.key);
+            }
+
+            const trackNumberA = getSortableTrackNumber(a);
+            const trackNumberB = getSortableTrackNumber(b);
+            if (trackNumberA != null && trackNumberB != null && trackNumberA !== trackNumberB) {
+                return trackNumberA - trackNumberB;
             }
 
             return (a.title ?? "").localeCompare(b.title ?? "");
@@ -138,12 +163,19 @@ export function buildTrackItems({
 
     if (selectedView === "albums") {
         const sortedTracks = [...filteredTracks].sort((a, b) => {
-            const albumA = a.album?.trim() || "Unknown Album";
-            const albumB = b.album?.trim() || "Unknown Album";
-            const keyA = albumA.toLowerCase();
-            const keyB = albumB.toLowerCase();
-            if (keyA !== keyB) {
-                return keyA.localeCompare(keyB);
+            const albumInfoA = getAlbumSortInfo(a);
+            const albumInfoB = getAlbumSortInfo(b);
+            if (albumInfoA.isMissing !== albumInfoB.isMissing) {
+                return albumInfoA.isMissing ? 1 : -1;
+            }
+            if (albumInfoA.key !== albumInfoB.key) {
+                return albumInfoA.key.localeCompare(albumInfoB.key);
+            }
+
+            const trackNumberA = getSortableTrackNumber(a);
+            const trackNumberB = getSortableTrackNumber(b);
+            if (trackNumberA != null && trackNumberB != null && trackNumberA !== trackNumberB) {
+                return trackNumberA - trackNumberB;
             }
 
             return (a.title ?? "").localeCompare(b.title ?? "");
@@ -154,18 +186,17 @@ export function buildTrackItems({
 
         let viewIndex = 0;
         for (const track of sortedTracks) {
-            const albumName = track.album?.trim() || "Unknown Album";
-            const albumKey = albumName.toLowerCase();
-            if (albumKey !== lastAlbumKey) {
+            const albumInfo = getAlbumSortInfo(track);
+            if (albumInfo.key !== lastAlbumKey) {
                 trackItems.push({
-                    id: `sep-album-${albumKey}`,
-                    title: `— ${albumName} —`,
+                    id: `sep-album-${albumInfo.key}`,
+                    title: `— ${albumInfo.displayName} —`,
                     artist: "",
                     album: "",
                     duration: "",
                     isSeparator: true,
                 });
-                lastAlbumKey = albumKey;
+                lastAlbumKey = albumInfo.key;
             }
 
             trackItems.push(toTrackItem(track, viewIndex));
@@ -207,17 +238,9 @@ export function buildTrackItems({
         const displayTracks = shouldApplySort
             ? [...orderedTracks].sort((a, b) => {
                   const valueA =
-                      playlistSort === "artist"
-                          ? a.artist
-                          : playlistSort === "album"
-                            ? a.album ?? ""
-                            : a.title;
+                      playlistSort === "artist" ? a.artist : playlistSort === "album" ? (a.album ?? "") : a.title;
                   const valueB =
-                      playlistSort === "artist"
-                          ? b.artist
-                          : playlistSort === "album"
-                            ? b.album ?? ""
-                            : b.title;
+                      playlistSort === "artist" ? b.artist : playlistSort === "album" ? (b.album ?? "") : b.title;
                   const compare = (valueA ?? "").localeCompare(valueB ?? "");
                   if (compare !== 0) {
                       return compare;
@@ -285,7 +308,7 @@ export function useLibraryTrackList(): UseLibraryTrackListResult {
     const isSearchActive = searchQuery.trim().length > 0;
     const selectedPlaylist =
         selectedView === "playlist" && selectedPlaylistId
-            ? playlists.find((pl) => pl.id === selectedPlaylistId) ?? null
+            ? (playlists.find((pl) => pl.id === selectedPlaylistId) ?? null)
             : null;
     const isPlaylistEditable =
         selectedView === "playlist" &&
@@ -448,8 +471,7 @@ export function useLibraryTrackList(): UseLibraryTrackListResult {
                                 label: "Undo",
                                 onPress: () => {
                                     const latestPlaylist =
-                                        localMusicState$.playlists.peek().find((pl) => pl.id === playlist.id) ??
-                                        null;
+                                        localMusicState$.playlists.peek().find((pl) => pl.id === playlist.id) ?? null;
                                     if (!latestPlaylist) {
                                         return;
                                     }

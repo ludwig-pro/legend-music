@@ -6,6 +6,7 @@ export interface PersistedLibraryTrack {
     title: string;
     artist: string;
     album?: string;
+    trackNumber?: number;
     duration: string;
     thumbnail?: string;
     thumb?: string;
@@ -89,17 +90,23 @@ const sanitizeTrack = (track: RawLibraryTrack, roots: string[]): PersistedLibrar
 
     const fileName = fileNameFromPath(rel);
 
+    const trackNumber =
+        typeof track.trackNumber === "number" && Number.isFinite(track.trackNumber) && track.trackNumber > 0
+            ? Math.trunc(track.trackNumber)
+            : undefined;
+
     return {
         root,
         rel,
         title: typeof track.title === "string" && track.title.length > 0 ? track.title : fileName,
         artist: typeof track.artist === "string" && track.artist.length > 0 ? track.artist : "Unknown Artist",
         album: typeof track.album === "string" && track.album.length > 0 ? track.album : undefined,
+        trackNumber,
         duration: typeof track.duration === "string" && track.duration.length > 0 ? track.duration : "0:00",
         thumbnail:
             thumb === undefined && typeof track.thumbnail === "string" && track.thumbnail.length > 0
                 ? track.thumbnail
-                : undefined,
+            : undefined,
         thumb,
     };
 };

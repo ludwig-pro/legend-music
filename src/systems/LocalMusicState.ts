@@ -29,6 +29,7 @@ export interface LocalTrack {
     title: string;
     artist: string;
     album?: string;
+    trackNumber?: number;
     duration: string;
     filePath: string;
     fileName: string;
@@ -377,6 +378,9 @@ export async function ensureLocalTrackThumbnail(track: LocalTrack): Promise<stri
             if (metadata.duration && (!track.duration || track.duration.trim().length === 0)) {
                 track.duration = metadata.duration;
             }
+            if (metadata.trackNumber != null && (!track.trackNumber || track.trackNumber <= 0)) {
+                track.trackNumber = metadata.trackNumber;
+            }
         } catch (error) {
             console.warn(`ensureLocalTrackThumbnail: Failed to resolve thumbnail for ${track.fileName}:`, error);
             return undefined;
@@ -395,6 +399,7 @@ async function extractId3Metadata(
     title: string;
     artist: string;
     album?: string;
+    trackNumber?: number;
     duration?: string;
     thumbnail?: string;
 }> {
@@ -404,6 +409,7 @@ async function extractId3Metadata(
     let title = fallback.title;
     let artist = fallback.artist;
     let album: string | undefined;
+    let trackNumber: number | undefined;
     let duration: string | undefined;
     let thumbnail: string | undefined;
 
@@ -426,6 +432,7 @@ async function extractId3Metadata(
             if (nativeTags.album?.trim()) {
                 album = nativeTags.album;
             }
+            trackNumber = normalizeTrackNumber(nativeTags.trackNumber);
             if (Number.isFinite(nativeTags.durationSeconds) && nativeTags.durationSeconds > 0) {
                 duration = formatDuration(nativeTags.durationSeconds);
             }
@@ -445,6 +452,7 @@ async function extractId3Metadata(
         title,
         artist,
         album,
+        trackNumber,
         duration,
         thumbnail,
     };
@@ -491,6 +499,15 @@ function formatDuration(seconds: number): string {
     return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
 }
 
+const normalizeTrackNumber = (value: unknown): number | undefined => {
+    if (typeof value !== "number" || !Number.isFinite(value)) {
+        return undefined;
+    }
+
+    const normalized = Math.trunc(value);
+    return normalized > 0 ? normalized : undefined;
+};
+
 /**
  * Creates a LocalTrack for an arbitrary audio file path by reusing the ID3 and native metadata pipeline.
  */
@@ -510,6 +527,7 @@ export async function createLocalTrackFromFile(filePath: string): Promise<LocalT
             title: metadata.title,
             artist: metadata.artist,
             album: metadata.album,
+            trackNumber: metadata.trackNumber,
             duration,
             thumbnail: metadata.thumbnail,
             filePath,
@@ -648,6 +666,7 @@ async function scanDirectoriesForTracks(
             const title = nativeTrack.title?.trim() || fallback.title;
             const artist = nativeTrack.artist?.trim() || fallback.artist;
             const album = nativeTrack.album?.trim() || undefined;
+            const trackNumber = normalizeTrackNumber(nativeTrack.trackNumber);
             const durationSeconds =
                 Number.isFinite(nativeTrack.durationSeconds) && nativeTrack.durationSeconds != null
                     ? nativeTrack.durationSeconds
@@ -659,6 +678,7 @@ async function scanDirectoriesForTracks(
                 title,
                 artist,
                 album,
+                trackNumber,
                 duration,
                 filePath: absolutePath,
                 fileName,
@@ -809,6 +829,8 @@ async function scanLibraryNative(
             const title = nativeTrack.title?.trim() || cachedTrack?.title || fallback.title;
             const artist = nativeTrack.artist?.trim() || cachedTrack?.artist || fallback.artist;
             const album = nativeTrack.album?.trim() || cachedTrack?.album || undefined;
+            const trackNumber =
+                normalizeTrackNumber(nativeTrack.trackNumber) ?? normalizeTrackNumber(cachedTrack?.trackNumber);
 
             const durationSeconds =
                 Number.isFinite(nativeTrack.durationSeconds) && nativeTrack.durationSeconds != null
@@ -823,6 +845,7 @@ async function scanLibraryNative(
                 title,
                 artist,
                 album,
+                trackNumber,
                 duration,
                 filePath: absolutePath,
                 fileName,

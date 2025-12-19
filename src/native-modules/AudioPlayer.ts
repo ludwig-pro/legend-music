@@ -44,6 +44,7 @@ export interface MediaTags {
     title?: string;
     artist?: string;
     album?: string;
+    trackNumber?: number;
     durationSeconds?: number;
     artworkUri?: string;
     artworkKey?: string;
@@ -64,6 +65,7 @@ export interface NativeScannedTrack {
     title?: string;
     artist?: string;
     album?: string;
+    trackNumber?: number;
     durationSeconds?: number;
     artworkUri?: string;
     artworkKey?: string;

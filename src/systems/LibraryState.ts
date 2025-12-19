@@ -102,6 +102,10 @@ const resolveRelativePathForTrack = (
 
 const buildPersistedTrack = (track: LocalTrack, roots: string[]): PersistedLibraryTrack => {
     const { rootIndex, relativePath } = resolveRelativePathForTrack(track, roots);
+    const trackNumber =
+        typeof track.trackNumber === "number" && Number.isFinite(track.trackNumber) && track.trackNumber > 0
+            ? Math.trunc(track.trackNumber)
+            : undefined;
 
     return {
         root: rootIndex,
@@ -109,6 +113,7 @@ const buildPersistedTrack = (track: LocalTrack, roots: string[]): PersistedLibra
         title: track.title,
         artist: track.artist,
         album: track.album,
+        trackNumber,
         duration: track.duration,
     };
 };
@@ -377,6 +382,7 @@ export const hydrateLibraryFromCache = (): boolean => {
             title: track.title,
             artist: artistName,
             album: track.album,
+            trackNumber: track.trackNumber,
             duration: track.duration,
             filePath,
             fileName: fileNameFromPath(filePath),

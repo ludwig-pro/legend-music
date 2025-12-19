@@ -69,7 +69,7 @@ export function TrackList(_props: TrackListProps) {
 
     const columns = useMemo<TableColumnSpec[]>(
         () => [
-            { id: "number", label: "#", width: 48, align: "right" },
+            { id: "number", label: "#", width: 36, align: "right" },
             { id: "title", label: "Title", flex: 3, minWidth: 120 },
             { id: "artist", label: "Artist", flex: 2, minWidth: 100 },
             { id: "album", label: "Album", flex: 2, minWidth: 100 },
@@ -398,7 +398,7 @@ function LibraryTrackRow({
         return currentTrack ? currentTrack.id === track.id : false;
     });
     const accentColor = useValue(() => themeState$.customColors.dark.accent.primary.get());
-    const displayIndex = (track.index ?? index) + 1;
+    const displayIndex = track.trackIndex;
 
     const handleMenuClick = useCallback(
         async (event: NativeMouseEvent) => {
@@ -429,9 +429,9 @@ function LibraryTrackRow({
             <TableCell column={columns[0]}>
                 {isPlaying ? (
                     <Icon name="play.fill" size={12} color={accentColor} />
-                ) : (
+                ) : displayIndex != null ? (
                     <Text className={cn("text-xs tabular-nums", listItemStyles.text.muted)}>{displayIndex}</Text>
-                )}
+                ) : null}
             </TableCell>
             <TableCell column={columns[1]}>
                 <Text className={cn("text-sm font-medium truncate", listItemStyles.text.primary)} numberOfLines={1}>

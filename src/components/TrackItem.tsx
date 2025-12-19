@@ -19,6 +19,7 @@ export interface TrackData {
     thumbnail?: string;
     album?: string;
     index?: number;
+    trackIndex?: number;
     isPlaying?: boolean;
     isSeparator?: boolean;
     fromSuggestions?: boolean;

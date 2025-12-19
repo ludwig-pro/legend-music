@@ -66,6 +66,42 @@ describe("buildTrackItems", () => {
         expect(result.trackItems.filter((item) => item.isSeparator).length).toBe(2);
     });
 
+    it("artists view orders by album then track number when available", () => {
+        const tracks: LibraryTrack[] = [
+            {
+                id: "1",
+                title: "Zed",
+                artist: "Artist 1",
+                album: "Album A",
+                trackNumber: 1,
+                duration: "120",
+                filePath: "/music/zed.mp3",
+                fileName: "zed.mp3",
+            },
+            {
+                id: "2",
+                title: "Alpha",
+                artist: "Artist 1",
+                album: "Album A",
+                trackNumber: 2,
+                duration: "120",
+                filePath: "/music/alpha.mp3",
+                fileName: "alpha.mp3",
+            },
+        ];
+
+        const result = buildTrackItems({
+            tracks,
+            playlists: [],
+            selectedView: "artists",
+            selectedPlaylistId: null,
+            searchQuery: "",
+            playlistSort: "playlist-order",
+        });
+
+        expect(result.trackItems.map((item) => item.title)).toEqual(["— Artist 1 —", "Zed", "Alpha"]);
+    });
+
     it("albums view inserts separators and groups by album", () => {
         const result = buildTrackItems({
             tracks: mockTracks,
@@ -85,6 +121,56 @@ describe("buildTrackItems", () => {
             "Another Song",
         ]);
         expect(result.trackItems.filter((item) => item.isSeparator).length).toBe(3);
+    });
+
+    it("albums view pushes missing albums to the end", () => {
+        const tracks: LibraryTrack[] = [
+            {
+                id: "1",
+                title: "No Album Song",
+                artist: "Artist 1",
+                album: "",
+                duration: "120",
+                filePath: "/music/no-album.mp3",
+                fileName: "no-album.mp3",
+            },
+            {
+                id: "2",
+                title: "Alpha Song",
+                artist: "Artist 1",
+                album: "Alpha",
+                duration: "120",
+                filePath: "/music/alpha.mp3",
+                fileName: "alpha.mp3",
+            },
+            {
+                id: "3",
+                title: "Beta Song",
+                artist: "Artist 1",
+                album: "Beta",
+                duration: "120",
+                filePath: "/music/beta.mp3",
+                fileName: "beta.mp3",
+            },
+        ];
+
+        const result = buildTrackItems({
+            tracks,
+            playlists: [],
+            selectedView: "albums",
+            selectedPlaylistId: null,
+            searchQuery: "",
+            playlistSort: "playlist-order",
+        });
+
+        expect(result.trackItems.map((item) => item.title)).toEqual([
+            "— Alpha —",
+            "Alpha Song",
+            "— Beta —",
+            "Beta Song",
+            "— Unknown Album —",
+            "No Album Song",
+        ]);
     });
 
     it("search filters within current view", () => {

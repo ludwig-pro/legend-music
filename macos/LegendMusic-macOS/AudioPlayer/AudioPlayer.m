@@ -339,6 +339,85 @@ static void LMCacheArtworkThumbnail(NSData *artworkData, NSURL *fileURL, NSStrin
     }
 }
 
+static NSNumber *LMParseTrackNumberString(NSString *stringValue) {
+    if (![stringValue isKindOfClass:[NSString class]]) {
+        return nil;
+    }
+
+    NSString *trimmed = [stringValue stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    if (trimmed.length == 0) {
+        return nil;
+    }
+
+    NSCharacterSet *digits = [NSCharacterSet decimalDigitCharacterSet];
+    NSRange firstDigitRange = [trimmed rangeOfCharacterFromSet:digits];
+    if (firstDigitRange.location == NSNotFound) {
+        return nil;
+    }
+
+    NSUInteger startIndex = firstDigitRange.location;
+    NSUInteger length = 0;
+    while (startIndex + length < trimmed.length) {
+        unichar character = [trimmed characterAtIndex:startIndex + length];
+        if (![digits characterIsMember:character]) {
+            break;
+        }
+        length += 1;
+    }
+
+    if (length == 0) {
+        return nil;
+    }
+
+    NSString *numberString = [trimmed substringWithRange:NSMakeRange(startIndex, length)];
+    NSInteger number = [numberString integerValue];
+    return number > 0 ? @(number) : nil;
+}
+
+static NSNumber *LMParseTrackNumberValue(id value) {
+    if (!value || value == (id)kCFNull) {
+        return nil;
+    }
+
+    if ([value isKindOfClass:[NSNumber class]]) {
+        NSInteger number = [(NSNumber *)value integerValue];
+        return number > 0 ? @(number) : nil;
+    }
+
+    if ([value isKindOfClass:[NSString class]]) {
+        return LMParseTrackNumberString((NSString *)value);
+    }
+
+    if ([value respondsToSelector:@selector(stringValue)]) {
+        NSString *stringValue = [value stringValue];
+        return LMParseTrackNumberString(stringValue);
+    }
+
+    return nil;
+}
+
+static NSNumber *LMExtractTrackNumberFromAsset(AVURLAsset *asset, NSArray<AVMetadataItem *> *commonMetadata) {
+    if (!asset || ![commonMetadata isKindOfClass:[NSArray class]]) {
+        return nil;
+    }
+
+    NSArray<AVMetadataItem *> *id3Items = [AVMetadataItem metadataItemsFromArray:[asset metadataForFormat:AVMetadataFormatID3Metadata]
+                                                                         withKey:AVMetadataID3MetadataKeyTrackNumber
+                                                                        keySpace:AVMetadataKeySpaceID3];
+    if (id3Items.count > 0) {
+        return LMParseTrackNumberValue(id3Items.firstObject.value ?: id3Items.firstObject.stringValue);
+    }
+
+    NSArray<AVMetadataItem *> *itunesItems = [AVMetadataItem metadataItemsFromArray:[asset metadataForFormat:AVMetadataFormatiTunesMetadata]
+                                                                            withKey:AVMetadataiTunesMetadataKeyTrackNumber
+                                                                           keySpace:AVMetadataKeySpaceiTunes];
+    if (itunesItems.count > 0) {
+        return LMParseTrackNumberValue(itunesItems.firstObject.value ?: itunesItems.firstObject.stringValue);
+    }
+
+    return nil;
+}
+
 static NSDictionary *LMExtractAVMediaTags(NSURL *fileURL, NSString *cacheDirPath, BOOL includeArtwork) {
     if (!fileURL) {
         return @{};
@@ -350,6 +429,7 @@ static NSDictionary *LMExtractAVMediaTags(NSURL *fileURL, NSString *cacheDirPath
     NSString *title = nil;
     NSString *artist = nil;
     NSString *album = nil;
+    NSNumber *trackNumber = nil;
     NSNumber *durationSeconds = nil;
     NSString *artworkPath = nil;
     NSString *artworkKey = nil;
@@ -368,6 +448,8 @@ static NSDictionary *LMExtractAVMediaTags(NSURL *fileURL, NSString *cacheDirPath
     if (albumItems.count > 0) {
         album = [albumItems.firstObject stringValue];
     }
+
+    trackNumber = LMExtractTrackNumberFromAsset(asset, commonMetadata);
 
     CMTime duration = asset.duration;
     if (CMTIME_IS_NUMERIC(duration)) {
@@ -416,6 +498,9 @@ static NSDictionary *LMExtractAVMediaTags(NSURL *fileURL, NSString *cacheDirPath
     if (album.length > 0) {
         result[@"album"] = album;
     }
+    if (trackNumber && trackNumber.integerValue > 0) {
+        result[@"trackNumber"] = trackNumber;
+    }
     if (durationSeconds) {
         result[@"durationSeconds"] = durationSeconds;
     }
@@ -442,6 +527,7 @@ static NSDictionary *LMExtractID3MediaTags(NSURL *fileURL, NSString *cacheDirPat
     NSString *title = tags.title.length > 0 ? tags.title : nil;
     NSString *artist = tags.artist.length > 0 ? tags.artist : nil;
     NSString *album = tags.album.length > 0 ? tags.album : nil;
+    NSNumber *trackNumber = nil;
     NSNumber *durationSeconds = tags.durationSeconds;
     NSString *artworkUri = nil;
     NSString *artworkKey = nil;
@@ -460,6 +546,10 @@ static NSDictionary *LMExtractID3MediaTags(NSURL *fileURL, NSString *cacheDirPat
         durationSeconds = nil;
     }
 
+    AVURLAsset *asset = [AVURLAsset URLAssetWithURL:fileURL options:nil];
+    NSArray<AVMetadataItem *> *commonMetadata = [asset commonMetadata];
+    trackNumber = LMExtractTrackNumberFromAsset(asset, commonMetadata);
+
     if (includeArtwork) {
         LMCacheArtworkThumbnail(tags.artworkData, fileURL, cacheDirPath, &artworkUri, &artworkKey);
     }
@@ -473,6 +563,9 @@ static NSDictionary *LMExtractID3MediaTags(NSURL *fileURL, NSString *cacheDirPat
     }
     if (album) {
         result[@"album"] = album;
+    }
+    if (trackNumber && trackNumber.integerValue > 0) {
+        result[@"trackNumber"] = trackNumber;
     }
     if (durationSeconds && durationSeconds.doubleValue > 0) {
         result[@"durationSeconds"] = durationSeconds;
@@ -1954,6 +2047,12 @@ RCT_EXPORT_METHOD(scanMediaLibrary:(NSArray<NSString *> *)paths
                         id albumValue = tags[@"album"];
                         if (albumValue) {
                             track[@"album"] = albumValue;
+                        }
+
+                        id trackNumberValue = tags[@"trackNumber"];
+                        NSNumber *trackNumber = [trackNumberValue isKindOfClass:[NSNumber class]] ? trackNumberValue : nil;
+                        if (trackNumber && trackNumber.integerValue > 0) {
+                            track[@"trackNumber"] = trackNumber;
                         }
 
                         id durationValue = tags[@"durationSeconds"];
