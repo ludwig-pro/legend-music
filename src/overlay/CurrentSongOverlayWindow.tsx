@@ -11,10 +11,9 @@ import Animated, {
     withSpring,
     withTiming,
 } from "react-native-reanimated";
-
+import { EffectView } from "@/components/EffectView";
 import { PlaybackArea } from "@/components/PlaybackArea";
 import { TooltipProvider } from "@/components/TooltipProvider";
-import { WindowEffectView } from "@/components/WindowEffectView";
 import { setWindowBlur } from "@/native-modules/WindowManager";
 import { ThemeProvider } from "@/theme/ThemeProvider";
 import { withWindowProvider } from "@/windows";
@@ -192,7 +191,7 @@ function CurrentSongOverlayWindow() {
         >
             <Animated.View style={styles.shadowContainer}>
                 <View style={styles.overlayWrapper}>
-                    <WindowEffectView
+                    <EffectView
                         blendingMode="behindWindow"
                         material="hudWindow"
                         state="active"
@@ -210,7 +209,7 @@ function CurrentSongOverlayWindow() {
                                 </PortalProvider>
                             </ThemeProvider>
                         </View>
-                    </WindowEffectView>
+                    </EffectView>
                 </View>
             </Animated.View>
         </Animated.View>

@@ -3,9 +3,9 @@ import type { Observable } from "@legendapp/state";
 import { useObservable, useValue } from "@legendapp/state/react";
 import { useMemo } from "react";
 import { View } from "react-native";
+import { EffectView } from "@/components/EffectView";
 import { Sidebar } from "@/components/Sidebar";
 import { TooltipProvider } from "@/components/TooltipProvider";
-import { WindowEffectView } from "@/components/WindowEffectView";
 import { AccountSettings } from "@/settings/AccountSettings";
 import { CustomizeUISettings } from "@/settings/CustomizeUISettings";
 import { GeneralSettings } from "@/settings/GeneralSettings";
@@ -55,7 +55,7 @@ export default function SettingsContainer() {
     const selectedItem$ = useObservable<SettingsPage>(showSettingsPage || "general");
 
     return (
-        <WindowEffectView style={{ flex: 1 }}>
+        <EffectView style={{ flex: 1 }}>
             <ThemeProvider>
                 <PortalProvider>
                     <TooltipProvider>
@@ -68,6 +68,6 @@ export default function SettingsContainer() {
                     </TooltipProvider>
                 </PortalProvider>
             </ThemeProvider>
-        </WindowEffectView>
+        </EffectView>
     );
 }

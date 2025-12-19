@@ -4,9 +4,9 @@ import { useCallback } from "react";
 import type { LayoutChangeEvent } from "react-native";
 import { View } from "react-native";
 import { DragDropProvider } from "@/components/dnd";
+import { EffectView } from "@/components/EffectView";
 import { MediaLibraryView } from "@/components/MediaLibrary";
 import { TooltipProvider } from "@/components/TooltipProvider";
-import { WindowEffectView } from "@/components/WindowEffectView";
 import { HiddenTextInput } from "@/systems/keyboard/HookKeyboard";
 import { stateSaved$ } from "@/systems/State";
 import { ThemeProvider } from "@/theme/ThemeProvider";
@@ -24,7 +24,7 @@ export default function MediaLibraryWindow() {
 
     return (
         <WindowProvider id={MEDIA_LIBRARY_WINDOW_ID}>
-            <WindowEffectView style={{ flex: 1 }}>
+            <EffectView style={{ flex: 1 }}>
                 <ThemeProvider>
                     <HiddenTextInput />
                     <PortalProvider>
@@ -37,7 +37,7 @@ export default function MediaLibraryWindow() {
                         </View>
                     </PortalProvider>
                 </ThemeProvider>
-            </WindowEffectView>
+            </EffectView>
         </WindowProvider>
     );
 }

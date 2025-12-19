@@ -4,7 +4,7 @@ import type { ColorValue, ViewProps } from "react-native";
 import { type GlassEffectStyle, GlassEffectView } from "@/native-modules/GlassEffectView";
 import { IS_TAHOE } from "@/systems/constants";
 
-export interface WindowEffectViewProps extends ViewProps {
+export interface EffectViewProps extends ViewProps {
     children?: ReactNode;
     glassStyle?: GlassEffectStyle;
     tintColor?: ColorValue;
@@ -13,7 +13,7 @@ export interface WindowEffectViewProps extends ViewProps {
     state?: State;
 }
 
-export function WindowEffectView({
+export function EffectView({
     children,
     glassStyle = "regular",
     tintColor = "#00000033",
@@ -21,7 +21,7 @@ export function WindowEffectView({
     material = "sidebar",
     state,
     ...props
-}: WindowEffectViewProps) {
+}: EffectViewProps) {
     if (IS_TAHOE) {
         return (
             <GlassEffectView glassStyle={glassStyle} tintColor={tintColor} {...props}>

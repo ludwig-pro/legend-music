@@ -5,11 +5,11 @@ import type React from "react";
 import { useRef } from "react";
 import { LogBox, View } from "react-native";
 import { DragDropProvider } from "@/components/dnd";
+import { EffectView } from "@/components/EffectView";
 import { MainContainer } from "@/components/MainContainer";
 import { TitleBar } from "@/components/TitleBar";
 import { ToastProvider } from "@/components/Toast";
 import { TooltipProvider } from "@/components/TooltipProvider";
-import { WindowEffectView } from "@/components/WindowEffectView";
 import { MediaLibraryWindowManager } from "@/media-library/MediaLibraryWindowManager";
 import { CurrentSongOverlayController } from "@/overlay/CurrentSongOverlayController";
 import { CurrentSongOverlayWindowManager } from "@/overlay/CurrentSongOverlayWindowManager";
@@ -106,9 +106,9 @@ function App(): React.JSX.Element | null {
         <WindowProvider id="main">
             <ThemeProvider>
                 <HookKeyboard />
-                <WindowEffectView glassStyle="regular" style={{ flex: 1 }}>
+                <EffectView glassStyle="regular" style={{ flex: 1 }}>
                     {content}
-                </WindowEffectView>
+                </EffectView>
                 <TitleBar />
                 <MediaLibraryWindowManager />
                 <SettingsWindowManager />
