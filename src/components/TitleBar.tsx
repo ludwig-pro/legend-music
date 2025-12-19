@@ -1,9 +1,9 @@
-import { VibrancyView } from "@fluentui-react-native/vibrancy-view";
 import { AnimatePresence, Motion } from "@legendapp/motion";
 import { observe } from "@legendapp/state";
 import { useObserveEffect, useValue } from "@legendapp/state/react";
 import type { JSX } from "react";
 import { Pressable } from "react-native";
+import { WindowEffectView } from "@/components/WindowEffectView";
 import WindowControls from "@/native-modules/WindowControls";
 import { IS_TAHOE } from "@/systems/constants";
 import { settings$ } from "@/systems/Settings";
@@ -63,7 +63,7 @@ export function TitleBar() {
                         exit={{ opacity: 0 }}
                         transition={{ type: "tween", duration: 100 }}
                     >
-                        <VibrancyView
+                        <WindowEffectView
                             blendingMode="withinWindow"
                             state="active"
                             material="popover"

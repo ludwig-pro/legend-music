@@ -14,12 +14,12 @@ import { MediaLibraryWindowManager } from "@/media-library/MediaLibraryWindowMan
 import { CurrentSongOverlayController } from "@/overlay/CurrentSongOverlayController";
 import { CurrentSongOverlayWindowManager } from "@/overlay/CurrentSongOverlayWindowManager";
 import { SettingsWindowManager } from "@/settings/SettingsWindowManager";
+import { IS_TAHOE } from "@/systems/constants";
 import { HookKeyboard } from "@/systems/keyboard/HookKeyboard";
 import { hydrateLibraryFromCache } from "@/systems/LibraryState";
 import { initializeLocalMusic } from "@/systems/LocalMusicState";
 import { initializeMenuManager } from "@/systems/MenuManager";
 import { initializeUpdater } from "@/systems/Updater";
-import { IS_TAHOE } from "@/systems/constants";
 import { perfMark } from "@/utils/perfLogger";
 import { runAfterInteractionsWithLabel } from "@/utils/runAfterInteractions";
 import { VisualizerWindowManager } from "@/visualizer/VisualizerWindowManager";
@@ -106,7 +106,7 @@ function App(): React.JSX.Element | null {
         <WindowProvider id="main">
             <ThemeProvider>
                 <HookKeyboard />
-                <WindowEffectView glassStyle="regular" tintColor="#00000033" style={{ flex: 1 }}>
+                <WindowEffectView glassStyle="regular" style={{ flex: 1 }}>
                     {content}
                 </WindowEffectView>
                 <TitleBar />
