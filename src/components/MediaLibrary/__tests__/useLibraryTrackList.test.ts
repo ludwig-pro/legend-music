@@ -58,8 +58,8 @@ describe("buildTrackItems", () => {
 
         expect(result.trackItems.map((item) => item.title)).toEqual([
             "— Artist 1 —",
-            "Another Song",
             "Song A",
+            "Another Song",
             "— Artist 2 —",
             "Song B",
         ]);

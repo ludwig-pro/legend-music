@@ -99,6 +99,14 @@ export function buildTrackItems({
                 return keyA.localeCompare(keyB);
             }
 
+            const albumA = a.album?.trim() || "Unknown Album";
+            const albumB = b.album?.trim() || "Unknown Album";
+            const albumKeyA = albumA.toLowerCase();
+            const albumKeyB = albumB.toLowerCase();
+            if (albumKeyA !== albumKeyB) {
+                return albumKeyA.localeCompare(albumKeyB);
+            }
+
             return (a.title ?? "").localeCompare(b.title ?? "");
         });
 
