@@ -2,7 +2,7 @@
 #import <React/RCTView.h>
 #import <React/RCTLog.h>
 
-static const CGFloat kMinimumPrimarySize = 220.0;
+static const CGFloat kMinimumPrimarySize = 140.0;
 static const CGFloat kMinimumSecondarySize = 320.0;
 
 @interface RNSplitView () <NSSplitViewDelegate>
@@ -198,7 +198,7 @@ static const CGFloat kMinimumSecondarySize = 320.0;
         return;
     }
 
-    CGFloat preferred = totalSize * 0.3;
+    CGFloat preferred = kMinimumPrimarySize;
     preferred = [self clampedDividerPosition:preferred totalSize:totalSize];
 
     [super setPosition:preferred ofDividerAtIndex:0];

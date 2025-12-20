@@ -14,7 +14,7 @@ Add a native split view wrapper for macOS and replace the settings layout with i
 
 ## Steps
 - [x] Add a `SplitView` wrapper in `src/native-modules/SplitView.tsx` using `requireNativeComponent("RNSplitView")`, `cssInterop`, and typed props (`isVertical`, `dividerThickness`, `onSplitViewDidResize`).
-- [ ] Confirm `RNSplitView` is included in the macOS target; adjust minimum sizes or defaults if they conflict with the settings sidebar width.
+- [x] Confirm `RNSplitView` is included in the macOS target; adjust minimum sizes or defaults if they conflict with the settings sidebar width.
 - [ ] Update `src/settings/SettingsContainer.tsx` to render Sidebar and Content as the two direct children of `SplitView`, keeping background and padding styles aligned with the current layout.
 - [ ] Add any wrapper views/className needed so both panes have explicit sizing and the content pane remains `flex-1`.
 
