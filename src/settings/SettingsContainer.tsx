@@ -1,11 +1,11 @@
 import { PortalProvider } from "@gorhom/portal";
 import type { Observable } from "@legendapp/state";
 import { useObservable, useValue } from "@legendapp/state/react";
-import { useMemo } from "react";
 import { View } from "react-native";
 import { EffectView } from "@/components/EffectView";
 import { Sidebar } from "@/components/Sidebar";
 import { TooltipProvider } from "@/components/TooltipProvider";
+import { SplitView } from "@/native-modules/SplitView";
 import { AccountSettings } from "@/settings/AccountSettings";
 import { CustomizeUISettings } from "@/settings/CustomizeUISettings";
 import { GeneralSettings } from "@/settings/GeneralSettings";
@@ -59,12 +59,14 @@ export default function SettingsContainer() {
             <ThemeProvider>
                 <PortalProvider>
                     <TooltipProvider>
-                        <View className="flex flex-1 flex-row">
-                            <Sidebar items={SETTING_PAGES} selectedItem$={selectedItem$} width={140} className="py-2" />
+                        <SplitView className="flex-1" isVertical>
+                            <View className="flex-1">
+                                <Sidebar items={SETTING_PAGES} selectedItem$={selectedItem$} className="py-2" />
+                            </View>
                             <View className="flex-1 bg-background-primary">
                                 <Content selectedItem$={selectedItem$} />
                             </View>
-                        </View>
+                        </SplitView>
                     </TooltipProvider>
                 </PortalProvider>
             </ThemeProvider>
