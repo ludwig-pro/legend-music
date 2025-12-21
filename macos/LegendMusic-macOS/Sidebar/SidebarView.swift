@@ -49,6 +49,14 @@ private struct SidebarItemModel {
     let selectable: Bool
 }
 
+/// Custom NSTableView that allows mouse events to pass through to RN content
+final class SidebarTableView: NSTableView {
+    override func validateProposedFirstResponder(_ responder: NSResponder, for event: NSEvent?) -> Bool {
+        // Allow all responders to become first responder, enabling buttons in RN content to receive clicks
+        return true
+    }
+}
+
 final class SidebarView: NSView, NSTableViewDataSource, NSTableViewDelegate {
     // Legacy items prop (for backwards compatibility)
     @objc var items: [NSDictionary] = [] {
@@ -76,7 +84,7 @@ final class SidebarView: NSView, NSTableViewDataSource, NSTableViewDelegate {
 
     private let scrollView = NSScrollView()
     private var lastReportedSize: CGSize = .zero
-    private let tableView = NSTableView()
+    private let tableView = SidebarTableView()
     private let tableColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("SidebarColumn"))
     private var itemModels: [SidebarItemModel] = []
     private var legacyItemLabels: [String: String] = [:] // id -> label for legacy mode
