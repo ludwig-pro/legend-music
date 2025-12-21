@@ -20,6 +20,7 @@ cssInterop(NativeSplitView, {
     className: "style",
 });
 
-export function SplitView(props: SplitViewProps) {
-    return <NativeSplitView {...props} />;
+export function SplitView({ isVertical = true, style, ...props }: SplitViewProps) {
+    const layoutStyle = { flexDirection: isVertical ? "row" : "column" };
+    return <NativeSplitView {...props} isVertical={isVertical} style={[style, layoutStyle]} />;
 }
