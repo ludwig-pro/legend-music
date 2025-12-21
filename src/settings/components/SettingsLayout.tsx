@@ -15,7 +15,7 @@ interface SettingsPageProps {
 
 export function SettingsPage({ title, description, actions, children, contentClassName }: SettingsPageProps) {
     return (
-        <View className={cn("flex-1 bg-background-primary")}>
+        <View className={cn("flex-1")}>
             <ScrollView
                 className="flex-1"
                 contentContainerClassName={cn("mx-auto w-full max-w-4xl p-6 flex flex-col", contentClassName)}

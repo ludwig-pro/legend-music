@@ -81,13 +81,18 @@ export default function SettingsContainer() {
                                     selectedId={selectedItem}
                                     onSelectionChange={handleSelectionChange}
                                 />
-                                <View className="flex-1 bg-background-primary">
+                                <View className="flex-1">
                                     <Content selectedItem$={selectedItem$} />
                                 </View>
                             </SidebarSplitView>
                         ) : (
                             <View className="flex flex-1 flex-row">
-                                <Sidebar items={SETTING_PAGES} selectedItem$={selectedItem$} width={140} className="py-2" />
+                                <Sidebar
+                                    items={SETTING_PAGES}
+                                    selectedItem$={selectedItem$}
+                                    width={140}
+                                    className="py-2"
+                                />
                                 <View className="flex-1 bg-background-primary">
                                     <Content selectedItem$={selectedItem$} />
                                 </View>

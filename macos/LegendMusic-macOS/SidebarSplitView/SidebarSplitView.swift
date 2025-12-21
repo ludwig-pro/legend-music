@@ -99,6 +99,14 @@ final class SidebarSplitView: NSView {
     override func layout() {
         super.layout()
         splitViewController.view.frame = bounds
+        splitViewController.splitView.adjustSubviews()
+        syncReactSubviewFrames()
+    }
+
+    override func setFrameSize(_ newSize: NSSize) {
+        super.setFrameSize(newSize)
+        splitViewController.view.frame = bounds
+        splitViewController.splitView.adjustSubviews()
         syncReactSubviewFrames()
     }
 
