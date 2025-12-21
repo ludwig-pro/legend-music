@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Platform, View, type ViewProps } from "react-native";
+import type { NativeMouseEvent } from "react-native-macos";
 import { NativeSidebarItemView } from "@/native-modules/NativeSidebar";
 import { cn } from "@/utils/cn";
 
@@ -10,6 +11,7 @@ export interface SidebarItemProps extends ViewProps {
     selectable?: boolean;
     /** Row height for this item (default: 28) */
     rowHeight?: number;
+    onRightClick?: (event: NativeMouseEvent) => void;
     /** Content to render inside the sidebar item */
     children: ReactNode;
 }
@@ -38,9 +40,15 @@ export function SidebarItem({
     children,
     className,
     style,
+    onRightClick,
     ...props
 }: SidebarItemProps) {
     const isMacOS = Platform.OS === "macos";
+    const handleRightClick = onRightClick
+        ? (event: { nativeEvent: NativeMouseEvent }) => {
+              onRightClick(event.nativeEvent);
+          }
+        : undefined;
 
     if (isMacOS) {
         return (
@@ -49,6 +57,7 @@ export function SidebarItem({
                 selectable={selectable}
                 rowHeight={rowHeight}
                 style={style}
+                onRightClick={handleRightClick}
                 {...props}
             >
                 {children}

@@ -1,6 +1,7 @@
 import { cssInterop } from "nativewind";
 import type { ReactNode } from "react";
 import { requireNativeComponent, type ViewProps } from "react-native";
+import type { NativeMouseEvent } from "react-native-macos";
 
 export interface NativeSidebarItem {
     id: string;
@@ -30,6 +31,7 @@ export interface SidebarItemViewProps extends ViewProps {
     selectable?: boolean;
     /** Row height for this item (default: 28) */
     rowHeight?: number;
+    onRightClick?: (event: { nativeEvent: NativeMouseEvent }) => void;
     children?: ReactNode;
 }
 

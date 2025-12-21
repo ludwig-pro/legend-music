@@ -29,9 +29,31 @@ final class SidebarItemView: NSView {
     @objc var selectable: Bool = true
     /// Row height for this item. 0 means auto-detect from content, positive value is explicit height.
     @objc var rowHeight: CGFloat = 0
+    @objc var onRightClick: RCTBubblingEventBlock?
 
     override var isFlipped: Bool {
         return true
+    }
+
+    override func rightMouseUp(with event: NSEvent) {
+        let locationInWindow = event.locationInWindow
+        let locationInView = convert(locationInWindow, from: nil)
+        let contentViewHeight = window?.contentView?.bounds.height ?? 0
+        let pageY = contentViewHeight > 0 ? contentViewHeight - locationInWindow.y : locationInWindow.y
+
+        onRightClick?([
+            "x": locationInView.x,
+            "y": locationInView.y,
+            "pageX": locationInWindow.x,
+            "pageY": pageY,
+            "button": 2,
+            "ctrlKey": event.modifierFlags.contains(.control),
+            "shiftKey": event.modifierFlags.contains(.shift),
+            "altKey": event.modifierFlags.contains(.option),
+            "metaKey": event.modifierFlags.contains(.command),
+        ])
+
+        super.rightMouseUp(with: event)
     }
 
     override func layout() {

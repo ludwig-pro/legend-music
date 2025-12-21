@@ -220,90 +220,100 @@ export function MediaLibrarySidebar({ useNativeLibraryList = false }: MediaLibra
         }
     }, []);
 
-    const handlePlaylistContextMenu = useCallback(async (playlist: LocalPlaylist, event: NativeMouseEvent) => {
-        const x = event.pageX ?? event.x ?? 0;
-        const y = event.pageY ?? event.y ?? 0;
+    const handlePlaylistContextMenu = useCallback(
+        async (playlist: LocalPlaylist, event: NativeMouseEvent, mode: "full" | "basic" = "full") => {
+            const x = event.pageX ?? event.x ?? 0;
+            const y = event.pageY ?? event.y ?? 0;
 
-        const isEditable = playlist.source === "cache" && Boolean(playlist.filePath);
-        const menuItems: ContextMenuItem[] = [];
+            const isEditable = playlist.source === "cache" && Boolean(playlist.filePath);
+            const menuItems: ContextMenuItem[] = [];
 
-        if (isEditable) {
-            menuItems.push({ id: "rename", title: "Rename" });
-            menuItems.push({ id: "delete", title: "Delete" });
-            menuItems.push({ id: "export", title: "Export .m3u" });
-        } else {
-            menuItems.push({ id: "import", title: "Import to Local Playlists" });
-            menuItems.push({ id: "export", title: "Export .m3u" });
-        }
+            if (mode === "basic") {
+                if (!isEditable) {
+                    return;
+                }
 
-        menuItems.push({ id: "reveal", title: "Reveal in Finder" });
+                menuItems.push({ id: "rename", title: "Rename" });
+                menuItems.push({ id: "delete", title: "Delete" });
+            } else if (isEditable) {
+                menuItems.push({ id: "rename", title: "Rename" });
+                menuItems.push({ id: "delete", title: "Delete" });
+                menuItems.push({ id: "export", title: "Export .m3u" });
+                menuItems.push({ id: "reveal", title: "Reveal in Finder" });
+            } else {
+                menuItems.push({ id: "import", title: "Import to Local Playlists" });
+                menuItems.push({ id: "export", title: "Export .m3u" });
+                menuItems.push({ id: "reveal", title: "Reveal in Finder" });
+            }
 
-        const selection = await showContextMenu(menuItems, { x, y });
-        if (!selection) {
-            return;
-        }
-
-        switch (selection) {
-            case "rename":
-                setEditingPlaylistId(playlist.id);
-                setEditingPlaylistName(playlist.name);
+            const selection = await showContextMenu(menuItems, { x, y });
+            if (!selection) {
                 return;
-            case "delete":
-                Alert.alert("Delete playlist", `Delete “${playlist.name}”?`, [
-                    { text: "Cancel", style: "cancel" },
-                    {
-                        text: "Delete",
-                        style: "destructive",
-                        onPress: () => {
-                            void (async () => {
-                                try {
-                                    await deletePlaylist(playlist.id);
-                                    showToast(`Deleted ${playlist.name}`, "info");
-                                } catch (error) {
-                                    const message =
-                                        error instanceof Error ? error.message : "Failed to delete playlist";
-                                    showToast(message, "error");
-                                }
-                            })();
+            }
+
+            switch (selection) {
+                case "rename":
+                    setEditingPlaylistId(playlist.id);
+                    setEditingPlaylistName(playlist.name);
+                    return;
+                case "delete":
+                    Alert.alert("Delete playlist", `Delete “${playlist.name}”?`, [
+                        { text: "Cancel", style: "cancel" },
+                        {
+                            text: "Delete",
+                            style: "destructive",
+                            onPress: () => {
+                                void (async () => {
+                                    try {
+                                        await deletePlaylist(playlist.id);
+                                        showToast(`Deleted ${playlist.name}`, "info");
+                                    } catch (error) {
+                                        const message =
+                                            error instanceof Error ? error.message : "Failed to delete playlist";
+                                        showToast(message, "error");
+                                    }
+                                })();
+                            },
                         },
-                    },
-                ]);
-                return;
-            case "reveal": {
-                const didReveal = await showInFinder(playlist.filePath);
-                if (!didReveal) {
-                    showToast("Unable to reveal playlist", "error");
-                }
-                return;
-            }
-            case "export": {
-                try {
-                    const exportedPath = await exportPlaylistToFile(playlist.id);
-                    if (exportedPath) {
-                        await showInFinder(exportedPath);
-                        showToast(`Exported ${playlist.name}`, "info");
+                    ]);
+                    return;
+                case "reveal": {
+                    const didReveal = await showInFinder(playlist.filePath);
+                    if (!didReveal) {
+                        showToast("Unable to reveal playlist", "error");
                     }
-                } catch (error) {
-                    const message = error instanceof Error ? error.message : "Failed to export playlist";
-                    showToast(message, "error");
+                    return;
                 }
-                return;
-            }
-            case "import": {
-                try {
-                    const nextPlaylist = await duplicatePlaylistToCache(playlist.id);
-                    selectLibraryPlaylist(nextPlaylist.id);
-                    showToast(`Imported ${playlist.name}`, "info");
-                } catch (error) {
-                    const message = error instanceof Error ? error.message : "Failed to import playlist";
-                    showToast(message, "error");
+                case "export": {
+                    try {
+                        const exportedPath = await exportPlaylistToFile(playlist.id);
+                        if (exportedPath) {
+                            await showInFinder(exportedPath);
+                            showToast(`Exported ${playlist.name}`, "info");
+                        }
+                    } catch (error) {
+                        const message = error instanceof Error ? error.message : "Failed to export playlist";
+                        showToast(message, "error");
+                    }
+                    return;
                 }
-                return;
+                case "import": {
+                    try {
+                        const nextPlaylist = await duplicatePlaylistToCache(playlist.id);
+                        selectLibraryPlaylist(nextPlaylist.id);
+                        showToast(`Imported ${playlist.name}`, "info");
+                    } catch (error) {
+                        const message = error instanceof Error ? error.message : "Failed to import playlist";
+                        showToast(message, "error");
+                    }
+                    return;
+                }
+                default:
+                    return;
             }
-            default:
-                return;
-        }
-    }, []);
+        },
+        [],
+    );
 
     // Compute selected ID for native sidebar
     const nativeSidebarSelectedId = useMemo(() => {
@@ -413,7 +423,11 @@ export function MediaLibrarySidebar({ useNativeLibraryList = false }: MediaLibra
                           }
 
                           return (
-                              <SidebarItem key={playlist.id} itemId={`playlist-${playlist.id}`}>
+                              <SidebarItem
+                                  key={playlist.id}
+                                  itemId={`playlist-${playlist.id}`}
+                                  onRightClick={(event) => handlePlaylistContextMenu(playlist, event, "basic")}
+                              >
                                   <View
                                       className="flex-row items-center justify-between"
                                       onLayout={(e) => console.log(e.nativeEvent.layout)}
