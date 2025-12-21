@@ -220,7 +220,7 @@ final class SidebarSplitView: RCTUIView {
                sidebarSize.height > 0,
                !sizesAreClose(sidebarSize, lastSidebarSize) {
                 lastSidebarSize = sidebarSize
-                uiManager.setSize(sidebarSize, forView: sidebarView)
+                uiManager.setSize(sidebarSize, for: sidebarView)
             }
         }
 
@@ -230,7 +230,7 @@ final class SidebarSplitView: RCTUIView {
                contentSize.height > 0,
                !sizesAreClose(contentSize, lastContentSize) {
                 lastContentSize = contentSize
-                uiManager.setSize(contentSize, forView: contentView)
+                uiManager.setSize(contentSize, for: contentView)
             }
         }
     }
