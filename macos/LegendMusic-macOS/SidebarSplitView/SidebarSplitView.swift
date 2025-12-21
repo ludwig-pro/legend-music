@@ -100,6 +100,7 @@ final class SidebarSplitView: NSView {
         super.layout()
         splitViewController.view.frame = bounds
         splitViewController.splitView.adjustSubviews()
+        splitViewController.view.layoutSubtreeIfNeeded()
         syncReactSubviewFrames()
     }
 
@@ -107,6 +108,7 @@ final class SidebarSplitView: NSView {
         super.setFrameSize(newSize)
         splitViewController.view.frame = bounds
         splitViewController.splitView.adjustSubviews()
+        splitViewController.view.layoutSubtreeIfNeeded()
         syncReactSubviewFrames()
     }
 
@@ -167,8 +169,9 @@ final class SidebarSplitView: NSView {
         }
 
         let targetFrame = container.bounds
-        if subview.responds(to: Selector(("reactSetFrame:"))) {
-            subview.reactSetFrame(targetFrame)
+        subview.translatesAutoresizingMaskIntoConstraints = true
+        if let reactView = subview as? RCTView {
+            reactView.reactSetFrame(targetFrame)
         } else {
             subview.frame = targetFrame
         }
