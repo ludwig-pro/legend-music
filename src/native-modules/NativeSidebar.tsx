@@ -12,6 +12,7 @@ export interface NativeSidebarViewProps extends ViewProps {
     selectedId?: string;
     contentInsetTop?: number;
     onSidebarSelectionChange?: (event: { nativeEvent: { id: string } }) => void;
+    onSidebarLayout?: (event: { nativeEvent: { width: number; height: number } }) => void;
     children?: ReactNode;
 }
 

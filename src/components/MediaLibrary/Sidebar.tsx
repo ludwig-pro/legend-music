@@ -1,6 +1,15 @@
 import { useValue } from "@legendapp/state/react";
 import { useCallback, useMemo, useRef, useState } from "react";
-import { Alert, Platform, ScrollView, Text, TextInput, View } from "react-native";
+import {
+    Alert,
+    LayoutChangeEvent,
+    type LayoutRectangle,
+    Platform,
+    ScrollView,
+    Text,
+    TextInput,
+    View,
+} from "react-native";
 import type { NativeMouseEvent } from "react-native-macos";
 
 import { Button } from "@/components/Button";
@@ -59,12 +68,20 @@ export function MediaLibrarySidebar({ useNativeLibraryList = false }: MediaLibra
     const [editingPlaylistId, setEditingPlaylistId] = useState<string | null>(null);
     const [editingPlaylistName, setEditingPlaylistName] = useState("");
     const shouldUseNativeLibraryList = useNativeLibraryList && Platform.OS === "macos";
+    const [width, setWidth] = useState(0);
 
+    const onNativeSidebarLayout = useCallback(
+        (layout: { width: number; height: number }) => {
+            setWidth(layout.width);
+        },
+        [setWidth],
+    );
     const handleSelectView = useCallback((view: LibraryView) => {
         selectLibraryView(view);
     }, []);
 
     const handleAddPlaylist = useCallback(() => {
+        console.log("handleAddPlaylist");
         if (tempPlaylistId) {
             return;
         }
@@ -316,6 +333,7 @@ export function MediaLibrarySidebar({ useNativeLibraryList = false }: MediaLibra
                 onSelectionChange={handleNativeSidebarSelection}
                 contentInsetTop={0}
                 className="flex-1 h-full"
+                onLayout={onNativeSidebarLayout}
             >
                 {/* Library Section Header */}
                 <SidebarItem itemId="header-library" selectable={false} rowHeight={20}>
@@ -332,18 +350,17 @@ export function MediaLibrarySidebar({ useNativeLibraryList = false }: MediaLibra
                 {/* Playlists Section Header */}
                 {SUPPORT_PLAYLISTS ? (
                     <SidebarItem itemId="header-playlists" selectable={false} rowHeight={36}>
-                        <View className="flex-row items-center justify-between pt-3">
+                        <View className="flex-row items-center justify-between pt-3" style={{ width: width - 28 }}>
                             <Text className="text-xs font-semibold text-white/40 uppercase tracking-wider">
                                 Playlists
                             </Text>
                             <Button
                                 icon="plus"
-                                variant="icon"
+                                variant="icon-hover"
                                 size="small"
                                 accessibilityLabel="Add playlist"
                                 disabled={Boolean(tempPlaylistId)}
                                 onClick={handleAddPlaylist}
-                                className="bg-transparent hover:bg-white/10"
                             />
                         </View>
                     </SidebarItem>

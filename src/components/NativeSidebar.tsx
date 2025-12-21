@@ -12,6 +12,8 @@ export interface NativeSidebarProps {
     selectedId?: string;
     /** Callback when selection changes */
     onSelectionChange?: (id: string) => void;
+    /** Callback when sidebar layout changes, provides width and height */
+    onLayout?: (layout: { width: number; height: number }) => void;
     /** Width of the sidebar (for non-macOS fallback) */
     width?: number;
     /** Top content inset */
@@ -29,6 +31,7 @@ export function NativeSidebar({
     items,
     selectedId,
     onSelectionChange,
+    onLayout,
     width,
     contentInsetTop,
     className,
@@ -66,6 +69,7 @@ export function NativeSidebar({
                     selectedId={selectedId}
                     contentInsetTop={contentInsetTop}
                     onSidebarSelectionChange={(event) => onSelectionChange?.(event.nativeEvent.id)}
+                    onSidebarLayout={onLayout ? (event) => onLayout(event.nativeEvent) : undefined}
                     style={[style, width !== undefined ? { width } : null]}
                     className={className}
                 >
@@ -81,6 +85,7 @@ export function NativeSidebar({
                 selectedId={selectedId}
                 contentInsetTop={contentInsetTop}
                 onSidebarSelectionChange={(event) => onSelectionChange?.(event.nativeEvent.id)}
+                onSidebarLayout={onLayout ? (event) => onLayout(event.nativeEvent) : undefined}
                 style={[style, width !== undefined ? { width } : null]}
                 className={className}
             />

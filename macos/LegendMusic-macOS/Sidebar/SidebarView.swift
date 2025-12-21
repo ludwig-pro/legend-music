@@ -72,8 +72,10 @@ final class SidebarView: NSView, NSTableViewDataSource, NSTableViewDelegate {
     }
 
     @objc var onSidebarSelectionChange: RCTBubblingEventBlock?
+    @objc var onSidebarLayout: RCTBubblingEventBlock?
 
     private let scrollView = NSScrollView()
+    private var lastReportedSize: CGSize = .zero
     private let tableView = NSTableView()
     private let tableColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("SidebarColumn"))
     private var itemModels: [SidebarItemModel] = []
@@ -139,6 +141,18 @@ final class SidebarView: NSView, NSTableViewDataSource, NSTableViewDelegate {
     override func layout() {
         super.layout()
         scrollView.frame = bounds
+        reportLayoutIfNeeded()
+    }
+
+    private func reportLayoutIfNeeded() {
+        guard bounds.width > 0, bounds.height > 0 else { return }
+        guard bounds.size != lastReportedSize else { return }
+
+        lastReportedSize = bounds.size
+        onSidebarLayout?([
+            "width": bounds.width,
+            "height": bounds.height
+        ])
     }
 
     // MARK: - React Native Subview Management
