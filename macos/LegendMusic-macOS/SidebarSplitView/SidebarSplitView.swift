@@ -33,6 +33,8 @@ final class SidebarSplitView: NSView {
     private let sidebarItem: NSSplitViewItem
     private let contentItem: NSSplitViewItem
     private var resizeObserver: NSObjectProtocol?
+    private weak var sidebarReactView: NSView?
+    private weak var contentReactView: NSView?
 
     override var isFlipped: Bool {
         return true
@@ -97,6 +99,8 @@ final class SidebarSplitView: NSView {
     override func layout() {
         super.layout()
         splitViewController.view.frame = bounds
+        sidebarReactView?.frame = sidebarContainer.bounds
+        contentReactView?.frame = contentContainer.bounds
     }
 
     private func updateSidebarSizing() {
@@ -111,13 +115,24 @@ final class SidebarSplitView: NSView {
     }
 
     override func insertReactSubview(_ subview: NSView!, at atIndex: Int) {
-        let targetView = atIndex == 0 ? sidebarContainer : contentContainer
+        if sidebarReactView == nil {
+            sidebarReactView = subview
+        } else if contentReactView == nil {
+            contentReactView = subview
+        }
+
+        let targetView = subview === sidebarReactView ? sidebarContainer : contentContainer
         targetView.addSubview(subview)
         subview.frame = targetView.bounds
         subview.autoresizingMask = [.width, .height]
     }
 
     override func removeReactSubview(_ subview: NSView!) {
+        if subview === sidebarReactView {
+            sidebarReactView = nil
+        } else if subview === contentReactView {
+            contentReactView = nil
+        }
         subview.removeFromSuperview()
     }
 
