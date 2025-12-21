@@ -331,7 +331,7 @@ export function MediaLibrarySidebar({ useNativeLibraryList = false }: MediaLibra
 
                 {/* Playlists Section Header */}
                 {SUPPORT_PLAYLISTS ? (
-                    <SidebarItem itemId="header-playlists" selectable={false}>
+                    <SidebarItem itemId="header-playlists" selectable={false} rowHeight={36}>
                         <View className="flex-row items-center justify-between pt-3">
                             <Text className="text-xs font-semibold text-white/40 uppercase tracking-wider">
                                 Playlists

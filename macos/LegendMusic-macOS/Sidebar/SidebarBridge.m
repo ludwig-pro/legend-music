@@ -13,5 +13,6 @@ RCT_EXPORT_VIEW_PROPERTY(onSidebarSelectionChange, RCTBubblingEventBlock)
 
 RCT_EXPORT_VIEW_PROPERTY(itemId, NSString)
 RCT_EXPORT_VIEW_PROPERTY(selectable, BOOL)
+RCT_EXPORT_VIEW_PROPERTY(rowHeight, CGFloat)
 
 @end

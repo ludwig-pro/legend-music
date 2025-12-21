@@ -27,6 +27,8 @@ class LMSidebarItem: RCTViewManager {
 final class SidebarItemView: NSView {
     @objc var itemId: NSString = ""
     @objc var selectable: Bool = true
+    /// Row height for this item. 0 means auto-detect from content, positive value is explicit height.
+    @objc var rowHeight: CGFloat = 0
 
     override var isFlipped: Bool {
         return true
@@ -38,14 +40,6 @@ final class SidebarItemView: NSView {
         for subview in subviews {
             subview.frame = bounds
         }
-    }
-
-    override var intrinsicContentSize: NSSize {
-        // Return the size of the first subview if available
-        if let firstSubview = subviews.first {
-            return firstSubview.intrinsicContentSize
-        }
-        return NSSize(width: NSView.noIntrinsicMetric, height: 28)
     }
 }
 
@@ -247,6 +241,11 @@ final class SidebarView: NSView, NSTableViewDataSource, NSTableViewDelegate {
 
         let model = itemModels[row]
         let view = model.view
+
+        // Use explicit rowHeight if set
+        if view.rowHeight > 0 {
+            return view.rowHeight
+        }
 
         // Get intrinsic height from the RN view
         let intrinsicSize = view.intrinsicContentSize

@@ -8,6 +8,8 @@ export interface SidebarItemProps extends ViewProps {
     itemId: string;
     /** Whether this item can be selected (default: true) */
     selectable?: boolean;
+    /** Row height for this item (default: 28) */
+    rowHeight?: number;
     /** Content to render inside the sidebar item */
     children: ReactNode;
 }
@@ -29,7 +31,15 @@ export interface SidebarItemProps extends ViewProps {
  *   </SidebarItem>
  * </NativeSidebar>
  */
-export function SidebarItem({ itemId, selectable = true, children, className, style, ...props }: SidebarItemProps) {
+export function SidebarItem({
+    itemId,
+    selectable = true,
+    rowHeight,
+    children,
+    className,
+    style,
+    ...props
+}: SidebarItemProps) {
     const isMacOS = Platform.OS === "macos";
 
     if (isMacOS) {
@@ -37,7 +47,7 @@ export function SidebarItem({ itemId, selectable = true, children, className, st
             <NativeSidebarItemView
                 itemId={itemId}
                 selectable={selectable}
-                // className={cn("px-3 py-2", className)}
+                rowHeight={rowHeight}
                 style={style}
                 {...props}
             >

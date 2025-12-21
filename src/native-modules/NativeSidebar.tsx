@@ -27,6 +27,8 @@ export { NativeSidebarView };
 export interface SidebarItemViewProps extends ViewProps {
     itemId: string;
     selectable?: boolean;
+    /** Row height for this item (default: 28) */
+    rowHeight?: number;
     children?: ReactNode;
 }
 
