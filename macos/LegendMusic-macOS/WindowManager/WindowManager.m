@@ -190,6 +190,16 @@ RCT_EXPORT_METHOD(openWindow:(NSDictionary *)options
       [existingWindow setTitlebarAppearsTransparent:[transparentTitlebar boolValue]];
     }
     LegendApplyTitleVisibility(existingWindow, titleVisibility);
+
+    // Create toolbar if requested and not already present
+    BOOL hasToolbar = [windowStyle[@"hasToolbar"] boolValue];
+    if (hasToolbar && ![existingWindow toolbar]) {
+      NSToolbar *toolbar = [[NSToolbar alloc] initWithIdentifier:identifier];
+      toolbar.displayMode = NSToolbarDisplayModeIconOnly;
+      toolbar.showsBaselineSeparator = NO;
+      [existingWindow setToolbar:toolbar];
+    }
+
     LegendApplyToolbarStyle(existingWindow, toolbarStyle);
 
     if (levelNumber) {
@@ -254,6 +264,16 @@ RCT_EXPORT_METHOD(openWindow:(NSDictionary *)options
     [window setTitlebarAppearsTransparent:[transparentTitlebar boolValue]];
   }
   LegendApplyTitleVisibility(window, titleVisibility);
+
+  // Create toolbar if requested (needed for proper sidebar layout)
+  BOOL hasToolbar = [windowStyle[@"hasToolbar"] boolValue];
+  if (hasToolbar) {
+    NSToolbar *toolbar = [[NSToolbar alloc] initWithIdentifier:identifier];
+    toolbar.displayMode = NSToolbarDisplayModeIconOnly;
+    toolbar.showsBaselineSeparator = NO;
+    [window setToolbar:toolbar];
+  }
+
   LegendApplyToolbarStyle(window, toolbarStyle);
 
   if (levelNumber) {

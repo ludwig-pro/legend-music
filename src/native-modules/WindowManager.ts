@@ -54,6 +54,7 @@ export type WindowStyleOptions = {
     titlebarAppearsTransparent?: boolean;
     titleVisibility?: "visible" | "hidden";
     toolbarStyle?: "automatic" | "expanded" | "preference" | "unified" | "unifiedCompact";
+    hasToolbar?: boolean;
 };
 
 export type WindowOptions = {
