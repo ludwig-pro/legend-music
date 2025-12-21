@@ -4,7 +4,9 @@ import React
 @objc(RNSidebarSplitView)
 class RNSidebarSplitView: RCTViewManager {
     override func view() -> NSView! {
-        return SidebarSplitView()
+        let view = SidebarSplitView()
+        view.bridge = bridge
+        return view
     }
 
     override static func requiresMainQueueSetup() -> Bool {
@@ -12,7 +14,7 @@ class RNSidebarSplitView: RCTViewManager {
     }
 }
 
-final class SidebarSplitView: NSView {
+final class SidebarSplitView: RCTUIView {
     @objc var onSplitViewDidResize: RCTBubblingEventBlock?
     @objc var sidebarMinWidth: NSNumber = 180 {
         didSet {
@@ -35,6 +37,10 @@ final class SidebarSplitView: NSView {
     private var resizeObserver: NSObjectProtocol?
     private weak var sidebarReactView: NSView?
     private weak var contentReactView: NSView?
+    weak var bridge: RCTBridge?
+    private var lastSidebarSize: CGSize = .zero
+    private var lastContentSize: CGSize = .zero
+    private let widthTolerance: CGFloat = 0.5
 
     override var isFlipped: Bool {
         return true
@@ -124,6 +130,7 @@ final class SidebarSplitView: NSView {
     }
 
     override func insertReactSubview(_ subview: NSView!, at atIndex: Int) {
+        super.insertReactSubview(subview, at: atIndex)
         if sidebarReactView == nil {
             sidebarReactView = subview
         } else if contentReactView == nil {
@@ -136,12 +143,16 @@ final class SidebarSplitView: NSView {
     }
 
     override func removeReactSubview(_ subview: NSView!) {
+        super.removeReactSubview(subview)
         if subview === sidebarReactView {
             sidebarReactView = nil
         } else if subview === contentReactView {
             contentReactView = nil
         }
-        subview.removeFromSuperview()
+    }
+
+    override func didUpdateReactSubviews() {
+        // Intentionally handled in insertReactSubview to route into the split view containers.
     }
 
     private func emitResizeEvent() {
@@ -162,6 +173,7 @@ final class SidebarSplitView: NSView {
     private func syncReactSubviewFrames() {
         syncReactSubview(sidebarReactView, in: sidebarContainer)
         syncReactSubview(contentReactView, in: contentContainer)
+        updateReactShadowSizes()
         logLayoutState("syncReactSubviewFrames")
     }
 
@@ -195,6 +207,36 @@ final class SidebarSplitView: NSView {
             NSStringFromRect(sidebarReactFrame),
             NSStringFromRect(contentReactFrame)
         )
+    }
+
+    private func updateReactShadowSizes() {
+        guard let bridge, let uiManager = bridge.uiManager else {
+            return
+        }
+
+        if let sidebarView = sidebarReactView as? RCTUIView {
+            let sidebarSize = sidebarContainer.frame.size
+            if sidebarSize.width > 0,
+               sidebarSize.height > 0,
+               !sizesAreClose(sidebarSize, lastSidebarSize) {
+                lastSidebarSize = sidebarSize
+                uiManager.setSize(sidebarSize, forView: sidebarView)
+            }
+        }
+
+        if let contentView = contentReactView as? RCTUIView {
+            let contentSize = contentContainer.frame.size
+            if contentSize.width > 0,
+               contentSize.height > 0,
+               !sizesAreClose(contentSize, lastContentSize) {
+                lastContentSize = contentSize
+                uiManager.setSize(contentSize, forView: contentView)
+            }
+        }
+    }
+
+    private func sizesAreClose(_ lhs: CGSize, _ rhs: CGSize) -> Bool {
+        abs(lhs.width - rhs.width) < widthTolerance && abs(lhs.height - rhs.height) < widthTolerance
     }
 
     deinit {
