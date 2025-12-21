@@ -238,7 +238,7 @@ export function TrackList(_props: TrackListProps) {
     }, []);
 
     return (
-        <View className="flex-1 min-h-0">
+        <View className="h-full bg-red-500">
             {selectedView === "playlist" && selectedPlaylist ? (
                 <View className="px-3 py-2 border-b border-white/10 flex-row items-center gap-2">
                     <View className="flex-1 min-w-0">

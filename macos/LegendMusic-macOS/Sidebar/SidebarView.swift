@@ -12,15 +12,56 @@ class LMSidebar: RCTViewManager {
     }
 }
 
-private struct SidebarItem {
+@objc(LMSidebarItem)
+class LMSidebarItem: RCTViewManager {
+    override func view() -> NSView! {
+        return SidebarItemView()
+    }
+
+    override static func requiresMainQueueSetup() -> Bool {
+        return true
+    }
+}
+
+/// A wrapper view for sidebar item content that stores the item ID
+final class SidebarItemView: NSView {
+    @objc var itemId: NSString = ""
+    @objc var selectable: Bool = true
+
+    override var isFlipped: Bool {
+        return true
+    }
+
+    override func layout() {
+        super.layout()
+        // Size subviews to fill this view
+        for subview in subviews {
+            subview.frame = bounds
+        }
+    }
+
+    override var intrinsicContentSize: NSSize {
+        // Return the size of the first subview if available
+        if let firstSubview = subviews.first {
+            return firstSubview.intrinsicContentSize
+        }
+        return NSSize(width: NSView.noIntrinsicMetric, height: 28)
+    }
+}
+
+private struct SidebarItemModel {
     let id: String
-    let label: String
+    let view: SidebarItemView
+    let selectable: Bool
 }
 
 final class SidebarView: NSView, NSTableViewDataSource, NSTableViewDelegate {
+    // Legacy items prop (for backwards compatibility)
     @objc var items: [NSDictionary] = [] {
         didSet {
-            reloadItems()
+            if !usesReactChildren {
+                reloadLegacyItems()
+            }
         }
     }
 
@@ -41,8 +82,10 @@ final class SidebarView: NSView, NSTableViewDataSource, NSTableViewDelegate {
     private let scrollView = NSScrollView()
     private let tableView = NSTableView()
     private let tableColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("SidebarColumn"))
-    private var itemModels: [SidebarItem] = []
+    private var itemModels: [SidebarItemModel] = []
+    private var legacyItemLabels: [String: String] = [:] // id -> label for legacy mode
     private var isUpdatingSelection = false
+    private var usesReactChildren = false
 
     override var isFlipped: Bool {
         return true
@@ -102,22 +145,73 @@ final class SidebarView: NSView, NSTableViewDataSource, NSTableViewDelegate {
     override func layout() {
         super.layout()
         scrollView.frame = bounds
-        tableView.frame = scrollView.bounds
     }
 
-    private func reloadItems() {
+    // MARK: - React Native Subview Management
+
+    override func insertReactSubview(_ subview: NSView!, at index: Int) {
+        guard let itemView = subview as? SidebarItemView else {
+            super.insertReactSubview(subview, at: index)
+            return
+        }
+
+        usesReactChildren = true
+
+        let model = SidebarItemModel(
+            id: itemView.itemId as String,
+            view: itemView,
+            selectable: itemView.selectable
+        )
+
+        let safeIndex = min(index, itemModels.count)
+        itemModels.insert(model, at: safeIndex)
+
+        tableView.reloadData()
+        updateSelection()
+    }
+
+    override func removeReactSubview(_ subview: NSView!) {
+        guard let itemView = subview as? SidebarItemView else {
+            super.removeReactSubview(subview)
+            return
+        }
+
+        if let index = itemModels.firstIndex(where: { $0.view === itemView }) {
+            itemModels.remove(at: index)
+            tableView.reloadData()
+            updateSelection()
+        }
+    }
+
+    override func didUpdateReactSubviews() {
+        // React has finished updating subviews
+        tableView.reloadData()
+        updateSelection()
+    }
+
+    // MARK: - Legacy Items Support
+
+    private func reloadLegacyItems() {
+        legacyItemLabels.removeAll()
         itemModels = items.compactMap { item in
             guard let id = item["id"] as? String else {
                 return nil
             }
-
             let label = item["label"] as? String ?? ""
-            return SidebarItem(id: id, label: label)
+            legacyItemLabels[id] = label
+
+            // Create a simple view for legacy items
+            let itemView = SidebarItemView()
+            itemView.itemId = id as NSString
+            itemView.selectable = true
+            return SidebarItemModel(id: id, view: itemView, selectable: true)
         }
 
         tableView.reloadData()
         updateSelection()
     }
+
+    // MARK: - Selection
 
     private func updateSelection() {
         guard !itemModels.isEmpty else {
@@ -138,14 +232,64 @@ final class SidebarView: NSView, NSTableViewDataSource, NSTableViewDelegate {
         isUpdatingSelection = false
     }
 
+    // MARK: - NSTableViewDataSource
+
     func numberOfRows(in tableView: NSTableView) -> Int {
         return itemModels.count
     }
 
-    func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
-        let item = itemModels[row]
-        let identifier = NSUserInterfaceItemIdentifier("SidebarCell")
+    // MARK: - NSTableViewDelegate
 
+    func tableView(_ tableView: NSTableView, heightOfRow row: Int) -> CGFloat {
+        guard row < itemModels.count else {
+            return 28.0
+        }
+
+        let model = itemModels[row]
+        let view = model.view
+
+        // Get intrinsic height from the RN view
+        let intrinsicSize = view.intrinsicContentSize
+        if intrinsicSize.height > 0 && intrinsicSize.height != NSView.noIntrinsicMetric {
+            return intrinsicSize.height
+        }
+
+        // Fallback: measure the view's frame
+        if view.frame.height > 0 {
+            return view.frame.height
+        }
+
+        return 28.0
+    }
+
+    func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
+        guard row < itemModels.count else {
+            return nil
+        }
+
+        let model = itemModels[row]
+
+        // For React children mode, use the RN view directly
+        if usesReactChildren {
+            let cellView = NSTableCellView()
+            cellView.identifier = NSUserInterfaceItemIdentifier("SidebarRNCell")
+
+            let rnView = model.view
+            rnView.translatesAutoresizingMaskIntoConstraints = false
+            cellView.addSubview(rnView)
+
+            NSLayoutConstraint.activate([
+                rnView.leadingAnchor.constraint(equalTo: cellView.leadingAnchor),
+                rnView.trailingAnchor.constraint(equalTo: cellView.trailingAnchor),
+                rnView.topAnchor.constraint(equalTo: cellView.topAnchor),
+                rnView.bottomAnchor.constraint(equalTo: cellView.bottomAnchor),
+            ])
+
+            return cellView
+        }
+
+        // Legacy mode: render text
+        let identifier = NSUserInterfaceItemIdentifier("SidebarCell")
         let cellView = tableView.makeView(withIdentifier: identifier, owner: self) as? NSTableCellView ?? {
             let view = NSTableCellView()
             view.identifier = identifier
@@ -167,8 +311,15 @@ final class SidebarView: NSView, NSTableViewDataSource, NSTableViewDelegate {
             return view
         }()
 
-        cellView.textField?.stringValue = item.label
+        cellView.textField?.stringValue = legacyItemLabels[model.id] ?? ""
         return cellView
+    }
+
+    func tableView(_ tableView: NSTableView, shouldSelectRow row: Int) -> Bool {
+        guard row < itemModels.count else {
+            return false
+        }
+        return itemModels[row].selectable
     }
 
     func tableViewSelectionDidChange(_ notification: Notification) {

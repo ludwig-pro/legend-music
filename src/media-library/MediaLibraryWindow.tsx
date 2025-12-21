@@ -37,9 +37,15 @@ export default function MediaLibraryWindow() {
                     <TooltipProvider>
                         <DragDropProvider>
                             {isMacOS ? (
-                                <SidebarSplitView className="flex-1 bg-background-primary">
+                                <SidebarSplitView
+                                    className="flex-1 bg-background-primary"
+                                    onLayout={(e) => console.log(e.nativeEvent.layout)}
+                                >
                                     <MediaLibrarySidebar useNativeLibraryList />
-                                    <View className="flex-1">
+                                    <View
+                                        className="flex-1 bg-blue-500"
+                                        onLayout={(e) => console.log("z", e.nativeEvent.layout)}
+                                    >
                                         <TrackList />
                                         {showHints ? (
                                             <View className="border-t border-white/15 bg-black/20 px-3 py-2">

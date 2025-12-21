@@ -11,7 +11,7 @@ import {
     type MediaLibraryDragData,
 } from "@/components/dnd";
 import { localAudioControls } from "@/components/LocalAudioPlayer";
-import { NativeSidebar } from "@/components/NativeSidebar";
+import { NativeSidebar, SidebarItem } from "@/components/NativeSidebar";
 import type { TextInputSearchRef } from "@/components/TextInputSearch";
 import { showToast } from "@/components/Toast";
 import { useListItemStyles } from "@/hooks/useListItemStyles";
@@ -45,8 +45,6 @@ interface MediaLibrarySidebarProps {
     useNativeLibraryList?: boolean;
 }
 
-const NATIVE_SIDEBAR_ROW_HEIGHT = 28;
-
 export function MediaLibrarySidebar({ useNativeLibraryList = false }: MediaLibrarySidebarProps) {
     perfCount("MediaLibrary.Sidebar.render");
     const selectedView = useValue(libraryUI$.selectedView);
@@ -62,30 +60,9 @@ export function MediaLibrarySidebar({ useNativeLibraryList = false }: MediaLibra
     const [editingPlaylistName, setEditingPlaylistName] = useState("");
     const shouldUseNativeLibraryList = useNativeLibraryList && Platform.OS === "macos";
 
-    const nativeLibraryItems = useMemo(() => {
-        return LIBRARY_VIEWS.filter((view) => !view.disabled).map((view) => ({ id: view.id, label: view.label }));
-    }, []);
-
-    const nativeLibraryHeight = nativeLibraryItems.length * NATIVE_SIDEBAR_ROW_HEIGHT;
-
-    const nativeSelectedId = useMemo(() => {
-        if (nativeLibraryItems.some((view) => view.id === selectedView)) {
-            return selectedView;
-        }
-
-        return undefined;
-    }, [nativeLibraryItems, selectedView]);
-
     const handleSelectView = useCallback((view: LibraryView) => {
         selectLibraryView(view);
     }, []);
-
-    const handleNativeLibrarySelection = useCallback(
-        (id: string) => {
-            handleSelectView(id as LibraryView);
-        },
-        [handleSelectView],
-    );
 
     const handleAddPlaylist = useCallback(() => {
         if (tempPlaylistId) {
@@ -311,6 +288,154 @@ export function MediaLibrarySidebar({ useNativeLibraryList = false }: MediaLibra
         }
     }, []);
 
+    // Compute selected ID for native sidebar
+    const nativeSidebarSelectedId = useMemo(() => {
+        if (selectedView === "playlist" && selectedPlaylistId) {
+            return `playlist-${selectedPlaylistId}`;
+        }
+        return selectedView;
+    }, [selectedView, selectedPlaylistId]);
+
+    const handleNativeSidebarSelection = useCallback(
+        (id: string) => {
+            if (id.startsWith("playlist-")) {
+                const playlistId = id.replace("playlist-", "");
+                selectLibraryPlaylist(playlistId);
+            } else {
+                handleSelectView(id as LibraryView);
+            }
+        },
+        [handleSelectView],
+    );
+
+    // Native macOS sidebar with custom RN content
+    if (shouldUseNativeLibraryList) {
+        return (
+            <NativeSidebar
+                selectedId={nativeSidebarSelectedId}
+                onSelectionChange={handleNativeSidebarSelection}
+                contentInsetTop={0}
+                className="flex-1 h-full bg-red-500"
+            >
+                {/* Library Section Header */}
+                <SidebarItem itemId="header-library" selectable={false}>
+                    <Text className="text-xs font-semibold text-white/40 uppercase tracking-wider pt-1">Library</Text>
+                </SidebarItem>
+
+                {/* Library Views */}
+                {LIBRARY_VIEWS.filter((view) => !view.disabled).map((view) => (
+                    <SidebarItem key={view.id} itemId={view.id}>
+                        <Text className="text-sm text-text-primary">{view.label}</Text>
+                    </SidebarItem>
+                ))}
+
+                {/* Playlists Section Header */}
+                {SUPPORT_PLAYLISTS ? (
+                    <SidebarItem itemId="header-playlists" selectable={false}>
+                        <View className="flex-row items-center justify-between pt-3">
+                            <Text className="text-xs font-semibold text-white/40 uppercase tracking-wider">
+                                Playlists
+                            </Text>
+                            <Button
+                                icon="plus"
+                                variant="icon"
+                                size="small"
+                                accessibilityLabel="Add playlist"
+                                disabled={Boolean(tempPlaylistId)}
+                                onClick={handleAddPlaylist}
+                                className="bg-transparent hover:bg-white/10"
+                            />
+                        </View>
+                    </SidebarItem>
+                ) : null}
+
+                {/* Playlist Items */}
+                {SUPPORT_PLAYLISTS && playlists.length === 0 ? (
+                    <SidebarItem itemId="no-playlists" selectable={false}>
+                        <Text className="text-sm text-white/40">No playlists yet</Text>
+                    </SidebarItem>
+                ) : null}
+
+                {SUPPORT_PLAYLISTS
+                    ? playlists.map((playlist) => {
+                          const isTemp = playlist.id === tempPlaylistId;
+                          const isEditing = playlist.id === editingPlaylistId;
+
+                          if (isTemp) {
+                              return (
+                                  <SidebarItem key={playlist.id} itemId={`playlist-${playlist.id}`}>
+                                      <TextInput
+                                          value={tempPlaylistName}
+                                          onChangeText={setTempPlaylistName}
+                                          onSubmitEditing={finalizeTempPlaylist}
+                                          onBlur={finalizeTempPlaylist}
+                                          autoFocus
+                                          selectTextOnFocus
+                                          placeholder="New Playlist"
+                                          className="flex-1 text-sm text-text-primary"
+                                      />
+                                  </SidebarItem>
+                              );
+                          }
+
+                          if (isEditing) {
+                              return (
+                                  <SidebarItem key={playlist.id} itemId={`playlist-${playlist.id}`}>
+                                      <TextInput
+                                          value={editingPlaylistName}
+                                          onChangeText={setEditingPlaylistName}
+                                          onSubmitEditing={finalizeRename}
+                                          onBlur={finalizeRename}
+                                          autoFocus
+                                          selectTextOnFocus
+                                          placeholder="Playlist name"
+                                          className="flex-1 text-sm text-text-primary"
+                                      />
+                                  </SidebarItem>
+                              );
+                          }
+
+                          return (
+                              <SidebarItem key={playlist.id} itemId={`playlist-${playlist.id}`}>
+                                  <View className="flex-row items-center justify-between">
+                                      <Text className="text-sm text-text-primary flex-1" numberOfLines={1}>
+                                          {playlist.name}
+                                      </Text>
+                                      <Text className="text-xs text-white/40">{playlist.trackCount}</Text>
+                                  </View>
+                              </SidebarItem>
+                          );
+                      })
+                    : null}
+
+                {/* Sources Section */}
+                <SidebarItem itemId="header-sources" selectable={false}>
+                    <Text className="text-xs font-semibold text-white/40 uppercase tracking-wider pt-3">Sources</Text>
+                </SidebarItem>
+                <SidebarItem itemId="source-local" selectable={false}>
+                    <Text className="text-sm text-white/70">✓ Local Music</Text>
+                </SidebarItem>
+
+                <SidebarItem itemId="spacer" selectable={false}>
+                    <View className="h-full bg-blue-500" />
+                </SidebarItem>
+                <SidebarItem itemId="spacer2" selectable={false}>
+                    <View className="h-full bg-blue-500" />
+                </SidebarItem>
+                <SidebarItem itemId="space3r3   " selectable={false}>
+                    <View className="h-full bg-blue-500" />
+                </SidebarItem>
+                <SidebarItem itemId="space4r4" selectable={false}>
+                    <View className="h-full bg-blue-500" />
+                </SidebarItem>
+                <SidebarItem itemId="space5r5" selectable={false}>
+                    <View className="h-full bg-blue-500" />
+                </SidebarItem>
+            </NativeSidebar>
+        );
+    }
+
+    // Fallback: non-native sidebar
     return (
         <View className="flex-1 min-h-0">
             <MediaLibrarySearchBar searchInputRef={searchInputRef} query={searchQuery} />
@@ -319,43 +444,32 @@ export function MediaLibrarySidebar({ useNativeLibraryList = false }: MediaLibra
                     <Text className="px-3 pt-2 pb-1 text-xs font-semibold text-white/40 uppercase tracking-wider">
                         Library
                     </Text>
-                    {shouldUseNativeLibraryList ? (
-                        <NativeSidebar
-                            items={nativeLibraryItems}
-                            selectedId={nativeSelectedId}
-                            onSelectionChange={handleNativeLibrarySelection}
-                            contentInsetTop={0}
-                            style={{ height: nativeLibraryHeight }}
-                            className="bg-transparent"
-                        />
-                    ) : (
-                        LIBRARY_VIEWS.map((view) => {
-                            const isSelected = selectedView === view.id;
-                            return (
-                                <Button
-                                    key={view.id}
-                                    disabled={view.disabled}
-                                    className={listItemStyles.getRowClassName({
-                                        variant: "compact",
-                                        isSelected,
-                                        isInteractive: !view.disabled,
-                                    })}
-                                    onClick={() => handleSelectView(view.id)}
+                    {LIBRARY_VIEWS.map((view) => {
+                        const isSelected = selectedView === view.id;
+                        return (
+                            <Button
+                                key={view.id}
+                                disabled={view.disabled}
+                                className={listItemStyles.getRowClassName({
+                                    variant: "compact",
+                                    isSelected,
+                                    isInteractive: !view.disabled,
+                                })}
+                                onClick={() => handleSelectView(view.id)}
+                            >
+                                <Text
+                                    className={cn(
+                                        "text-sm truncate flex-1 pr-4",
+                                        isSelected ? listItemStyles.text.primary : listItemStyles.text.secondary,
+                                        view.disabled ? "opacity-40" : "",
+                                    )}
+                                    numberOfLines={1}
                                 >
-                                    <Text
-                                        className={cn(
-                                            "text-sm truncate flex-1 pr-4",
-                                            isSelected ? listItemStyles.text.primary : listItemStyles.text.secondary,
-                                            view.disabled ? "opacity-40" : "",
-                                        )}
-                                        numberOfLines={1}
-                                    >
-                                        {view.label}
-                                    </Text>
-                                </Button>
-                            );
-                        })
-                    )}
+                                    {view.label}
+                                </Text>
+                            </Button>
+                        );
+                    })}
                 </View>
 
                 {SUPPORT_PLAYLISTS ? (

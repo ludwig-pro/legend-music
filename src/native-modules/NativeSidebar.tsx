@@ -1,4 +1,5 @@
 import { cssInterop } from "nativewind";
+import type { ReactNode } from "react";
 import { requireNativeComponent, type ViewProps } from "react-native";
 
 export interface NativeSidebarItem {
@@ -7,10 +8,11 @@ export interface NativeSidebarItem {
 }
 
 export interface NativeSidebarViewProps extends ViewProps {
-    items: NativeSidebarItem[];
+    items?: NativeSidebarItem[];
     selectedId?: string;
     contentInsetTop?: number;
     onSidebarSelectionChange?: (event: { nativeEvent: { id: string } }) => void;
+    children?: ReactNode;
 }
 
 const NativeSidebarView = requireNativeComponent<NativeSidebarViewProps>("LMSidebar");
@@ -20,3 +22,18 @@ cssInterop(NativeSidebarView, {
 });
 
 export { NativeSidebarView };
+
+// SidebarItem - wrapper for custom RN content in sidebar rows
+export interface SidebarItemViewProps extends ViewProps {
+    itemId: string;
+    selectable?: boolean;
+    children?: ReactNode;
+}
+
+const NativeSidebarItemView = requireNativeComponent<SidebarItemViewProps>("LMSidebarItem");
+
+cssInterop(NativeSidebarItemView, {
+    className: "style",
+});
+
+export { NativeSidebarItemView };
