@@ -90,8 +90,6 @@ class GlassEffectView: NSView {
         switch glassStyle {
         case "clear":
             glassView.style = .clear
-        case "sidebar":
-            glassView.style = .sidebar
         default:
             glassView.style = .regular
         }

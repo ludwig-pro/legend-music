@@ -36,8 +36,8 @@ export function Sidebar({ items, selectedItem$, width, className, children }: Si
 
     return (
         <View className="h-full" style={sidebarStyle}>
-            <EffectView glassStyle="sidebar" style={{ flex: 1 }} tintColor={"#FF000001"}>
-                <View className={cn("flex-1", className)}>
+            <EffectView style={{ flex: 1 }} tintColor="#FFFFFF10">
+                <View className={cn("flex-1 px-2", className)}>
                     <ScrollView showsVerticalScrollIndicator={false}>{children ?? renderItems()}</ScrollView>
                 </View>
             </EffectView>
