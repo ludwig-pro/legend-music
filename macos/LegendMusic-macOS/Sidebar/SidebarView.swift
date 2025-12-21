@@ -58,6 +58,8 @@ final class SidebarView: NSView, NSTableViewDataSource, NSTableViewDelegate {
         scrollView.hasVerticalScroller = true
         scrollView.autohidesScrollers = true
         scrollView.borderType = .noBorder
+        // Add top inset for traffic lights when sidebar extends under title bar
+        scrollView.contentInsets = NSEdgeInsets(top: 52, left: 0, bottom: 0, right: 0)
 
         tableView.headerView = nil
         tableView.allowsMultipleSelection = false

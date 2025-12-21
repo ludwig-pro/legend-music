@@ -46,6 +46,24 @@ static void LegendApplyToolbarStyle(NSWindow *window, NSString *value) {
   }
 }
 
+static void LegendApplyTitlebarSeparatorStyle(NSWindow *window, NSString *value) {
+  if (![value isKindOfClass:[NSString class]] || value.length == 0) {
+    return;
+  }
+
+  if (@available(macOS 11.0, *)) {
+    if ([value isEqualToString:@"automatic"]) {
+      window.titlebarSeparatorStyle = NSTitlebarSeparatorStyleAutomatic;
+    } else if ([value isEqualToString:@"none"]) {
+      window.titlebarSeparatorStyle = NSTitlebarSeparatorStyleNone;
+    } else if ([value isEqualToString:@"line"]) {
+      window.titlebarSeparatorStyle = NSTitlebarSeparatorStyleLine;
+    } else if ([value isEqualToString:@"shadow"]) {
+      window.titlebarSeparatorStyle = NSTitlebarSeparatorStyleShadow;
+    }
+  }
+}
+
 @interface WindowManager() <NSWindowDelegate>
 @property (nonatomic, strong) NSMutableDictionary<NSString *, NSWindow *> *windows;
 @property (nonatomic, strong) NSMutableDictionary<NSString *, RCTRootView *> *rootViews;
@@ -125,6 +143,7 @@ RCT_EXPORT_METHOD(openWindow:(NSDictionary *)options
   NSNumber *transparentTitlebar = windowStyle[@"titlebarAppearsTransparent"];
   NSString *titleVisibility = windowStyle[@"titleVisibility"];
   NSString *toolbarStyle = windowStyle[@"toolbarStyle"];
+  NSString *titlebarSeparatorStyle = windowStyle[@"titlebarSeparatorStyle"];
   NSNumber *levelNumber = options[@"level"];
   BOOL transparentBackground = [options[@"transparentBackground"] boolValue];
   NSNumber *hasShadowNumber = options[@"hasShadow"];
@@ -201,6 +220,7 @@ RCT_EXPORT_METHOD(openWindow:(NSDictionary *)options
     }
 
     LegendApplyToolbarStyle(existingWindow, toolbarStyle);
+    LegendApplyTitlebarSeparatorStyle(existingWindow, titlebarSeparatorStyle);
 
     if (levelNumber) {
       [existingWindow setLevel:[levelNumber integerValue]];
@@ -275,6 +295,7 @@ RCT_EXPORT_METHOD(openWindow:(NSDictionary *)options
   }
 
   LegendApplyToolbarStyle(window, toolbarStyle);
+  LegendApplyTitlebarSeparatorStyle(window, titlebarSeparatorStyle);
 
   if (levelNumber) {
     [window setLevel:[levelNumber integerValue]];

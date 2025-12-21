@@ -2,7 +2,7 @@ import { useObservable, useObserveEffect } from "@legendapp/state/react";
 import { useEffect, useMemo } from "react";
 import { Platform, type StyleProp, View, type ViewStyle } from "react-native";
 import { Sidebar } from "@/components/Sidebar";
-import { NativeSidebarView, type NativeSidebarItem } from "@/native-modules/NativeSidebar";
+import { type NativeSidebarItem, NativeSidebarView } from "@/native-modules/NativeSidebar";
 
 export interface NativeSidebarProps {
     items: NativeSidebarItem[];
@@ -13,14 +13,7 @@ export interface NativeSidebarProps {
     style?: StyleProp<ViewStyle>;
 }
 
-export function NativeSidebar({
-    items,
-    selectedId,
-    onSelectionChange,
-    width,
-    className,
-    style,
-}: NativeSidebarProps) {
+export function NativeSidebar({ items, selectedId, onSelectionChange, width, className, style }: NativeSidebarProps) {
     const isMacOS = Platform.OS === "macos";
 
     const fallbackItems = useMemo(() => {
