@@ -36,7 +36,7 @@ final class SidebarItemView: NSView {
     }
 
     override func rightMouseDown(with event: NSEvent) {
-        selectContainingRow()
+        setContextHighlight()
         super.rightMouseDown(with: event)
     }
 
@@ -58,31 +58,43 @@ final class SidebarItemView: NSView {
             "metaKey": event.modifierFlags.contains(.command),
         ])
 
+        // Clear highlight after a short delay to allow context menu to appear
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            self?.clearContextHighlight()
+        }
+
         super.rightMouseUp(with: event)
     }
 
-    private func selectContainingRow() {
+    private func setContextHighlight() {
         guard selectable else {
             return
         }
 
-        guard let tableView = enclosingTableView() else {
+        guard let sidebarView = enclosingSidebarView() else {
             return
         }
 
-        let row = tableView.row(for: self)
+        let row = sidebarView.tableView.row(for: self)
         guard row >= 0 else {
             return
         }
 
-        tableView.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
+        sidebarView.setContextHighlight(row: row)
     }
 
-    private func enclosingTableView() -> NSTableView? {
+    private func clearContextHighlight() {
+        guard let sidebarView = enclosingSidebarView() else {
+            return
+        }
+        sidebarView.clearContextHighlight()
+    }
+
+    private func enclosingSidebarView() -> SidebarView? {
         var view: NSView? = self
         while let current = view {
-            if let tableView = current as? NSTableView {
-                return tableView
+            if let sidebarView = current as? SidebarView {
+                return sidebarView
             }
             view = current.superview
         }
@@ -104,16 +116,51 @@ private struct SidebarItemModel {
     let selectable: Bool
 }
 
+/// Custom row view that can show a context menu highlight (rounded blue border)
+final class SidebarRowView: NSTableRowView {
+    var isContextHighlighted: Bool = false {
+        didSet {
+            needsDisplay = true
+        }
+    }
+
+    override func drawSelection(in dirtyRect: NSRect) {
+        // Draw normal selection
+        super.drawSelection(in: dirtyRect)
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        super.draw(dirtyRect)
+
+        // Draw context highlight border if active
+        if isContextHighlighted {
+            let borderRect = bounds.insetBy(dx: 12, dy: 1)
+            let borderPath = NSBezierPath(roundedRect: borderRect, xRadius: 6, yRadius: 6)
+            NSColor.controlAccentColor.withAlphaComponent(0.8).setStroke()
+            borderPath.lineWidth = 2
+            borderPath.stroke()
+        }
+    }
+}
+
 /// Custom NSTableView that allows mouse events to pass through to RN content
 final class SidebarTableView: NSTableView {
+    var isRightMouseDown = false
+
     override func validateProposedFirstResponder(_ responder: NSResponder, for event: NSEvent?) -> Bool {
         // Allow all responders to become first responder, enabling buttons in RN content to receive clicks
         return true
     }
 
     override func rightMouseDown(with event: NSEvent) {
+        isRightMouseDown = true
         window?.makeFirstResponder(self)
         super.rightMouseDown(with: event)
+    }
+
+    override func rightMouseUp(with event: NSEvent) {
+        super.rightMouseUp(with: event)
+        isRightMouseDown = false
     }
 }
 
@@ -144,12 +191,13 @@ final class SidebarView: NSView, NSTableViewDataSource, NSTableViewDelegate {
 
     private let scrollView = NSScrollView()
     private var lastReportedSize: CGSize = .zero
-    private let tableView = SidebarTableView()
+    let tableView = SidebarTableView()
     private let tableColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("SidebarColumn"))
     private var itemModels: [SidebarItemModel] = []
     private var legacyItemLabels: [String: String] = [:] // id -> label for legacy mode
     private var isUpdatingSelection = false
     private var usesReactChildren = false
+    private var contextHighlightedRow: Int = -1
 
     override var isFlipped: Bool {
         return true
@@ -215,11 +263,52 @@ final class SidebarView: NSView, NSTableViewDataSource, NSTableViewDelegate {
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
 
-        guard let window, window.isKeyWindow else {
+        // Remove any existing observer
+        NotificationCenter.default.removeObserver(self, name: NSWindow.didBecomeKeyNotification, object: nil)
+
+        guard let window else {
             return
         }
 
+        if window.isKeyWindow {
+            // Delay slightly to ensure view hierarchy is ready
+            DispatchQueue.main.async { [weak self] in
+                self?.activateTableView()
+            }
+        } else {
+            // Observe for when the window becomes key
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(windowDidBecomeKey(_:)),
+                name: NSWindow.didBecomeKeyNotification,
+                object: window
+            )
+        }
+    }
+
+    @objc private func windowDidBecomeKey(_ notification: Notification) {
+        guard let window = notification.object as? NSWindow, window === self.window else {
+            return
+        }
+
+        // Remove observer after handling
+        NotificationCenter.default.removeObserver(self, name: NSWindow.didBecomeKeyNotification, object: window)
+
+        // Delay slightly to ensure view hierarchy is ready
+        DispatchQueue.main.async { [weak self] in
+            self?.activateTableView()
+        }
+    }
+
+    private func activateTableView() {
+        guard let window = self.window else {
+            return
+        }
         window.makeFirstResponder(tableView)
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
 
     private func reportLayoutIfNeeded() {
@@ -406,10 +495,20 @@ final class SidebarView: NSView, NSTableViewDataSource, NSTableViewDelegate {
     }
 
     func tableView(_ tableView: NSTableView, shouldSelectRow row: Int) -> Bool {
+        // Don't change selection on right-click
+        if let sidebarTableView = tableView as? SidebarTableView, sidebarTableView.isRightMouseDown {
+            return false
+        }
         guard row < itemModels.count else {
             return false
         }
         return itemModels[row].selectable
+    }
+
+    func tableView(_ tableView: NSTableView, rowViewForRow row: Int) -> NSTableRowView? {
+        let rowView = SidebarRowView()
+        rowView.isContextHighlighted = (row == contextHighlightedRow)
+        return rowView
     }
 
     func tableViewSelectionDidChange(_ notification: Notification) {
@@ -424,5 +523,26 @@ final class SidebarView: NSView, NSTableViewDataSource, NSTableViewDelegate {
 
         let selectedItem = itemModels[row]
         onSidebarSelectionChange?(["id": selectedItem.id])
+    }
+
+    // MARK: - Context Highlight
+
+    func setContextHighlight(row: Int) {
+        let previousRow = contextHighlightedRow
+        contextHighlightedRow = row
+
+        // Update previous row if it exists
+        if previousRow >= 0, let previousRowView = tableView.rowView(atRow: previousRow, makeIfNecessary: false) as? SidebarRowView {
+            previousRowView.isContextHighlighted = false
+        }
+
+        // Update new row
+        if row >= 0, let rowView = tableView.rowView(atRow: row, makeIfNecessary: false) as? SidebarRowView {
+            rowView.isContextHighlighted = true
+        }
+    }
+
+    func clearContextHighlight() {
+        setContextHighlight(row: -1)
     }
 }
