@@ -3,12 +3,26 @@
     <channel>
         <title>LegendMusic</title>
         <item>
+            <title>0.0.8</title>
+            <pubDate>Tue, 23 Dec 2025 16:22:27 +0900</pubDate>
+            <sparkle:version>008</sparkle:version>
+            <sparkle:shortVersionString>0.0.8</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>11.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/LegendApp/legend-music/releases/download/v0.0.8/Legend-Music-0.0.8.zip" length="12350083" type="application/octet-stream" sparkle:edSignature="gnqdAMWxBEL8xRDBfWwmcbxSkWUnApUhLK4qPtWbsS5q8ffYvErFAEK5guMheDW2FkPDKXyhcNPihFwsk0B7BA=="/>
+            <sparkle:deltas>
+                <enclosure url="https://github.com/LegendApp/legend-music/releases/download/v0.0.8/Legend-Music008-007.delta" sparkle:deltaFrom="007" length="1098930" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="436512" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,en" sparkle:edSignature="T2e6szARQkoZvslgHcWxdPW9K6uDYfGie0ydsVdQxAaxUwnjLzj5ZWC7hlVXFOQty/cwIhte1ZfFs2w3rHRICg=="/>
+                <enclosure url="https://github.com/LegendApp/legend-music/releases/download/v0.0.8/Legend-Music008-006.delta" sparkle:deltaFrom="006" length="1275110" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="438848" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,en" sparkle:edSignature="jdzpfh2klofGAg300jWkRxcutrHWcmEd5Yf4L3d4XeYpwKVayMuDFxsl2MOkiAue51ECnPItqJTwoun7ta/bBw=="/>
+                <enclosure url="https://github.com/LegendApp/legend-music/releases/download/v0.0.8/Legend-Music008-005.delta" sparkle:deltaFrom="005" length="5489550" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="438848" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,en" sparkle:edSignature="MEZHvY0OSIT5DFv78m2UYQ3K3AcQM37eDGFAJvR0scWVAwFxiwPP/by2H4Cc0FAeqLDhd3Zc8BX1ta5jpjT9Aw=="/>
+                <enclosure url="https://github.com/LegendApp/legend-music/releases/download/v0.0.8/Legend-Music008-004.delta" sparkle:deltaFrom="004" length="5493722" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="438848" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,en" sparkle:edSignature="tfYmYDxJmZmJoX7+AAuxPvCdK1WvCj7hgJIfvufSaPGaMEeLui/1wp2YIDAj6cCIEqRNBVJBFVCYgEm0uebDCg=="/>
+            </sparkle:deltas>
+        </item>
+        <item>
             <title>0.0.7</title>
             <pubDate>Fri, 19 Dec 2025 10:36:51 +0900</pubDate>
             <sparkle:version>007</sparkle:version>
             <sparkle:shortVersionString>0.0.7</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>11.0</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/LegendApp/legend-music/releases/download/v0.0.7/Legend-Music-0.0.7.zip" length="12306178" type="application/octet-stream" sparkle:edSignature="LBHPe4kQONpdkj0Twhe1IV28gtq/doxb5reDevghF0wQIsikZXT40XFjpaVVVX3fAOnHu7FTNn8cwqSq5jXbDw=="/>
+            <enclosure url="https://github.com/LegendApp/legend-music/releases/download/v0.0.8/Legend-Music-0.0.7.zip" length="12306178" type="application/octet-stream" sparkle:edSignature="LBHPe4kQONpdkj0Twhe1IV28gtq/doxb5reDevghF0wQIsikZXT40XFjpaVVVX3fAOnHu7FTNn8cwqSq5jXbDw=="/>
             <sparkle:deltas>
                 <enclosure url="https://github.com/LegendApp/legend-music/releases/download/v0.0.7/Legend-Music007-006.delta" sparkle:deltaFrom="006" length="1060750" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="438848" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,en" sparkle:edSignature="D2WBIF2rF5p12YTJlPqRPWcP2OSFNpYOUFb66Jkmkxhb0zwfOyhSQbj95wrh8Tedagv2PsURw//EakloLf2WDA=="/>
                 <enclosure url="https://github.com/LegendApp/legend-music/releases/download/v0.0.7/Legend-Music007-005.delta" sparkle:deltaFrom="005" length="5442922" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="438848" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,en" sparkle:edSignature="RZvEcZFVJbVzKMbEMtqBMDAn+GXzLzVUFlFdVJtbWOyEcySUzAT/rOZcuWRgCuwfNa/+KkyweWK2TAHXi/0pAA=="/>
@@ -21,21 +35,10 @@
             <sparkle:version>006</sparkle:version>
             <sparkle:shortVersionString>0.0.6</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>11.0</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/LegendApp/legend-music/releases/download/v0.0.7/Legend-Music-0.0.6.zip" length="12450089" type="application/octet-stream" sparkle:edSignature="dJGUWdhDiXw07Uisw+Yzst1d8WJH5kvsB6dlMEvHrtymqmGWrliEO2GXggNdfKiLcWL3zFSTGXSfGoYV946cBg=="/>
+            <enclosure url="https://github.com/LegendApp/legend-music/releases/download/v0.0.8/Legend-Music-0.0.6.zip" length="12450089" type="application/octet-stream" sparkle:edSignature="dJGUWdhDiXw07Uisw+Yzst1d8WJH5kvsB6dlMEvHrtymqmGWrliEO2GXggNdfKiLcWL3zFSTGXSfGoYV946cBg=="/>
             <sparkle:deltas>
                 <enclosure url="https://github.com/LegendApp/legend-music/releases/download/v0.0.6/Legend-Music006-005.delta" sparkle:deltaFrom="005" length="5362106" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="438848" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,en" sparkle:edSignature="nuZU82O+ZvOXv0lmm+G6DPf+p7rw7/YIcSXfT2X5IJPstH8fYgLecpPSuSIXAKFOYISHNT3iM000gPxnvcz4AA=="/>
                 <enclosure url="https://github.com/LegendApp/legend-music/releases/download/v0.0.6/Legend-Music006-004.delta" sparkle:deltaFrom="004" length="5467394" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="438848" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,en" sparkle:edSignature="9M3QniJOA91+2U2xUf0kx0bqRHKeWHIPcfH7zomTgOBsospXLritMRWrX3KGqkkcNmDnjNf6phCVJaqPfXNOBw=="/>
-            </sparkle:deltas>
-        </item>
-        <item>
-            <title>0.0.5</title>
-            <pubDate>Thu, 04 Dec 2025 22:31:57 +0100</pubDate>
-            <sparkle:version>005</sparkle:version>
-            <sparkle:shortVersionString>0.0.5</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>11.0</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/LegendApp/legend-music/releases/download/v0.0.7/LegendMusic-0.0.5.zip" length="12448594" type="application/octet-stream" sparkle:edSignature="3PMe0WNCZbzNoBqrsfjIhanT6UN73YCFQAKyxCb5F2eQhHXr8RnJgO16WDcviW0R7AXFgJWqkGlUcYjK1A3lAA=="/>
-            <sparkle:deltas>
-                <enclosure url="https://github.com/LegendApp/legend-music/releases/download/v0.0.5/LegendMusic005-004.delta" sparkle:deltaFrom="004" length="828234" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="438848" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,en" sparkle:edSignature="gH+aYPvVgFHvdvN+i3/F4ftBQrFWCmsV0YiQ+aGJkh+6nZApsqB38kd92/5egSPP4lgwTCNWZwJ87AXpX9zTDQ=="/>
             </sparkle:deltas>
         </item>
     </channel>
